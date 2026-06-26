@@ -1,166 +1,198 @@
 # Open Decisions — REVE ACADEMY OS
 
-구현 전 Owner 또는 지정 decision maker의 결정이 필요한 비즈니스 항목입니다.  
-**권장 default는 시작점일 뿐이며, 승인 전까지 확정 요구사항으로 취급하지 않습니다.**
+이 문서는 비즈니스 결정 이력과 **아직 확정되지 않은** 항목을 추적합니다.
+
+## Status overview
+
+| 범주 | 설명 |
+|------|------|
+| **Confirmed (2026-06-26)** | OD-01 ~ OD-12 — 아래 **Confirmed Decisions** 섹션. **권위 있는 요구사항**으로 취급 |
+| **Open** | 현재 **비즈니스 open decision 없음**. Phase 0B 설계 deliverable(ERD, RLS SQL)은 별도 로드맵 항목 |
+
+**Confirmed 결정은 `docs/project-brief.md`, `docs/domain-rules.md`, `docs/permissions-matrix.md`, `docs/state-transitions.md`에 반영되어야 합니다.**
 
 ---
 
-## 1. Teacher schedule request approval
+## Confirmed Decisions (2026-06-26)
 
-| Field | Content |
-|-------|---------|
-| **Decision required** | Teacher가 schedule change request를 **승인(approve)** 할 수 있는가, 아니면 **제출(submit)만** 가능한가? |
-| **Recommended default** | Teacher는 **제출만**; Owner(또는 지정 admin)만 승인·거절 |
-| **Reason** | 요구사항에 "Process schedule requests only if later approved as a business rule" 및 Teacher 권한 제한이 명시됨. 연쇄 일정 변경 위험을 Owner가 통제하는 것이 안전 |
-| **Risk** | Teacher 승인 허용 시 unauthorized cascade reschedule, 타 학생 일정 충돌 가능 |
-| **Affected** | `schedule_change_requests`, RLS policies, Teacher/Owner UI, notification flow |
+다음 12개 결정은 Owner에 의해 **2026-06-26** 확정되었으며, 더 이상 open이 아닙니다.
 
 ---
 
-## 2. Reverting completed lessons to non-deductible status
+### OD-01 — Teacher schedule-change authority
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | `completed`(또는 deductible) 수업을 `postponed` 등 **비차감 상태로 되돌릴** 수 있는가? |
-| **Recommended default** | **Owner만** 제한적 허용; audit_log 필수; used/remaining 즉시 재계산 |
-| **Reason** | 실무 오입력 수정 필요 vs 회차 조작·감사 추적 복잡성 trade-off |
-| **Risk** | 무제한 revert 시 used count 조작, SMS 상태 불일치, pass completed 조기 전환 |
-| **Affected** | `lessons.status` transitions, used/remaining function, `audit_logs`, SMS state |
+| **Original question** | Teacher가 schedule change request를 승인할 수 있는가, 제출만 가능한가? |
+| **Confirmed decision** | Teacher는 **제출·사유 기록·대체 일시 제안·배정 학생 관련 요청 조회**만 가능. **최종 승인·거절·연쇄 수업 이동 실행·타 강사 일정 변경**은 **Owner만** 가능 |
+| **Risk context** | Teacher 승인 허용 시 unauthorized cascade reschedule, 타 학생 일정 충돌 |
+| **Affected** | `schedule_change_requests`, RLS, Teacher/Owner UI |
 
 ---
 
-## 3. Pass expiration date requirement
+### OD-02 — Correcting completed lessons
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | 모든 pass에 **만료일(expiration date)** 이 필수인가? |
-| **Recommended default** | **Optional** — `expired` 상태는 만료일 또는 명시적 Owner action으로 전환 |
-| **Reason** | vocal academy는 회차 소진 중심; 만료 정책이 학원마다 다름 |
-| **Risk** | 필수 시 데이터 입력 부담; optional 시 만료 미관리 pass 장기 active |
-| **Affected** | `passes.expires_at`, cron/job for auto-expire, dashboard filters |
+| **Original question** | deductible/completed 수업을 non-deductible 상태로 되돌릴 수 있는가? |
+| **Confirmed decision** | **Owner만** 가능. **수정 사유 필수**. `audit_logs`에 previous/new value 기록. lesson, pass 계산, next lesson, SMS, dashboard counter를 **하나의 일관된 operation**으로 갱신. Teacher·Student 불가 |
+| **Risk context** | 무제한 revert 시 used count 조작, SMS 불일치 |
+| **Affected** | `lessons`, `passes`, `audit_logs`, SMS, dashboard |
 
 ---
 
-## 4. Multiple fixed schedule slots per pass
+### OD-03 — Pass expiration date
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | 하나의 pass가 **여러 고정 schedule slot**(예: 화 15:00 + 목 15:00)을 가질 수 있는가? |
-| **Recommended default** | **Yes** — `schedule_slots` 1:N to pass (or student+course); 주 2회 = 2 slots |
-| **Reason** | 주 2회(8 lessons) 상품은 요일 2개가 자연스러움; 단일 slot이면 모델 왜곡 |
-| **Risk** | N slots 시 lesson generation·cascade reschedule 복잡도 증가 |
+| **Original question** | 모든 pass에 만료일이 필수인가? |
+| **Confirmed decision** | **Optional**. 데이터 모델은 optional expiration date 지원. MVP는 모든 pass 자동 만료하지 않음. 만료 정책이 있는 product는 나중에 정의 가능. 만료일 없음 ≠ invalid pass |
+| **Risk context** | 필수 시 입력 부담; optional 시 만료 미관리 pass 장기 active |
+| **Affected** | `passes`, `course_products`, `expired` transition |
+
+---
+
+### OD-04 — Multiple fixed schedule slots
+
+| Field | Content |
+|-------|---------|
+| **Original question** | 하나의 pass가 여러 fixed schedule slot을 가질 수 있는가? |
+| **Confirmed decision** | **Yes**. 주 1회 보통 1 slot, 주 2회 보통 2 slot. 미래 product는 더 많은 slot 지원. 각 slot: weekday, local start time, duration, teacher, active state. **actual lesson date에서 slot 추론 금지** |
+| **Risk context** | N slots 시 lesson generation·cascade 복잡도 |
 | **Affected** | `schedule_slots`, lesson generation, weekly schedule UI |
 
 ---
 
-## 5. Makeup lesson linkage
+### OD-05 — Makeup lesson relationship
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | `makeup_completed` 수업을 **원본 취소 수업**과 어떻게 연결하는가? |
-| **Recommended default** | Optional `lessons.makeup_for_lesson_id` FK → 원본 lesson; pass sequence는 별도 번호 유지 |
-| **Reason** | 감사·통계에서 보강 vs 정규 구분; used count는 status로만 차감 |
-| **Risk** | FK 없으면 보강 추적 불가; FK 필수 시 미연결 makeup 입력 거부 필요 |
-| **Affected** | `lessons` schema, UI for makeup creation, reports |
+| **Original question** | `makeup_completed`를 원본 수업과 어떻게 연결하는가? |
+| **Confirmed decision** | makeup lesson은 **원인 lesson에 명시적 link** 필수. 원본 lesson 보존. makeup은 별도 lesson record. relationship queryable. **duplicate deduction 방지**. 원본 물리 대체·삭제 금지 |
+| **Risk context** | FK 없으면 보강 추적 불가 |
+| **Affected** | `lessons`, state-transitions, deduction rules |
 
 ---
 
-## 6. Refund impact on active or reserved passes
+### OD-06 — Refund effect
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | 환불 시 **active** 또는 **reserved** pass를 어떻게 처리하는가? |
-| **Recommended default** | Payment status `refunded`; linked pass → `cancelled`; unused lessons → non-deductible freeze; **no physical delete** |
-| **Reason** | 이력 보존 원칙; financial audit 필요 |
-| **Risk** | partial refund, mid-pass refund, reserved+active 동시 존재 시 정책 미정이면 데이터 불일치 |
-| **Affected** | `payments`, `passes`, renewal transaction, Owner UI |
+| **Original question** | 환불 시 active/reserved pass를 어떻게 처리하는가? |
+| **Confirmed decision** | **Reserved pass refund**: reserved pass `cancelled`, pass·payment 이력 보존, 이후 activate 금지. **Active pass refund**: OD-12 controlled workflow — Owner only, mandatory amount/reason, future non-deducted lessons → `advance_cancelled`, pass → `cancelled`, trusted transactional operation, audit 필수. lesson/pass 이력 silent destroy 금지 |
+| **Risk context** | partial refund, mid-pass refund 시 정책 미정이면 불일치 |
+| **Affected** | `payments`, `passes`, refund workflow, `audit_logs` |
 
 ---
 
-## 7. Multiple simultaneous courses per student
+### OD-07 — Multiple simultaneous courses
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | 한 학생이 **동시에 여러 course**(예: vocal + theory)를 수강할 수 있는가? |
-| **Recommended default** | **Yes** — pass uniqueness = (student, course); not global per student |
-| **Reason** | pass ID `V-S006-001`은 student scope; course별 active pass 규칙과 일치 |
-| **Risk** | No 시 실제 운영 course 추가 불가; Yes 시 UI·dashboard aggregation 복잡 |
-| **Affected** | `passes` unique constraints, student detail, dashboard counts |
+| **Original question** | 한 학생이 동시에 여러 course 수강 가능한가? |
+| **Confirmed decision** | **Yes**. (student, course)당 active pass **1개**, reserved pass **0 또는 1개**. 다른 course의 active pass와 충돌하지 않음 |
+| **Risk context** | UI·dashboard aggregation 복잡 |
+| **Affected** | `passes` uniqueness, student detail, dashboard |
 
 ---
 
-## 8. Tuition base amount storage
+### OD-08 — Tuition source (`course_products`)
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | 수강료 **기준 금액**은 어디에 저장하는가? |
-| **Recommended default** | `courses` (or product catalog table)에 default tuition; per-student override on `students` optional |
-| **Reason** | 과목별 상품 가격 + 개별 할인/약정 분리 |
-| **Risk** | courses only → 개별 계약 반영 어려움; students only → 과목별 관리 혼란 |
-| **Affected** | `courses`, `students`, dashboard "expected monthly tuition" |
+| **Original question** | 수강료 기준 금액은 어디에 저장하는가? |
+| **Confirmed decision** | **`course_products`** 테이블(계획) 도입. `courses` = 과목/커리큘럼. `course_products` = 상품(package): product name, course, default lesson count, weekly frequency, default tuition, optional expiration policy, active/inactive. **Phase 0A에서는 문서화만; table/SQL 미생성** |
+| **Risk context** | course와 commercial package 혼동 방지 |
+| **Affected** | `courses`, `course_products`, `passes`, payments |
 
 ---
 
-## 9. Tuition snapshot on passes and payments
+### OD-09 — Tuition snapshots
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | pass·payment 생성 시 **수강료 금액을 스냅샷** 저장하는가? |
-| **Recommended default** | **Yes** — `passes.tuition_amount`, `payments.amount` at transaction time immutable |
-| **Reason** | 기준가 변경 후에도 당시 계약·입금액 감사 가능 |
-| **Risk** | No snapshot → historical revenue/reporting 부정확 |
+| **Original question** | pass/payment 생성 시 금액 snapshot 저장하는가? |
+| **Confirmed decision** | **Yes**. Pass snapshot: product reference, product name, registered lesson count, weekly frequency, tuition amount, (future) discount/adjustment. Payment snapshot: paid amount, payment date, method, status, related pass, idempotency reference. **Product 가격 변경이 historical pass/payment amount 변경하지 않음** |
+| **Risk context** | No snapshot → historical revenue 부정확 |
 | **Affected** | `passes`, `payments`, dashboard, audit |
 
 ---
 
-## 10. Reserved pass limit (exactly one)
+### OD-10 — Reserved pass limit
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | reserved pass를 **정확히 1개**로 제한할지, **최대 1개**로 할지 |
-| **Recommended default** | **At most one** reserved per (student, course) — DB partial unique index |
-| **Reason** | 요구사항 "At most one reserved next pass"; 선결제 중복 방지 |
-| **Risk** | 0 reserved 허용은 정상; 2+ reserved 허용 시 activation 순서 충돌 |
-| **Affected** | `passes` constraints, payment renewal idempotency |
+| **Original question** | reserved pass를 exactly one vs at most one? |
+| **Confirmed decision** | **Zero or one** reserved per (student, course). reserved는 **필수 아님**. 동일 (student, course)에 reserved **2개 이상 금지** |
+| **Risk context** | 2+ reserved 시 activation 순서 충돌 |
+| **Affected** | `passes` constraints, payment renewal |
 
 ---
 
-## 11. Reactivating cancelled passes
+### OD-11 — Cancelled pass reactivation
 
 | Field | Content |
 |-------|---------|
-| **Decision required** | `cancelled` pass를 **다시 active**로 전환할 수 있는가? |
-| **Recommended default** | **No** — reactivation forbidden; issue new pass via new payment/Owner adjustment with audit |
-| **Reason** | 상태 이력 단순화; cancelled → active는 감사·회차 혼란 유발 |
-| **Risk** | Yes 시 lesson/pass state 복구 로직 복잡; No 시 Owner 실수 cancel 시 수동 보정 필요 |
+| **Original question** | `cancelled` pass를 다시 active로 전환할 수 있는가? |
+| **Confirmed decision** | **No**. `cancelled`는 terminal. 오취소 시: cancelled pass 보존, Owner-controlled correction workflow로 **신규 pass** 생성, correction reason/source link, `audit_logs` 기록 |
+| **Risk context** | reactivation 시 pass/lesson state 복구 복잡 |
 | **Affected** | pass state machine, Owner admin tools, `audit_logs` |
 
 ---
 
 ## Decision Log
 
-| ID | Topic | Status | Decided By | Date |
-|----|-------|--------|------------|------|
-| OD-01 | Teacher schedule approval | Open | — | — |
-| OD-02 | Completed lesson revert | Open | — | — |
-| OD-03 | Pass expiration required | Open | — | — |
-| OD-04 | Multiple schedule slots | Open | — | — |
-| OD-05 | Makeup lesson linkage | Open | — | — |
-| OD-06 | Refund policy | Open | — | — |
-| OD-07 | Multi-course per student | Open | — | — |
-| OD-08 | Tuition base storage | Open | — | — |
-| OD-09 | Tuition snapshot | Open | — | — |
-| OD-10 | Reserved pass limit | Open | — | — |
-| OD-11 | Cancelled pass reactivation | Open | — | — |
+| ID | Topic | Status | Confirmed Date |
+|----|-------|--------|----------------|
+| OD-01 | Teacher schedule authority | **Confirmed** | 2026-06-26 |
+| OD-02 | Completed lesson correction | **Confirmed** | 2026-06-26 |
+| OD-03 | Pass expiration optional | **Confirmed** | 2026-06-26 |
+| OD-04 | Multiple schedule slots | **Confirmed** | 2026-06-26 |
+| OD-05 | Makeup lesson linkage | **Confirmed** | 2026-06-26 |
+| OD-06 | Refund boundaries | **Confirmed** | 2026-06-26 |
+| OD-07 | Multi-course per student | **Confirmed** | 2026-06-26 |
+| OD-08 | `course_products` concept | **Confirmed** | 2026-06-26 |
+| OD-09 | Pass/payment snapshots | **Confirmed** | 2026-06-26 |
+| OD-10 | Zero or one reserved pass | **Confirmed** | 2026-06-26 |
+| OD-11 | No cancelled reactivation | **Confirmed** | 2026-06-26 |
+| OD-12 | Active-pass refund disposition | **Confirmed** | 2026-06-26 |
 
 ---
 
-## How to Close a Decision
+### OD-12 — Active-pass refund disposition
 
-1. Owner review of recommended default vs alternatives  
-2. Update this file: Status → **Decided**, record Decided By + Date  
-3. Propagate to `project-brief.md` (Confirmed section)  
-4. Update ERD / state diagrams in Phase 0  
-5. Add test scenarios for the decided behavior  
+| Field | Content |
+|-------|---------|
+| **Original question** | Active pass refund 시 remaining lessons 및 pass 후속 처리는? |
+| **Confirmed decision** | MVP active-pass refund = **남은 서비스 종료**, 모든 이력 **보존**. **Owner only**. refund amount·reason **필수**. completed/deductible historical lessons **변경 없음**. refunded active pass의 **future non-deducted** lessons → **`advance_cancelled`** (trusted single transaction). 각 affected future lesson의 **original scheduled data** audit history 보존. active pass → **`cancelled`** (terminal). used/remaining **수동 편집 금지** — lesson status + registered count snapshot에서 derived. original payment, pass, lesson records 보존. refund record: refunded amount, date, reason, actor. pass change + future-lesson cancel + refund record + SMS recalc + audit → **trusted operation** 일관 처리 |
+| **MVP exclusions** | Partial refund while pass stays active; remaining count transfer to other course/student/pass; credits or stored balances |
+| **Mistaken refund correction** | cancelled pass **reactivate 금지**; Owner-controlled **new pass correction workflow** (OD-11) |
+| **Risk context** | partial refund·credit·transfer 허용 시 financial/audit 복잡도 급증 |
+| **Affected** | `payments`, `passes`, `lessons`, `sms_notifications`, `audit_logs`, trusted refund function |
 
-**Do not implement ambiguous behavior until the decision is recorded.**
+---
+
+## Remaining Open Decisions
+
+**현재 비즈니스 open decision 없음.** OD-01 ~ OD-12 모두 authoritative requirements.
+
+Phase 0B 이후 설계에서 **새로운** ambiguous business rule이 발견되면 이 섹션에 기록하고 Owner 승인 후 구현합니다.
+
+### Phase 0B design deliverables (not open business decisions)
+
+- ERD, column design, indexes
+- RLS policy SQL
+
+상세: [roadmap.md](./roadmap.md)
+
+---
+
+## How to Close a New Decision
+
+1. Owner review
+2. 이 파일에 Status → **Confirmed**, 날짜 기록
+3. `project-brief.md` Confirmed 섹션 반영
+4. `domain-rules.md`, `permissions-matrix.md`, `state-transitions.md` 동기화
+5. Phase 0B ERD / test scenarios 갱신
+
+**기록되지 않은 ambiguous behavior는 구현하지 않습니다.**
