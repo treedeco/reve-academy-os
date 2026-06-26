@@ -174,6 +174,7 @@ Safe after failure; duplicate completion returns existing
 |--------|---------------|
 | Purpose | Ordinary lesson status change by teacher or owner |
 | Caller | Teacher (assigned) or Owner via trusted |
+| **Status** | **Implemented** — `public.reve_transition_lesson_status` (Phase 0B-3B-2B-1) |
 
 ### Allowed transitions
 
@@ -181,31 +182,83 @@ Per [state-transitions.md](./state-transitions.md) §1.4 matrix (excluding Owner
 
 ### Input
 
-- `lesson_id`, `new_status`, `reason`, `actual_start_at`, `actual_end_at`, `expected_updated_at`
-- Optional makeup source for new makeup row path (separate insert)
+- `p_lesson_id uuid`
+- `p_new_status text`
+- `p_expected_updated_at timestamptz`
+- `p_actual_started_at timestamptz` (default NULL)
+- `p_actual_ended_at timestamptz` (default NULL)
+- `p_reason text` (default NULL)
+
+### Output (explicit contract; not base-table row type)
+
+| Field | Type |
+|-------|------|
+| `lesson_id` | uuid |
+| `previous_status` | text |
+| `new_status` | text |
+| `lesson_updated_at` | timestamptz |
+| `pass_id` | uuid |
+| `pass_status` | text |
+| `registered_lesson_count` | integer |
+| `used_lesson_count` | integer |
+| `remaining_lesson_count` | integer |
+| `next_lesson_at` | timestamptz |
+| `sms_notification_status` | text |
+| `reserved_pass_activation_pending` | boolean |
 
 ### Authorization
 
-- Teacher: `teacher_can_access_lesson`
+- Teacher: `reve_private.teacher_can_access_lesson(p_lesson_id)`; profile from `public.profiles` only (JWT metadata ignored)
 - Owner: always
+- Student / unassigned teacher / inactive profile: `REVE_UNAUTHORIZED` (`42501`)
 
-### Steps
+### Lock order
 
-1. Lock lesson FOR UPDATE
-2. Stale check
-3. Validate transition allowed
-4. Validate reason / actual times per status rules
-5. UPDATE lesson status (deduction implicit — no count columns)
-6. Recalculate pass usage (read model / query)
-7. Recalculate next lesson pointer (derived)
-8. Recalculate SMS for pass (internal helper)
-9. If last deductible on active pass → call `activate_reserved_pass`
-10. Audit with previous/new JSON
-11. COMMIT or full ROLLBACK
+1. Resolve authenticated profile and role
+2. Lock target lesson `FOR UPDATE`
+3. Lock referenced pass `FOR UPDATE`
+4. Lock current pass SMS row when present `FOR UPDATE`
+5. Validate authorization, stale token, transition, reason, actual times
+6. Update lesson; recalc usage; sync pass lifecycle; next lesson; SMS; audit
+
+### Concurrency
+
+- Stale `p_expected_updated_at` → `REVE_STALE_STATE` (`22000`); no mutation; no audit
+
+### Pass synchronization
+
+- Usage derived from lesson statuses only (no count columns written on lessons)
+- Active pass with remaining = 0 → `completed` + `completed_at`
+- Returns `reserved_pass_activation_pending = true` when pass completes and a `reserved` pass exists for same student+course
+- **Does not** activate reserved pass (OD-14 provisional; deferred)
+
+### SMS synchronization
+
+- Recalculates unsent `renewal_reminder` row for pass; preserves `sent`
+- Message body template: `회차권 갱신 안내: 잔여 N회`
+- Asia/Seoul date for target window
+
+### Audit
+
+- Append-only `audit_logs` with shared `correlation_id` per RPC transaction
+- Lesson transition always logged; pass/SMS logged when changed
+
+### Failure codes
+
+| Code | Message | When |
+|------|---------|------|
+| `42501` | `REVE_UNAUTHORIZED` | Missing/invalid profile or denied role |
+| `22000` | `REVE_STALE_STATE` | Optimistic concurrency mismatch |
+| `P0001` | `REVE_INVALID_TRANSITION` | Matrix violation |
+| `P0001` | `REVE_REASON_REQUIRED` | Blank/whitespace reason |
+| `P0001` | `REVE_ACTUAL_START_REQUIRED` | `completed` without actual start |
+| `P0001` | `REVE_INVALID_ACTUAL_TIMES` | End before start |
+| `P0001` | `REVE_USAGE_EXCEEDED` | Deductible count > registered |
+| `P0001` | `REVE_PASS_CANCELLED` | Mutation on cancelled pass |
 
 ### Prohibited
 
-Direct count updates; cascade from this op; deductible→non-deductible (use correction op)
+Direct count updates; deductible→non-deductible (use correction op); dynamic SQL; exposing tuition/payment/audit internals in result
 
 ---
 
@@ -215,11 +268,40 @@ Direct count updates; cascade from this op; deductible→non-deductible (use cor
 |--------|---------------|
 | Purpose | Owner-only correction from deductible to non-deductible (OD-02) |
 | Caller | Owner only |
-| Input | lesson_id, new_status, mandatory reason, expected_updated_at |
-| Preconditions | From ∈ {completed, same_day_cancelled, makeup_completed}; to per ✓O matrix |
-| Locks | Lesson, pass FOR UPDATE |
-| Steps | Validate → update → usage recalc → SMS → audit |
-| Prohibited | Lesson DELETE; silent SQL from client |
+| **Status** | **Implemented** — `public.reve_correct_lesson_status` (Phase 0B-3B-2B-1) |
+
+### Input
+
+- `p_lesson_id uuid`
+- `p_new_status text`
+- `p_expected_updated_at timestamptz`
+- `p_reason text` (**mandatory**, non-empty after trim)
+- `p_actual_started_at timestamptz` (default NULL)
+- `p_actual_ended_at timestamptz` (default NULL)
+
+### Output
+
+Same explicit contract as §6.
+
+### Preconditions
+
+- From ∈ {`completed`, `same_day_cancelled`, `makeup_completed`}
+- To ∈ non-deductible targets per ✓O matrix in [state-transitions.md](./state-transitions.md)
+
+### Controlled correction reopening
+
+- When correction restores remaining lessons on a `completed` pass → pass may return to `active`; `completed_at` cleared
+- `cancelled` pass never reactivated
+- Audit action `pass.reopened_by_correction` when pass status changes
+
+### Security
+
+- `SECURITY DEFINER`, `search_path = ''`, owner `postgres`
+- `REVOKE` from `PUBLIC` and `anon`; `GRANT EXECUTE` to `authenticated`, `service_role`
+
+### Prohibited
+
+Lesson DELETE; silent SQL from client; teacher callers
 
 ---
 

@@ -1,6 +1,8 @@
 # Database Test Plan — REVE ACADEMY OS
 
-Phase **0B-2** database-level test specification. **Tests not implemented.** Execution: Phase 0B-3+ (pgTAP, Supabase test DB, or CI SQL harness).
+Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-1 (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
+
+Execution: `npx supabase test db` (transaction rollback per test file).
 
 Each case: **Setup → Actor → Operation → Expected result → Expected DB state → Expected audit → Cleanup**.
 
@@ -234,6 +236,22 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Derived values | DV-01 – DV-12 | 12 |
 | Provisional (OD-14–21) | PV-01 – PV-12 | 12 |
 | **Total** | | **108** |
+
+---
+
+## 8. Phase 0B-3B-2B-1 implemented coverage
+
+| Area | pgTAP file | Tests | Status |
+|------|------------|-------|--------|
+| Core schema / constraints | `phase_0b3a_core_schema.test.sql` | 60 | **Pass** |
+| Identity helpers + RLS | `phase_0b3b1_identity_rls.test.sql` | 111 | **Pass** |
+| Safe read RPCs | `phase_0b3b2a_safe_read_projections.test.sql` | 47 | **Pass** |
+| Lesson transitions + correction | `phase_0b3b2b1_lesson_transitions.test.sql` | 62 | **Pass** |
+| **Combined** | | **280** | **Pass** |
+
+Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion and reserved-pending flag (activation deferred), SMS state sync, audit correlation, unauthorized roles.
+
+**Still deferred** (no pgTAP in this phase): TX-01–TX-06 payment/renewal/reserved activation, TX-08–TX-14 schedule cascade and refund transactions, RC-01–RC-02 payment races, PV-01–PV-12 provisional policy cases.
 
 ---
 

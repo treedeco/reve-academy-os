@@ -126,7 +126,7 @@ No client INSERT/UPDATE for lifecycle fields or snapshots.
 | Student | Y | — | — | — | `student_owns_lesson(id)` |
 | Trusted | Y | T | T | — | Generation, correction, cascade |
 
-Student: no UPDATE. Teacher: no direct UPDATE policy (use `transition_lesson_status`).
+Student: no UPDATE. Teacher: **no direct UPDATE policy** — lesson status changes only via `public.reve_transition_lesson_status` or `public.reve_correct_lesson_status` (Phase 0B-3B-2B-1).
 
 ### 3.8 `payments`
 
@@ -252,7 +252,7 @@ Separate policies per command (SELECT, INSERT, UPDATE, DELETE) for clarity and t
 | Owner master-data mutation (students, teachers, courses, products) | No column-safe direct writes implemented; trusted operations pending |
 | Profile provisioning and role changes | Trusted-operation-only |
 | Profile `display_name` self-update | Not implemented in 0B-3B-1 |
-| Lesson status transitions | Trusted-operation-only |
+| Lesson status transitions | **Implemented** — `reve_transition_lesson_status`, `reve_correct_lesson_status` (0B-3B-2B-1); base-table UPDATE still denied |
 | Pass lifecycle changes | Trusted-operation-only |
 | Payment completion and renewal | Trusted-operation-only |
 | Refund processing | Trusted-operation-only |
@@ -278,4 +278,4 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions remain unimplemented (Phase 0B-3B-2B+).
+Business mutation functions: lesson status transitions **implemented** (Phase 0B-3B-2B-1); payment renewal, pass creation, refunds, schedule application, and remaining trusted ops **deferred** (Phase 0B-3B-2B+).
