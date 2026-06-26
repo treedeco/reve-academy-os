@@ -20,13 +20,14 @@ Legend for **Mutability**: `mutable` | `immutable` | `append-only` | `derived-no
 
 ## `profiles`
 
+**Phase 0B-2 physical mapping**: `id` **is** `auth.users.id` (same UUID). No separate `auth_user_id` column. See [postgresql-physical-design.md](./postgresql-physical-design.md) §3.
+
 | Column | Type | Null | Default | Source | Mutability | Description | Validation | Client write |
 |--------|------|------|---------|--------|------------|-------------|------------|--------------|
-| `id` | uuid | NO | gen | System | immutable | PK | | Trusted bootstrap |
-| `auth_user_id` | uuid | NO | — | Supabase Auth | immutable | FK → auth.users | unique | Trusted |
-| `role` | text | NO | — | Owner assign | mutable | `owner` \| `teacher` \| `student` | check enum | Owner† |
+| `id` | uuid | NO | auth | Supabase Auth | immutable | PK; FK → auth.users(id) | | Trusted bootstrap |
+| `role` | text | NO | — | Owner assign | mutable | `owner` \| `teacher` \| `student` | check enum | Trusted† |
 | `display_name` | text | NO | — | User/Owner | mutable | Display name | non-empty | Owner, Self (limited) |
-| `account_state` | text | NO | `active` | Owner | mutable | `active` \| `inactive` \| `suspended` | check | Owner |
+| `account_state` | text | NO | `active` | Owner | mutable | `active` \| `inactive` \| `suspended` | check | Trusted† |
 | `created_at` | timestamptz | NO | now | System | immutable | | | None |
 | `updated_at` | timestamptz | NO | now | System | mutable | | | System |
 
@@ -191,7 +192,7 @@ Rescheduling a **lesson** does not rewrite slot row by default.
 | `related_pass_id` | uuid | YES | — | Owner/Trusted | immutable | Prior pass if renewal | FK passes | Owner, Trusted |
 | `renewed_pass_id` | uuid | YES | — | Trusted | **immutable** | Created pass | FK; set once | Trusted |
 | `paid_amount_krw` | integer | NO | — | Owner | **immutable** | KRW at completion | >= 0 | Owner (pending), Trusted (complete) |
-| `payment_method` | text | NO | — | Owner | **immutable** | e.g. transfer, card | | Owner |
+| `payment_method` | text | YES | — | Owner | **immutable** | OD-18 provisional: `cash`, `bank_transfer`, `card`, `other`; NULL while pending | check when set | Owner (complete) |
 | `status` | text | NO | `pending` | Owner/Trusted | mutable | pending/completed/cancelled/refunded | check | Owner†, Trusted |
 | `paid_at` | timestamptz | YES | — | Trusted | **immutable** | Completion time | | Trusted |
 | `idempotency_key` | text | NO | — | Owner | **immutable** | Unique business key | globally unique | Owner (create) |
@@ -326,3 +327,4 @@ Append-only immutable refund history. **Row existence = successfully completed r
 - [data-model.md](./data-model.md)
 - [erd.md](./erd.md)
 - [data-integrity-constraints.md](./data-integrity-constraints.md)
+- [postgresql-physical-design.md](./postgresql-physical-design.md) (Phase 0B-2)

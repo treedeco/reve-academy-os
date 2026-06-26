@@ -7,9 +7,17 @@
 | 범주 | 설명 |
 |------|------|
 | **Confirmed (2026-06-26)** | OD-01 ~ OD-13 — 아래 **Confirmed Decisions** 섹션. **권위 있는 요구사항**으로 취급 |
-| **Open** | 현재 **비즈니스 open decision 없음**. Phase 0B-2+ 설계 deliverable(RLS SQL, migrations)은 별도 |
+| **Provisional (2026-06-26)** | OD-14 ~ OD-21 — **임시 기본값**; executable migration 및 UI 검증 전 Owner 재검토 필수. **영구 확정 요구사항 아님** |
 
 **Confirmed 결정은 `docs/project-brief.md`, `docs/domain-rules.md`, `docs/permissions-matrix.md`, `docs/state-transitions.md`에 반영되어야 합니다.**
+
+**Provisional 결정 (OD-14 ~ OD-21)**:
+
+- Phase 0B-2 아키텍처 계획용 **안전한 기본값**이며, 최종 Owner 승인 운영 정책이 **아님**.
+- **Phase 0B-3** executable migration 생성 **전** 반드시 재검토.
+- 관련 **UI phase**에서 사용자-facing 동작 재검토.
+- production migration **전** schema-affecting 변경은 physical design, trusted-operation contracts, database tests, migrations에 반영 후 적용.
+- Status: `Provisional — review before executable database implementation and again during UI workflow verification`
 
 ---
 
@@ -184,18 +192,130 @@
 
 ---
 
+## Provisional Decisions (2026-06-26)
+
+**Status for OD-14 ~ OD-21**: `Provisional — review before executable database implementation and again during UI workflow verification`
+
+These are **safe defaults** selected to allow continued development. They are **not** final owner-approved operating policies.
+
+**Review points** (all OD-14 ~ OD-21):
+
+1. Before Phase 0B-3 creates executable migrations
+2. During the related UI phase (see each OD)
+3. Before production data migration
+
+Any change must update [postgresql-physical-design.md](./postgresql-physical-design.md), [trusted-operation-contracts.md](./trusted-operation-contracts.md), [database-test-plan.md](./database-test-plan.md), and [database-migration-plan.md](./database-migration-plan.md) before production use.
+
+---
+
+### OD-14 — Reserved-pass start date calculation
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | A **reserved** pass does **not** receive final lesson dates until activation. When the current pass finishes, the **first valid configured schedule slot after completion** becomes the new pass’s first lesson. |
+| **UI review** | Pass-renewal UI design |
+| **Affected** | `passes.start_date`, `complete_payment_and_renew_pass`, `activate_reserved_pass`, lesson generation |
+
+---
+
+### OD-15 — Schedule slot copy on renewal
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | Active schedule slots from the **current pass** are **copied** into the new pass as **independent snapshot rows**. Owner may edit before activation. Later changes to the previous pass’s slots do **not** change the new pass. |
+| **UI review** | Pass-renewal / schedule-slot editor UI |
+| **Affected** | `schedule_slots`, `complete_payment_and_renew_pass`, `replace_pass_schedule_slots` |
+
+---
+
+### OD-16 — Lesson generation order (multiple weekly slots)
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | Generate lesson occurrences in **chronological order**. When timestamps are equal, use `slot_order`. Assign `sequence_number` from the sorted result. |
+| **UI review** | Weekly schedule / lesson list UI |
+| **Affected** | `reve_generate_lessons_from_schedule_slots`, `lessons.sequence_number` |
+
+---
+
+### OD-17 — Generated lesson collision handling
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | Do **not** automatically move a lesson to an arbitrary alternative time. **Stop** the operation and return a **collision list**. Owner changes the schedule and retries. |
+| **UI review** | Schedule change / collision presentation UI |
+| **Affected** | `apply_schedule_change_request`, `cascade_reschedule_lessons`, lesson generation |
+
+---
+
+### OD-18 — Payment method allowed values
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional values** | `cash`, `bank_transfer`, `card`, `other` |
+| **Provisional rules** | Pending payment may have **no** payment method (`NULL`). Completed payment **requires** a payment method. `other` requires a note (application/trusted validation). |
+| **UI review** | Payment UI — labels and additional methods |
+| **Affected** | `payments.payment_method`, CHECK constraint, `complete_payment_and_renew_pass` |
+
+---
+
+### OD-19 — Account deletion vs deactivation
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | **No physical deletion** during MVP. Deactivate login and business records instead. Personal-data anonymization is a **future** owner-controlled workflow. Historical passes, lessons, payments, refunds, and audit history **remain preserved**. |
+| **UI review** | Account / profile admin UI |
+| **Affected** | `profiles`, `auth.users`, `students`, `teachers`, audit FKs |
+
+---
+
+### OD-20 — Student visibility of SMS message content
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | Student may read **only** the final message content (`message_body_snapshot`) related to **their own current pass** when the product UI exposes it. Internal SMS calculation state, audit information, actor information, and administrative metadata remain **hidden**. |
+| **UI review** | Student page / payment notice UI |
+| **Affected** | `sms_notifications` RLS, Student PWA |
+
+---
+
+### OD-21 — Owner profile count
+
+| Field | Content |
+|-------|---------|
+| **Status** | **Provisional** (2026-06-26) |
+| **Provisional default** | **Multiple** owner profiles allowed. At least **one active owner** must always remain. The **final active owner** cannot remove or deactivate their own owner access. |
+| **UI review** | Owner-management UI before implementation |
+| **Affected** | `profiles.role`, `provision_profile`, `set_profile_role`, `is_owner()` |
+
+---
+
 ## Remaining Open Decisions
 
-**현재 비즈니스 open decision 없음.** OD-01 ~ OD-13 모두 authoritative requirements.
+**현재 Open status 항목 없음.** OD-14 ~ OD-21은 **Provisional** (위 섹션).
 
-Phase 0B-2 이후 설계에서 **새로운** ambiguous business rule이 발견되면 이 섹션에 기록하고 Owner 승인 후 구현합니다.
+---
 
-### Phase 0B design deliverables (not open business decisions)
+## Decision Log (updated)
 
-- RLS policy SQL (Phase 0B-2)
-- Migration scripts
-
-상세: [roadmap.md](./roadmap.md), [data-model.md](./data-model.md)
+| ID | Topic | Status |
+|----|-------|--------|
+| OD-01 – OD-13 | See Confirmed above | **Confirmed** 2026-06-26 |
+| OD-14 | Reserved pass start date | **Provisional** 2026-06-26 |
+| OD-15 | Schedule slot copy on renewal | **Provisional** 2026-06-26 |
+| OD-16 | Multi-slot lesson generation order | **Provisional** 2026-06-26 |
+| OD-17 | Lesson collision handling | **Provisional** 2026-06-26 |
+| OD-18 | Payment method values | **Provisional** 2026-06-26 |
+| OD-19 | Account deletion vs deactivation | **Provisional** 2026-06-26 |
+| OD-20 | Student SMS content visibility | **Provisional** 2026-06-26 |
+| OD-21 | Owner profile count | **Provisional** 2026-06-26 |
 
 ---
 

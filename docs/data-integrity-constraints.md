@@ -472,9 +472,47 @@ Apply **PG** `CHECK` on text status columns aligned with [state-transitions.md](
 
 ---
 
+## 38. `passes_composite_parent_key`
+
+| Field | Value |
+|-------|-------|
+| Type | unique |
+| Table | `passes` (`id`, `student_id`, `course_id`) |
+| Purpose | Composite FK parent for lesson denormalized consistency |
+| Blocks | Lesson referencing pass with mismatched student/course |
+| Enforcement | **PG** UNIQUE + composite FK from `lessons` |
+
+---
+
+## 39. `profiles_id_equals_auth_user`
+
+| Field | Value |
+|-------|-------|
+| Type | FK |
+| Table | `profiles` (`id` → `auth.users(id)`) |
+| Purpose | Single identity column; no separate auth_user_id |
+| Blocks | Profile without auth user; duplicate auth mapping |
+| Enforcement | **PG** PK/FK ON DELETE RESTRICT |
+
+---
+
+## 40. `payments_payment_method_provisional`
+
+| Field | Value |
+|-------|-------|
+| Type | check + TF |
+| Table | `payments` |
+| Purpose | OD-18 provisional — NULL while pending; enum when set; required on completed |
+| Blocks | Invalid method value; completed without method |
+| Enforcement | **PG** CHECK (when not null); **TF** on completion |
+| Status | **Provisional** — review before executable migration |
+
+---
+
 ## Related documents
 
 - [data-model.md](./data-model.md)
 - [schema-dictionary.md](./schema-dictionary.md)
 - [erd.md](./erd.md)
 - [state-transitions.md](./state-transitions.md)
+- [postgresql-physical-design.md](./postgresql-physical-design.md) (Phase 0B-2)
