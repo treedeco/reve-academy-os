@@ -6,8 +6,8 @@
 
 | 범주 | 설명 |
 |------|------|
-| **Confirmed (2026-06-26)** | OD-01 ~ OD-12 — 아래 **Confirmed Decisions** 섹션. **권위 있는 요구사항**으로 취급 |
-| **Open** | 현재 **비즈니스 open decision 없음**. Phase 0B 설계 deliverable(ERD, RLS SQL)은 별도 로드맵 항목 |
+| **Confirmed (2026-06-26)** | OD-01 ~ OD-13 — 아래 **Confirmed Decisions** 섹션. **권위 있는 요구사항**으로 취급 |
+| **Open** | 현재 **비즈니스 open decision 없음**. Phase 0B-2+ 설계 deliverable(RLS SQL, migrations)은 별도 |
 
 **Confirmed 결정은 `docs/project-brief.md`, `docs/domain-rules.md`, `docs/permissions-matrix.md`, `docs/state-transitions.md`에 반영되어야 합니다.**
 
@@ -15,7 +15,7 @@
 
 ## Confirmed Decisions (2026-06-26)
 
-다음 12개 결정은 Owner에 의해 **2026-06-26** 확정되었으며, 더 이상 open이 아닙니다.
+다음 13개 결정은 Owner에 의해 **2026-06-26** 확정되었으며, 더 이상 open이 아닙니다.
 
 ---
 
@@ -156,6 +156,7 @@
 | OD-10 | Zero or one reserved pass | **Confirmed** | 2026-06-26 |
 | OD-11 | No cancelled reactivation | **Confirmed** | 2026-06-26 |
 | OD-12 | Active-pass refund disposition | **Confirmed** | 2026-06-26 |
+| OD-13 | Refund-record cardinality | **Confirmed** | 2026-06-26 |
 
 ---
 
@@ -172,18 +173,29 @@
 
 ---
 
+### OD-13 — Refund-record cardinality per payment
+
+| Field | Content |
+|-------|---------|
+| **Original question** | MVP에서 동일 payment에 refund 기록을 몇 건 허용할지 |
+| **Confirmed decision** | MVP: payment당 **0 또는 1** completed refund record. 동일 payment에 **2건 이상 금지**. Partial refund **MVP 제외**. `payment_refunds` row existence = **성공적으로 완료된 refund**; 실패 시 trusted transaction **rollback**, refund row **미생성**. `payment_refunds.payment_id` **MVP unique**. Refund row **immutable**; 물리 삭제·silent edit **금지**. Mistaken refund → Owner correction workflow + audit; **원본 refund record 보존**. Multiple/partial refund → **future explicitly approved model extension** |
+| **Risk context** | Multi-row 허용 시 partial refund·audit 복잡; single-row limit 시 correction workflow 필요 |
+| **Affected** | `payment_refunds`, `payments`, trusted refund function, integrity constraints |
+
+---
+
 ## Remaining Open Decisions
 
-**현재 비즈니스 open decision 없음.** OD-01 ~ OD-12 모두 authoritative requirements.
+**현재 비즈니스 open decision 없음.** OD-01 ~ OD-13 모두 authoritative requirements.
 
-Phase 0B 이후 설계에서 **새로운** ambiguous business rule이 발견되면 이 섹션에 기록하고 Owner 승인 후 구현합니다.
+Phase 0B-2 이후 설계에서 **새로운** ambiguous business rule이 발견되면 이 섹션에 기록하고 Owner 승인 후 구현합니다.
 
 ### Phase 0B design deliverables (not open business decisions)
 
-- ERD, column design, indexes
-- RLS policy SQL
+- RLS policy SQL (Phase 0B-2)
+- Migration scripts
 
-상세: [roadmap.md](./roadmap.md)
+상세: [roadmap.md](./roadmap.md), [data-model.md](./data-model.md)
 
 ---
 
