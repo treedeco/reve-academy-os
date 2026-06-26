@@ -225,3 +225,41 @@ Separate policies per command (SELECT, INSERT, UPDATE, DELETE) for clarity and t
 - [trusted-operation-contracts.md](./trusted-operation-contracts.md)
 - [permissions-matrix.md](./permissions-matrix.md)
 - [database-test-plan.md](./database-test-plan.md)
+
+---
+
+## 6. Phase 0B-3B-1 implementation status
+
+**Implemented (Phase 0B-3B-1, tag `phase-0b3b1-identity-rls`):**
+
+- Private authorization schema `reve_private` (not exposed via Supabase Data API)
+- Identity helpers: `current_profile_id()`, `current_app_role()`, `is_owner()`, `current_teacher_id()`, `current_student_id()`, `teacher_can_access_student()`, `teacher_can_access_lesson()`, `teacher_can_access_schedule_slot()`, `teacher_can_access_schedule_request()`, `student_owns_lesson()`, `student_owns_schedule_slot()`, `student_owns_schedule_request()`
+- Least-privilege `SELECT` grants for `authenticated` on all 15 application tables (RLS predicates enforce role scope)
+- Role-scoped RLS policies targeting `authenticated` only (no `anon` policies; no `DELETE` policies)
+- Direct client writes limited to:
+  - Teacher `INSERT` / column-limited `UPDATE` on `lesson_notes`
+  - Student and teacher `INSERT` on `schedule_change_requests` (submitted-only; decision fields protected)
+
+**Intentionally deferred (not available through the client yet):**
+
+| Deferred path | Reason |
+|---------------|--------|
+| Teacher pass-usage summary | Pass base table withheld from teachers (financial snapshots) |
+| Student pass summary | Pass base table withheld from students |
+| Student payment-facing summary | Payment base table withheld from students |
+| Student teacher-display projection | Full `teachers` table withheld from students (internal contact fields) |
+| Student SMS message projection | SMS base table withheld from students while OD-20 is provisional |
+| Owner master-data mutation (students, teachers, courses, products) | No column-safe direct writes implemented; trusted operations pending |
+| Profile provisioning and role changes | Trusted-operation-only |
+| Profile `display_name` self-update | Not implemented in 0B-3B-1 |
+| Lesson status transitions | Trusted-operation-only |
+| Pass lifecycle changes | Trusted-operation-only |
+| Payment completion and renewal | Trusted-operation-only |
+| Refund processing | Trusted-operation-only |
+| Schedule request approval / rejection / application | No direct UPDATE policies in 0B-3B-1 |
+| Schedule cascading | Trusted-operation-only |
+| SMS recalculation | Trusted-operation-only |
+| Audit log insertion | Trusted-operation-only |
+| Lesson schedule change event insertion | Trusted-operation-only |
+
+Do not treat the above as client-available features until a later phase implements safe projections or trusted operations.
