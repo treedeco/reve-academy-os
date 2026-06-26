@@ -263,3 +263,19 @@ Separate policies per command (SELECT, INSERT, UPDATE, DELETE) for clarity and t
 | Lesson schedule change event insertion | Trusted-operation-only |
 
 Do not treat the above as client-available features until a later phase implements safe projections or trusted operations.
+
+---
+
+## 7. Phase 0B-3B-2A safe read projection status
+
+Direct base-table access remains **denied** for teacher/student roles where previously denied (passes, payments, payment_refunds, sms_notifications, teachers full row for students, course_products). Safe data is exposed only through read-only RPC functions below.
+
+| Function | Role | Base tables read (definer) | Safe fields returned | Sensitive fields omitted | Authorization | Provisional | Status |
+|----------|------|----------------------------|------------------------|--------------------------|---------------|-------------|--------|
+| `reve_get_my_pass_summary()` | Student | `passes`, `courses`, `lessons`, `schedule_slots`, `teachers` | pass/course identifiers, status, registered/used/remaining counts, next lesson, dates, teacher display name | tuition, discount, product price, payment ids, audit | `current_student_id()` + active profile | OD-14 reserved next-lesson null allowed | **Implemented** |
+| `reve_get_my_assigned_student_summaries()` | Teacher | `passes`, `students`, `courses`, `lessons`, `schedule_slots` | student/course/pass identifiers, usage counts, next lesson, slot weekday/time | phone, email, tuition, payments, SMS, notes | current active/reserved pass assignment only | — | **Implemented** |
+| `reve_get_my_payment_summary()` | Student | `payments`, `courses`, `passes` (code only) | payment id, pass code, course display, amount, status, method, timestamps | idempotency key, processed_at, created_by, refund rows | `current_student_id()` | — | **Implemented** |
+| `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
+| `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
+
+Business mutation functions remain unimplemented (Phase 0B-3B-2B+).

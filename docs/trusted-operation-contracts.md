@@ -377,6 +377,74 @@ All internal: `REVOKE EXECUTE FROM PUBLIC, authenticated`; callable only from ot
 
 ---
 
+## Read-only client RPC contracts (Phase 0B-3B-2A)
+
+These are **not** mutation operations. Wrong role or inactive profile → **empty result set** (no row-existence leak).
+
+### `reve_get_my_pass_summary()`
+
+| Aspect | Specification |
+|--------|---------------|
+| Purpose | Student operational pass usage summary for UI |
+| Caller | Authenticated student (`profiles.role = student`, active) |
+| Inputs | None (uses `auth.uid()`) |
+| Output | One row per current `active`/`reserved` pass: pass/course ids and codes, status, registered/used/remaining counts, next scheduled lesson, dates, assigned teacher display name |
+| Authorization | `reve_private.current_student_id()`; no caller-supplied ids |
+| Sensitive exclusions | Tuition/discount snapshots, product pricing, payment/audit fields |
+| Empty result | Non-student, inactive profile, or no qualifying passes |
+| Failure | No detailed authorization exceptions |
+| Provisional | OD-14: reserved pass may have null next lesson |
+
+### `reve_get_my_assigned_student_summaries()`
+
+| Aspect | Specification |
+|--------|---------------|
+| Purpose | Teacher operational view of currently assigned students |
+| Caller | Authenticated teacher (active) |
+| Inputs | None |
+| Output | Student/course/pass identifiers, usage counts, next assigned lesson, slot weekday/time |
+| Authorization | Active/reserved pass with current teacher slot or lesson assignment; historical-only pass does not qualify |
+| Sensitive exclusions | Student contact, tuition, payments, SMS, notes, other teachers' data |
+| Empty result | Non-teacher or no current assignments |
+
+### `reve_get_my_payment_summary()`
+
+| Aspect | Specification |
+|--------|---------------|
+| Purpose | Student payment-facing history |
+| Caller | Authenticated student (active) |
+| Inputs | None |
+| Output | Payment id, related pass code, course display, paid amount, status, method, paid/created timestamps |
+| Authorization | Own `student_id` only |
+| Sensitive exclusions | Idempotency key, processed_at, created_by, refund base rows |
+| Empty result | Non-student; no payments |
+
+### `reve_get_my_teacher_display()`
+
+| Aspect | Specification |
+|--------|---------------|
+| Purpose | Student-safe teacher list for current enrollment |
+| Caller | Authenticated student (active) |
+| Inputs | None |
+| Output | Distinct teacher id/code/name per course from active/reserved passes, slots, future lessons |
+| Sensitive exclusions | Phone, email, internal teacher account fields |
+| Empty result | Non-student; no linked teachers |
+
+### `reve_get_my_current_notice()`
+
+| Aspect | Specification |
+|--------|---------------|
+| Purpose | Student current-pass payment/SMS notice (MVP) |
+| Caller | Authenticated student (active) |
+| Inputs | None |
+| Output | Pass id/code, course name, message body snapshot, target date, sent timestamp |
+| Authorization | Current active/reserved pass; non-empty message body only |
+| Sensitive exclusions | SMS status calculation, actor ids, notification type, audit metadata |
+| Empty result | Non-student; no user-facing message on current pass |
+| Provisional | **OD-20** — subject to owner review; not hardened as irreversible policy |
+
+---
+
 ## Related documents
 
 - [postgresql-physical-design.md](./postgresql-physical-design.md)
