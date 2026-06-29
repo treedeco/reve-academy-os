@@ -1,6 +1,6 @@
 # Database Test Plan — REVE ACADEMY OS
 
-Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-1 (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
+Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-2 (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
 
 Execution: `npx supabase test db` (transaction rollback per test file).
 
@@ -247,13 +247,16 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Identity helpers + RLS | `phase_0b3b1_identity_rls.test.sql` | 111 | **Pass** |
 | Safe read RPCs | `phase_0b3b2a_safe_read_projections.test.sql` | 47 | **Pass** |
 | Lesson transitions + correction | `phase_0b3b2b1_lesson_transitions.test.sql` | 62 | **Pass** |
-| **Combined** | | **280** | **Pass** |
+| Payment renewal + reserved activation | `phase_0b3b2b2_payment_renewal.test.sql` | 47 | **Pass** |
+| **Combined** | | **327** | **Pass** |
 
-Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion and reserved-pending flag (activation deferred), SMS state sync, audit correlation, unauthorized roles.
+Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion with automatic reserved activation (0B-3B-2B-2), SMS state sync, audit correlation, unauthorized roles.
 
-**Still deferred** (no pgTAP in this phase): TX-01–TX-06 payment/renewal/reserved activation, TX-08–TX-14 schedule cascade and refund transactions, RC-01–RC-02 payment races, PV-01–PV-12 provisional policy cases.
+## 9. Phase 0B-3B-2B-2 implemented coverage
 
----
+Payment-renewal tests cover: RPC existence/security, payment completion, pass sequence and public code, active vs reserved creation, 4/8 lesson products, schedule snapshot copy, lesson scheduling (Asia/Seoul), reserved activation (manual and automatic), idempotency, optimistic concurrency, SMS initialization, audit correlation, scope isolation.
+
+**Still deferred** (no pgTAP in this phase): TX-08–TX-14 schedule cascade and refund transactions, RC-01–RC-02 payment races (partial coverage in 0B-3B-2B-2), PV-01–PV-12 provisional policy cases.
 
 ## Related documents
 

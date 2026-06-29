@@ -309,9 +309,20 @@ Refund does **not** physically delete payment, pass, or lesson data. Refund does
 | Owner correction (✓O cells) | `public.reve_correct_lesson_status` | Mandatory reason |
 | Pass completion when remaining = 0 | Automatic inside both RPCs | Sets `completed_at`; no pass delete |
 | Controlled pass reopen after correction | Inside `reve_correct_lesson_status` only | `completed` → `active` when remaining > 0 |
-| Reserved pass activation | **Deferred** | Returns `reserved_pass_activation_pending`; OD-14 provisional |
+| Reserved pass activation | **Implemented (0B-3B-2B-2)** | Automatic on final lesson or `reve_activate_reserved_pass`; OD-14~16 provisional |
 | Usage / remaining counts | Derived in RPC result | Not persisted on `lessons` |
 | SMS recalc | `reve_private.synchronize_sms_notification` | Preserves `sent` on same pass |
+
+---
+
+## 7. Phase 0B-3B-2B-2 payment and activation mapping
+
+| Behavior | RPC / path | Notes |
+|----------|------------|-------|
+| Payment pending → completed | `public.reve_complete_payment_and_renew_pass` | Owner only; idempotent |
+| New pass active vs reserved | Same RPC | Reserved when active pass has remaining lessons |
+| Reserved → active | `public.reve_activate_reserved_pass` or automatic lesson transition | Lessons generated at activation |
+| Payment links one pass | `payments.renewed_pass_id` unique partial index | No second pass per payment |
 
 ---
 

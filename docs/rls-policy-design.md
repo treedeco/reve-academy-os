@@ -254,8 +254,8 @@ Separate policies per command (SELECT, INSERT, UPDATE, DELETE) for clarity and t
 | Profile `display_name` self-update | Not implemented in 0B-3B-1 |
 | Lesson status transitions | **Implemented** — `reve_transition_lesson_status`, `reve_correct_lesson_status` (0B-3B-2B-1); base-table UPDATE still denied |
 | Pass lifecycle changes | Trusted-operation-only |
-| Payment completion and renewal | Trusted-operation-only |
-| Refund processing | Trusted-operation-only |
+| Payment completion and renewal | **Implemented** — `reve_complete_payment_and_renew_pass` (0B-3B-2B-2); base-table writes denied |
+| Reserved pass activation | **Implemented** — `reve_activate_reserved_pass` + automatic hook from lesson transition (0B-3B-2B-2) |
 | Schedule request approval / rejection / application | No direct UPDATE policies in 0B-3B-1 |
 | Schedule cascading | Trusted-operation-only |
 | SMS recalculation | Trusted-operation-only |
@@ -278,4 +278,4 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions: lesson status transitions **implemented** (Phase 0B-3B-2B-1); payment renewal, pass creation, refunds, schedule application, and remaining trusted ops **deferred** (Phase 0B-3B-2B+).
+Business mutation functions: lesson status transitions (0B-3B-2B-1), **payment renewal and reserved activation (0B-3B-2B-2)** implemented; refunds, schedule application, and remaining trusted ops **deferred**.

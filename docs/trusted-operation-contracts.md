@@ -86,71 +86,68 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 |--------|---------------|
 | Purpose | Idempotent payment completion + pass renewal |
 | Caller | Owner trusted |
+| **Status** | **Implemented** — `public.reve_complete_payment_and_renew_pass` (Phase 0B-3B-2B-2) |
 
 ### Input contract
 
-- `payment_id uuid`
-- `idempotency_key text` (must match payment row)
-- `expected_payment_updated_at timestamptz`
-- `payment_method text` (required at completion — OD-18 provisional: `cash`, `bank_transfer`, `card`, `other`)
-- `payment_method_note text` (required when method = `other`)
-- Optional schedule slot edits after copy (OD-15)
+- `p_payment_id uuid`
+- `p_expected_payment_updated_at timestamptz`
+- `p_paid_amount_krw integer` (must match payment row and product tuition)
+- `p_payment_method text` (`cash`, `bank_transfer`, `card`, `other` — OD-18 provisional)
+- `p_paid_at timestamptz`
+- `p_idempotency_key text` (must match payment row)
 
 ### Output contract
 
-- `payment_id`, `renewed_pass_id`, `pass_code`, `pass_status` (active or reserved)
-- Existing result if already processed
+| Field | Type |
+|-------|------|
+| `payment_id` | uuid |
+| `payment_status` | text |
+| `payment_updated_at` | timestamptz |
+| `new_pass_id` | uuid |
+| `new_pass_public_code` | text |
+| `new_pass_sequence` | integer |
+| `new_pass_status` | text |
+| `registered_lesson_count` | integer |
+| `lesson_rows_created` | integer |
+| `schedule_slots_copied` | integer |
+| `activation_required` | boolean |
+| `activated_at` | timestamptz |
+| `first_lesson_at` | timestamptz |
+| `idempotent_replay` | boolean |
 
-### Ordered steps
+### Lock order
 
-1. Authenticate and authorize owner
-2. Validate payment status = `pending` (or completed for idempotent return)
-3. `SELECT payment FOR UPDATE`; validate stale
-4. Check idempotency: if `renewed_pass_id` set → return existing bundle
-5. Load student, course, product, related_pass
-6. `SELECT student FOR UPDATE` (race-safe sequence)
-7. Compute next sequence + pass_code (internal helper)
-8. Decide **active vs reserved** (existing active pass → reserved per OD-10)
-9. Preserve all previous pass/lesson history (no deletes)
-10. INSERT pass with immutable snapshots (OD-09)
-11. **Copy active schedule slots** from current pass as independent rows (OD-15 provisional); Owner edits allowed before commit
-12. **Reserved pass**: set placeholder `start_date`; **defer lesson generation** until activation (OD-14 provisional). **Active pass**: generate lessons now using chronological order / `slot_order` tie-break (OD-16 provisional)
-13. Run **collision detection**; on conflict abort with collision list — no auto-move (OD-17 provisional)
-14. UPDATE payment: status completed, renewed_pass_id, paid_at, processed_at, payment_method
-15. INSERT sms_notifications row for new pass (reset lifecycle)
-16. Append audit logs with shared `correlation_id`
-17. COMMIT only if all succeed
+1. Owner profile validation
+2. Payment `FOR UPDATE`
+3. Transaction-scoped advisory lock on `(student_id, course_id)`
+4. Existing active/reserved passes `FOR UPDATE`
+5. Pass insert, slot copy, optional lesson generation, SMS, payment update, audit
 
-### Locks
+### Active vs reserved
 
-Payment row, student row, prior active pass row if status transition needed
+- Active pass with **remaining > 0** → new pass `reserved`; lessons **deferred** (schema: `scheduled_at NOT NULL`)
+- No active pass (or prior completed) → new pass `active`; lessons generated in same transaction
 
 ### Idempotency
 
-Same idempotency_key / payment already completed → return same renewed_pass_id
+- Completed payment + matching key → safe replay (`idempotent_replay = true`); no duplicate pass/lessons/SMS/audit
+- Conflicting key, amount, or method → `REVE_IDEMPOTENCY_CONFLICT`
 
-### SMS
+### Failure codes
 
-New pass → new SMS row; prior pass SMS preserved
-
-### Failure
-
-Full ROLLBACK; payment stays pending; no pass, no lessons, no SMS
-
-### Retry
-
-Safe after failure; duplicate completion returns existing
+`REVE_UNAUTHORIZED`, `REVE_STALE_STATE`, `REVE_IDEMPOTENCY_CONFLICT`, `REVE_PAYMENT_NOT_COMPLETABLE`, `REVE_PAYMENT_AMOUNT_MISMATCH`, `REVE_INVALID_PAYMENT_METHOD`, `REVE_RESERVED_EXISTS`, `REVE_NO_SCHEDULE`, `REVE_SCHEDULE_COLLISION`
 
 ---
 
-### Provisional policies (OD-14 ~ OD-17) — subject to owner review before executable migration
+### Provisional policies (OD-14 ~ OD-17) — **implemented as provisional; Owner UI review still required**
 
 | OD | Policy |
 |----|--------|
-| OD-14 | Reserved pass: no final lesson dates until activation; on activation first valid slot after prior pass completion |
-| OD-15 | Copy active slots to new pass as independent snapshot rows; prior pass edits do not propagate |
-| OD-16 | Lesson order: chronological, tie-break `slot_order`, then sequence_number |
-| OD-17 | Collision: stop + return list; no arbitrary auto-reschedule |
+| OD-14 | Reserved pass: lessons generated at activation; first slot after prior pass completion boundary |
+| OD-15 | Copy active slots to new pass as independent snapshot rows |
+| OD-16 | Lesson order: chronological; tie-break `slot_order` |
+| OD-17 | Collision: abort with `REVE_SCHEDULE_COLLISION`; no auto-reschedule |
 
 ---
 
@@ -159,12 +156,30 @@ Safe after failure; duplicate completion returns existing
 | Aspect | Specification |
 |--------|---------------|
 | Purpose | Transition reserved → active when prior pass completes |
-| Caller | Trusted (triggered from lesson completion or manual owner) |
-| Preconditions | Exactly one reserved; prior active completed or cancelled; not cancelled terminal |
-| Locks | Student, both passes FOR UPDATE |
-| Steps | Validate → compute first lesson from first valid slot after completion (OD-14 provisional) → generate deferred lessons (OD-16) → collision check (OD-17) → UPDATE reserved status → set activated_at → audit |
-| Idempotency | If already active → no-op success |
-| Prohibited | Reactivating cancelled pass (OD-11) |
+| Caller | Owner manual RPC; **automatic** from lesson-transition transaction |
+| **Status** | **Implemented** — `public.reve_activate_reserved_pass` + auto hook in `synchronize_pass_after_lesson_change` (Phase 0B-3B-2B-2) |
+
+### Input
+
+- `p_reserved_pass_id uuid`
+- `p_expected_pass_updated_at timestamptz`
+- `p_reason text` (optional for manual; recorded in audit when provided)
+
+### Output
+
+`pass_id`, `pass_public_code`, `previous_status`, `new_status`, `pass_updated_at`, `activated_at`, `lessons_scheduled`, `first_lesson_at`, `last_lesson_at`, `previous_pass_id`, `idempotent_replay`
+
+### Automatic activation
+
+When the final deductible lesson completes the current active pass, reserved pass activation runs **in the same transaction**. Failure rolls back pass completion and lesson transition. `reserved_pass_activation_pending` is always `false` after success.
+
+### Manual activation preconditions
+
+Reserved status; no other active pass; previous pass completed; schedule slots present; stale token valid or pass already active (idempotent).
+
+### Prohibited
+
+Reactivating cancelled pass (OD-11)
 
 ---
 

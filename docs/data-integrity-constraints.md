@@ -509,6 +509,23 @@ Apply **PG** `CHECK` on text status columns aligned with [state-transitions.md](
 
 ---
 
+## Phase 0B-3B-2B-2 runtime protections (payment renewal)
+
+| Protection | Mechanism |
+|------------|-----------|
+| One active pass per student/course | Partial unique index + TF validation before insert |
+| At most one reserved pass | Partial unique index + `REVE_RESERVED_EXISTS` |
+| Pass sequence and code uniqueness | `next_pass_sequence` under advisory lock + unique indexes |
+| One payment → one pass | `payments.renewed_pass_id` partial unique + idempotency key |
+| Exact registered lesson count | Product snapshot + lesson row count validation |
+| Idempotent payment retry | `idempotency_key` unique partial on completed payments |
+| No duplicate activation | Activation checks status; idempotent replay on success |
+| No duplicate lesson ordinals | Unique `(pass_id, sequence_number)` + activation reuses shells when applicable |
+
+Enforced in `reve_complete_payment_and_renew_pass`, `reve_activate_reserved_pass`, and automatic activation inside `synchronize_pass_after_lesson_change`.
+
+---
+
 ## Related documents
 
 - [data-model.md](./data-model.md)

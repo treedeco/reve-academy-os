@@ -30,6 +30,7 @@ DECLARE
   v_pass_sb_old uuid := '69696969-6969-6969-6969-696969696969';
   v_pass_sb_piano uuid := '70707070-7070-7070-7070-707070707071';
   v_slot_vocal uuid := '77777777-7777-7777-7777-777777777701';
+  v_slot_reserved uuid := '77777777-7777-7777-7777-777777777702';
   v_slot_piano uuid := '77777777-7777-7777-7777-777777777708';
   v_slot_sb uuid := '88888888-8888-8888-8888-888888888888';
   v_lesson_sched_1 uuid := '99999999-9999-9999-9999-999999999901';
@@ -126,6 +127,7 @@ BEGIN
     id, pass_id, teacher_id, weekday, local_start_time, duration_minutes, effective_from
   ) VALUES
     (v_slot_vocal, v_pass_vocal, v_teacher_a_row, 1, '10:00', 60, CURRENT_DATE),
+    (v_slot_reserved, v_pass_reserved, v_teacher_a_row, 1, '10:00', 60, CURRENT_DATE),
     (v_slot_piano, v_pass_piano, v_teacher_a_row, 4, '12:00', 60, CURRENT_DATE),
     (v_slot_sb, v_pass_sb, v_teacher_b_row, 3, '14:00', 60, CURRENT_DATE);
 
@@ -652,7 +654,7 @@ SELECT ok(
 SELECT ok(
   (
     SELECT pass_status = 'completed'
-      AND reserved_pass_activation_pending = true
+      AND reserved_pass_activation_pending = false
     FROM public.reve_transition_lesson_status(
       current_setting('test.lesson_vocal_last')::uuid,
       'completed',
@@ -663,19 +665,19 @@ SELECT ok(
     )
     LIMIT 1
   ),
-  'final deductible lesson completes active pass and signals reserved activation pending'
-);
-
-SELECT ok(
-  (SELECT completed_at IS NOT NULL FROM public.passes
-   WHERE id = current_setting('test.pass_vocal')::uuid),
-  'pass completed_at is set when pass completes'
+  'final deductible lesson completes active pass and auto-activates reserved pass'
 );
 
 SELECT ok(
   (SELECT status FROM public.passes
-   WHERE id = current_setting('test.pass_reserved')::uuid) = 'reserved',
-  'reserved pass is not activated during lesson transition'
+   WHERE id = current_setting('test.pass_reserved')::uuid) = 'active',
+  'reserved pass becomes active after automatic activation'
+);
+
+SELECT ok(
+  (SELECT count(*)::integer FROM public.lessons
+   WHERE pass_id = current_setting('test.pass_reserved')::uuid) = 4,
+  'automatic activation generates reserved pass lessons'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_auth_as(current_setting('test.teacher_b')::uuid); END $$;
@@ -855,13 +857,11 @@ SELECT ok(
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND p.proname IN (
-        'reve_activate_reserved_pass',
-        'reve_complete_payment_and_renew_pass',
         'reve_process_payment_refund',
         'reve_apply_schedule_change_request'
       )
   ),
-  'deferred trusted operations are not implemented in this phase'
+  'refund and schedule application RPCs remain deferred'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_reset_role(); END $$;
