@@ -510,7 +510,23 @@ Modifying schedule_slots unless separate slot edit op
 
 ---
 
-## 12. `replace_pass_schedule_slots`
+## 12. Pass schedule replacement — **Implemented (0B-3B-2B-3D-1)**
+
+`public.reve_owner_replace_pass_schedule_slots` — migration `20260703120000_phase_0b3b2b3d1_pass_schedule_management.sql`.
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Purpose | Replace **fixed weekly timetable** on `active` or `reserved` pass |
+| Inputs | `pass_id`, `expected_pass_updated_at`, `schedule_slots` JSON, `reason` |
+| Separation | **Fixed timetable change ≠ lesson-date change** — no lesson row updates |
+| Steps | Deactivate old active slots → insert new active slots |
+| No-op | Fingerprint match → no deactivate/insert/audit/pass touch |
+| Collision | Recurring teacher/weekday time-range overlap → `REVE_SCHEDULE_COLLISION`; reserved may overlap same student/course active predecessor |
+| Immutable | `completed`/`cancelled` → `REVE_PASS_SCHEDULE_IMMUTABLE` |
+| Result | `lesson_rows_changed = 0` always |
+
+Legacy design reference (`replace_pass_schedule_slots`):
 
 | Aspect | Specification |
 |--------|---------------|

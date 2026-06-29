@@ -564,6 +564,16 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Collision rollback | `REVE_SCHEDULE_COLLISION` aborts all writes |
 | Direct writes denied | payments/passes/schedule_slots/lessons/sms via RPC only |
 
+## Phase 0B-3B-2B-3D-1 pass schedule protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| Historical slots | Deactivate only; inactive rows preserved; lessons keep old slot FK |
+| Lesson dates unchanged | No UPDATE on lessons during slot replacement |
+| Timetable vs lessons | Fixed slot rows independent of `lessons.scheduled_at` |
+| Active/reserved only | `REVE_PASS_SCHEDULE_IMMUTABLE` for completed/cancelled |
+| Renewal/activation | Copy/use `is_active = true` slots only |
+
 ## Related documents
 
 - [data-model.md](./data-model.md)

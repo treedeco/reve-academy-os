@@ -232,6 +232,8 @@ Any change must update [postgresql-physical-design.md](./postgresql-physical-des
 
 **Phase 0B-3B-2B-2 implementation note (2026-06-29)**: Snapshot copy implemented in `reve_private.copy_schedule_slots_from_pass`. **Status remains Provisional**.
 
+**Phase 0B-3B-2B-3D-1 implementation note**: Owner may replace active/reserved pass timetable; old slots deactivated (not deleted); lessons unchanged. Requires owner UI validation before confirmation. **Status remains Provisional**.
+
 ---
 
 ### OD-16 — Lesson generation order (multiple weekly slots)

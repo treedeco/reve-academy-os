@@ -300,6 +300,7 @@ Pass에 연결된 **고정 요일·로컬 시간** 슬롯. Lesson generation 및
 ### Allowed operations
 
 - Owner: define/update slots at pass setup (implementation Phase)
+- Owner: replace active/reserved pass timetable via `reve_owner_replace_pass_schedule_slots` (Phase 0B-3B-2B-3D-1) — **does not move lesson dates**
 - Read within role scope
 
 ### Prohibited operations

@@ -251,7 +251,8 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Profile/people master data | `phase_0b3b2b3a_profile_people_master_data.test.sql` | 55 | **Pass** |
 | Course/product master data | `phase_0b3b2b3b_course_product_management.test.sql` | 69 | **Pass** |
 | Initial enrollment | `phase_0b3b2b3c_initial_enrollment.test.sql` | 85 | **Pass** |
-| **Combined** | | **550** | **Pass** |
+| Pass schedule management | `phase_0b3b2b3d1_pass_schedule_management.test.sql` | 85 | **Pass** |
+| **Combined** | | **635** | **Pass** |
 
 Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion with automatic reserved activation (0B-3B-2B-2), SMS state sync, audit correlation, unauthorized roles.
 
@@ -275,7 +276,11 @@ Course/product tests cover: six owner RPCs security, course CRUD and lifecycle d
 
 Initial enrollment tests cover: `reve_owner_create_initial_enrollment` security, first pass sequence 001, 4/8 lesson generation, schedule JSON validation, Seoul start-boundary, teacher collision atomic rollback, idempotency replay/conflict, pass-history rejection (`REVE_NOT_INITIAL_ENROLLMENT`), payment-pass-slot-lesson-SMS atomicity, regression of prior phases.
 
-**Still deferred**: general schedule editing, returning-student re-enrollment, refunds, schedule-change approval/cascade, external SMS, UI.
+## 14. Phase 0B-3B-2B-3D-1 implemented coverage
+
+Pass schedule tests cover: `reve_owner_replace_pass_schedule_slots` security, active/reserved replacement, lesson preservation (`lesson_rows_changed=0`), reserved activation with new slots, completed/cancelled immutability, no-op fingerprint, stale concurrency, recurring collision with duration overlap, reserved/active predecessor exception, renewal active-slot copy regression.
+
+**Still deferred**: lesson-date realignment, schedule cascading, schedule-change approval, refunds, re-enrollment, external SMS, UI.
 
 ## Related documents
 

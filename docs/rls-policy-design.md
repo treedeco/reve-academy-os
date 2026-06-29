@@ -278,8 +278,10 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), profile/people master data (0B-3B-2B-3A), course/product master data (0B-3B-2B-3B), **initial enrollment (0B-3B-2B-3C)** implemented; refunds, schedule application/editing, and remaining trusted ops **deferred**.
+Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), profile/people master data (0B-3B-2B-3A), course/product master data (0B-3B-2B-3B), initial enrollment (0B-3B-2B-3C), **pass schedule replacement (0B-3B-2B-3D-1)** implemented; lesson-date realignment, schedule cascading, schedule-change approval, refunds, and remaining trusted ops **deferred**.
 
 **Phase 0B-3B-2B-3B**: `courses` and `course_products` base-table writes remain unavailable to clients. Owner mutations use authenticated trusted RPCs only. Teacher/student read scope unchanged.
 
 **Phase 0B-3B-2B-3C**: `payments`, `passes`, `schedule_slots`, `lessons`, `sms_notifications` initial-enrollment writes occur only through `reve_owner_create_initial_enrollment`. No direct client writes.
+
+**Phase 0B-3B-2B-3D-1**: `schedule_slots` timetable replacement occurs only through `reve_owner_replace_pass_schedule_slots`. Lesson rows are not modified. Teacher/student read scope unchanged.
