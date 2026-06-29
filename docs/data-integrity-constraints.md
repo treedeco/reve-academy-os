@@ -541,7 +541,17 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Last active owner | Advisory lock + `REVE_LAST_OWNER` |
 | Soft deactivation | No physical DELETE on profiles/students/teachers |
 
----
+## Phase 0B-3B-2B-3B course and product protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| Unique identifiers | `courses.course_code`, `course_products.product_code` unique |
+| Immutable codes | RPC update paths reject code changes |
+| Pass/payment snapshots | Product mutations do not rewrite pass or completed payment rows |
+| Active product → active course | Deferred constraint trigger on `course_products` |
+| Course deactivation | Blocks when active products, operational passes/lessons, or pending payments exist |
+| Product deactivation | Blocks unresolved pending payments; preserves historical references |
+| No physical DELETE | Courses and products deactivated only |
 
 ## Related documents
 

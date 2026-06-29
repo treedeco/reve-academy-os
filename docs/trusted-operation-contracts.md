@@ -140,6 +140,30 @@ Migration: `20260630120000_phase_0b3b2b3a_profile_people_master_data.sql`. Accou
 
 `SECURITY DEFINER`, `search_path = ''`, fully qualified objects, owned by `postgres`, no dynamic SQL, no base-table row return type, no audit JSON in results. Base-table INSERT/UPDATE/DELETE grants remain denied for `authenticated`/`anon`.
 
+### Implemented RPCs (Phase 0B-3B-2B-3B)
+
+Migration: `20260701120000_phase_0b3b2b3b_course_product_management.sql`. Pass and payment rows store immutable product/course snapshots at creation; product updates affect future enrollment/renewal only.
+
+#### Course RPCs
+
+| RPC | Caller | Mutable fields | Immutable | Deactivation |
+|-----|--------|----------------|-----------|--------------|
+| `reve_owner_create_course` | Active owner | — | — | Creates `is_active = true` |
+| `reve_owner_update_course` | Active owner | `name`, `description` | `course_code`, PK | No-op → `REVE_NO_CHANGES` |
+| `reve_owner_set_course_active` | Active owner | `is_active` | — | Blocks active products (`REVE_COURSE_HAS_ACTIVE_PRODUCTS`), operational deps (`REVE_ACTIVE_DEPENDENCIES_EXIST`) |
+
+#### Product RPCs
+
+| RPC | Caller | Mutable fields | Immutable | Notes |
+|-----|--------|----------------|-----------|-------|
+| `reve_owner_create_course_product` | Active owner | — | — | Parent course must be active; positive lesson count and frequency |
+| `reve_owner_update_course_product` | Active owner | `product_name`, counts, price, `expiration_policy` | `product_code`, `course_id` | Pending payment → `REVE_PENDING_PAYMENT_EXISTS` for contractual fields |
+| `reve_owner_set_course_product_active` | Active owner | `is_active` | — | Reactivation requires active parent course |
+
+#### Renewal integration
+
+`reve_private.complete_payment_and_renew_pass_internal` requires active course and active product for new completions; idempotent replay of completed payments unchanged when product later deactivated.
+
 ---
 
 ## 3. `create_initial_pass`

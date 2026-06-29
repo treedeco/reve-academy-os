@@ -249,7 +249,7 @@ Separate policies per command (SELECT, INSERT, UPDATE, DELETE) for clarity and t
 | Student payment-facing summary | Payment base table withheld from students |
 | Student teacher-display projection | Full `teachers` table withheld from students (internal contact fields) |
 | Student SMS message projection | SMS base table withheld from students while OD-20 is provisional |
-| Owner master-data mutation (students, teachers, courses, products) | No column-safe direct writes implemented; trusted operations pending |
+| Owner master-data mutation (students, teachers, courses, products) | Trusted owner RPCs only; no direct client writes |
 | Profile provisioning and role changes | Trusted-operation-only |
 | Profile `display_name` self-update | Not implemented in 0B-3B-1 |
 | Lesson status transitions | **Implemented** — `reve_transition_lesson_status`, `reve_correct_lesson_status` (0B-3B-2B-1); base-table UPDATE still denied |
@@ -278,6 +278,8 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), **profile/people master data (0B-3B-2B-3A)** implemented; refunds, schedule application, courses/products, initial pass, and remaining trusted ops **deferred**.
+Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), profile/people master data (0B-3B-2B-3A), **course/product master data (0B-3B-2B-3B)** implemented; refunds, schedule application, initial pass, and remaining trusted ops **deferred**.
 
 **Phase 0B-3B-2B-3A**: `profiles`, `students`, and `teachers` base-table writes remain unavailable to clients. Owner mutations use authenticated trusted RPCs. `reve_bootstrap_first_owner` is **`service_role` only** — the service-role key must never reach browser clients.
+
+**Phase 0B-3B-2B-3B**: `courses` and `course_products` base-table writes remain unavailable to clients. Owner mutations use authenticated trusted RPCs only. Teacher/student read scope unchanged.
