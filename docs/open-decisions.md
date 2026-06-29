@@ -217,7 +217,7 @@ Any change must update [postgresql-physical-design.md](./postgresql-physical-des
 | **UI review** | Pass-renewal UI design |
 | **Affected** | `passes.start_date`, `complete_payment_and_renew_pass`, `activate_reserved_pass`, lesson generation |
 
-**Phase 0B-3B-2B-2 implementation note (2026-06-29)**: Database behavior follows the provisional default above. **Status remains Provisional** — Owner must revalidate during pass-renewal UI design before treating as permanent.
+**Phase 0B-3B-2B-2A implementation note (2026-06-29)**: Payment creates all lesson shells; activation finalizes `scheduled_at` on existing rows. **Status remains Provisional**.
 
 ---
 

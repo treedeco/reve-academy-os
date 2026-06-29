@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(47);
+SELECT plan(48);
 
 -- ---------------------------------------------------------------------------
 -- Fixture
@@ -67,6 +67,10 @@ DECLARE
   v_lesson_s006_2 uuid := '99999999-9999-9999-9999-999999999912';
   v_lesson_s006_3 uuid := '99999999-9999-9999-9999-999999999913';
   v_lesson_s006_last uuid := '99999999-9999-9999-9999-999999999914';
+  v_lesson_s009_1 uuid := 'abababab-abab-abab-abab-ababababab01';
+  v_lesson_s009_2 uuid := 'abababab-abab-abab-abab-ababababab02';
+  v_lesson_s009_3 uuid := 'abababab-abab-abab-abab-ababababab03';
+  v_lesson_s009_4 uuid := 'abababab-abab-abab-abab-ababababab04';
   v_payment_stale uuid := '12121212-1212-1212-1212-121212121201';
   v_payment_bad_amt uuid := '12121212-1212-1212-1212-121212121202';
   v_payment_bad_method uuid := '12121212-1212-1212-1212-121212121203';
@@ -219,7 +223,15 @@ BEGIN
      v_slot_s006, 3, now() - interval '7 days', 'completed',
      now() - interval '7 days', now() - interval '7 days' + interval '1 hour'),
     (v_lesson_s006_last, v_pass_s006_active, v_student_s006, v_course_vocal, v_teacher_a_row,
-     v_slot_s006, 4, now() + interval '1 day', 'scheduled', NULL, NULL);
+     v_slot_s006, 4, now() + interval '1 day', 'scheduled', NULL, NULL),
+    (v_lesson_s009_1, v_pass_s009_reserved, v_student_s001, v_course_vocal, v_teacher_a_row,
+     v_slot_s009_reserved, 1, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_s009_2, v_pass_s009_reserved, v_student_s001, v_course_vocal, v_teacher_a_row,
+     v_slot_s009_reserved, 2, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_s009_3, v_pass_s009_reserved, v_student_s001, v_course_vocal, v_teacher_a_row,
+     v_slot_s009_reserved, 3, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_s009_4, v_pass_s009_reserved, v_student_s001, v_course_vocal, v_teacher_a_row,
+     v_slot_s009_reserved, 4, NULL, 'scheduled', NULL, NULL);
 
   INSERT INTO public.payments (
     id, student_id, course_id, course_product_id, related_pass_id,
@@ -281,6 +293,10 @@ BEGIN
   PERFORM set_config('test.slot_s003', v_slot_s003::text, false);
   PERFORM set_config('test.student_s007', v_student_s007::text, false);
   PERFORM set_config('test.pass_s009_reserved', v_pass_s009_reserved::text, false);
+  PERFORM set_config('test.lesson_s009_1', v_lesson_s009_1::text, false);
+  PERFORM set_config('test.lesson_s009_2', v_lesson_s009_2::text, false);
+  PERFORM set_config('test.lesson_s009_3', v_lesson_s009_3::text, false);
+  PERFORM set_config('test.lesson_s009_4', v_lesson_s009_4::text, false);
 END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.test_auth_as(p_user uuid)
@@ -598,7 +614,7 @@ SELECT ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Active with remaining → reserved; zero lessons at payment time
+-- Active with remaining → reserved; lesson shells at payment time
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -622,19 +638,22 @@ SELECT ok(
       AND p.pass_code = 'V-S002-003'
       AND p.sequence_number = 3
       AND (SELECT count(*)::integer FROM public.lessons AS l
-           WHERE l.pass_id = p.id) = 0
+           WHERE l.pass_id = p.id) = 4
+      AND (SELECT count(*)::integer FROM public.lessons AS l
+           WHERE l.pass_id = p.id AND l.scheduled_at IS NULL) = 4
       AND (SELECT count(*)::integer FROM public.schedule_slots AS ss
            WHERE ss.pass_id = p.id) >= 1
     FROM public.passes AS p
     WHERE p.id = current_setting('test.pass_s002_reserved')::uuid
   ),
-  'active pass with remaining lessons yields reserved next pass without lessons'
+  'active pass with remaining lessons yields reserved next pass with four lesson shells'
 );
 
 SELECT ok(
   (SELECT count(*)::integer FROM public.lessons
-   WHERE pass_id = current_setting('test.pass_s002_reserved')::uuid) = 0,
-  'reserved pass has zero lessons immediately after payment completion'
+   WHERE pass_id = current_setting('test.pass_s002_reserved')::uuid
+     AND scheduled_at IS NULL) = 4,
+  'reserved pass lesson shells have pending scheduled_at after payment completion'
 );
 
 -- ---------------------------------------------------------------------------
@@ -653,13 +672,28 @@ SELECT ok(
     )
     LIMIT 1
   ),
-  'owner manual activation schedules lessons on reserved pass'
+  'owner manual activation finalizes schedules on existing reserved lesson shells'
 );
 
 SELECT ok(
   (SELECT count(*)::integer FROM public.lessons
-   WHERE pass_id = current_setting('test.pass_s009_reserved')::uuid) = 4,
-  'manual activation creates four lessons for four-lesson reserved pass'
+   WHERE pass_id = current_setting('test.pass_s009_reserved')::uuid
+     AND scheduled_at IS NOT NULL) = 4,
+  'manual activation assigns scheduled_at to four existing reserved lesson shells'
+);
+
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.lessons
+    WHERE pass_id = current_setting('test.pass_s009_reserved')::uuid
+      AND id NOT IN (
+        current_setting('test.lesson_s009_1')::uuid,
+        current_setting('test.lesson_s009_2')::uuid,
+        current_setting('test.lesson_s009_3')::uuid,
+        current_setting('test.lesson_s009_4')::uuid
+      )
+  ),
+  'manual activation inserts no additional lesson rows'
 );
 
 -- ---------------------------------------------------------------------------
@@ -876,8 +910,9 @@ SELECT ok(
 
 SELECT ok(
   (SELECT count(*)::integer FROM public.lessons
-   WHERE pass_id = current_setting('test.pass_s006_reserved')::uuid) = 4,
-  'automatic activation generates four lessons on reserved pass'
+   WHERE pass_id = current_setting('test.pass_s006_reserved')::uuid
+     AND scheduled_at IS NOT NULL) = 4,
+  'automatic activation finalizes scheduled_at on four existing reserved lesson shells'
 );
 
 -- ---------------------------------------------------------------------------

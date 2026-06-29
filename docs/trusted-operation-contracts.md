@@ -126,8 +126,16 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 
 ### Active vs reserved
 
-- Active pass with **remaining > 0** → new pass `reserved`; lessons **deferred** (schema: `scheduled_at NOT NULL`)
-- No active pass (or prior completed) → new pass `active`; lessons generated in same transaction
+- Active pass with **remaining > 0** → new pass `reserved`; **lesson shells** created (`scheduled_at` null) in same transaction
+- No active pass (or prior completed) → new pass `active`; lessons scheduled immediately
+
+### Lesson shells (Phase 0B-3B-2B-2A)
+
+- Payment completion always creates exactly `registered_lesson_count` lesson rows.
+- Reserved-pass shells: valid pass/student/course/teacher/ordinal/slot; `scheduled_at = null`; status `scheduled`.
+- Activation **updates** existing rows via `finalize_pass_lesson_schedules`; never inserts a second lesson set.
+- Null `scheduled_at` is valid only for reserved-pass shells; active/completed passes require non-null dates (deferred invariant).
+- Ordinal-to-slot assignment at shell creation: round-robin by `slot_order`, weekday, `local_start_time`.
 
 ### Idempotency
 
@@ -144,7 +152,7 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 
 | OD | Policy |
 |----|--------|
-| OD-14 | Reserved pass: lessons generated at activation; first slot after prior pass completion boundary |
+| OD-14 | Reserved pass: lesson shells at payment; `scheduled_at` finalized at activation on existing rows |
 | OD-15 | Copy active slots to new pass as independent snapshot rows |
 | OD-16 | Lesson order: chronological; tie-break `slot_order` |
 | OD-17 | Collision: abort with `REVE_SCHEDULE_COLLISION`; no auto-reschedule |
@@ -171,7 +179,7 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 
 ### Automatic activation
 
-When the final deductible lesson completes the current active pass, reserved pass activation runs **in the same transaction**. Failure rolls back pass completion and lesson transition. `reserved_pass_activation_pending` is always `false` after success.
+When the final deductible lesson completes the current active pass, reserved pass activation runs **in the same transaction**. Activation finalizes `scheduled_at` on existing lesson shells. Failure rolls back pass completion and lesson transition. `reserved_pass_activation_pending` is always `false` after success.
 
 ### Manual activation preconditions
 
@@ -245,7 +253,7 @@ Per [state-transitions.md](./state-transitions.md) §1.4 matrix (excluding Owner
 - Usage derived from lesson statuses only (no count columns written on lessons)
 - Active pass with remaining = 0 → `completed` + `completed_at`
 - Returns `reserved_pass_activation_pending = true` when pass completes and a `reserved` pass exists for same student+course
-- **Does not** activate reserved pass (OD-14 provisional; deferred)
+- **Automatic** reserved-pass activation from lesson-transition transaction (same DB transaction; updates existing shells)
 
 ### SMS synchronization
 

@@ -522,7 +522,14 @@ Apply **PG** `CHECK` on text status columns aligned with [state-transitions.md](
 | No duplicate activation | Activation checks status; idempotent replay on success |
 | No duplicate lesson ordinals | Unique `(pass_id, sequence_number)` + activation reuses shells when applicable |
 
-Enforced in `reve_complete_payment_and_renew_pass`, `reve_activate_reserved_pass`, and automatic activation inside `synchronize_pass_after_lesson_change`.
+Enforced in payment completion, activation, and deferred constraint triggers on `lessons` / `passes`.
+
+| Invariant | Rule |
+|-----------|------|
+| Reserved shell row | `scheduled_at` null; status `scheduled`; no actual timestamps |
+| Active pass | Exactly registered count; all lessons have non-null `scheduled_at` |
+| Reserved pass | Exactly registered count; shells may have null `scheduled_at` |
+| Activation | Updates existing lesson IDs; no second INSERT set |
 
 ---
 

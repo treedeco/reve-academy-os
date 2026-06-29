@@ -510,7 +510,7 @@ Partial UK: (pass_id, weekday, local_start_time, teacher_id) WHERE is_active.
 | `assigned_teacher_id` | uuid | NO | — | FK→teachers | RESTRICT | — | (teacher,scheduled_at) |
 | `schedule_slot_id` | uuid | YES | — | FK→schedule_slots | SET NULL | — | — |
 | `sequence_number` | integer | NO | — | UK(pass,seq) | — | >=1 | — |
-| `scheduled_at` | timestamptz | NO | — | — | — | — | scheduled_at_idx |
+| `scheduled_at` | timestamptz | **YES** (Phase 0B-3B-2B-2A) | — | — | — | null only for reserved-pass shells | scheduled_at_idx |
 | `actual_start_at` | timestamptz | YES | — | — | — | — | — |
 | `actual_end_at` | timestamptz | YES | — | — | — | end>=start | — |
 | `status` | text | NO | scheduled | — | — | lesson statuses | status_idx |

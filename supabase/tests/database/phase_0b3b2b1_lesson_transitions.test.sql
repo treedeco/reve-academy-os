@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(62);
+SELECT plan(63);
 
 -- ---------------------------------------------------------------------------
 -- Fixture
@@ -56,6 +56,10 @@ DECLARE
   v_lesson_sb_x3 uuid := '10101010-1010-1010-1010-101010101023';
   v_lesson_sb_x4 uuid := '10101010-1010-1010-1010-101010101024';
   v_lesson_sb_exceed uuid := '10101010-1010-1010-1010-101010101015';
+  v_lesson_reserved_1 uuid := 'abababab-abab-abab-abab-ababababab01';
+  v_lesson_reserved_2 uuid := 'abababab-abab-abab-abab-ababababab02';
+  v_lesson_reserved_3 uuid := 'abababab-abab-abab-abab-ababababab03';
+  v_lesson_reserved_4 uuid := 'abababab-abab-abab-abab-ababababab04';
   v_sms_piano uuid := '14141414-1414-1414-1414-141414141401';
   v_sms_vocal uuid := '14141414-1414-1414-1414-141414141402';
   v_sms_old uuid := '14141414-1414-1414-1414-141414141406';
@@ -192,7 +196,15 @@ BEGIN
      NULL, 4, now() - interval '7 days', 'completed',
      now() - interval '7 days', now() - interval '7 days' + interval '1 hour'),
     (v_lesson_sb_exceed, v_pass_sb_piano, v_student_b_row, v_course_piano, v_teacher_b_row,
-     NULL, 5, now() + interval '1 day', 'scheduled', NULL, NULL);
+     NULL, 5, now() + interval '1 day', 'scheduled', NULL, NULL),
+    (v_lesson_reserved_1, v_pass_reserved, v_student_a_row, v_course_vocal, v_teacher_a_row,
+     v_slot_reserved, 1, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_reserved_2, v_pass_reserved, v_student_a_row, v_course_vocal, v_teacher_a_row,
+     v_slot_reserved, 2, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_reserved_3, v_pass_reserved, v_student_a_row, v_course_vocal, v_teacher_a_row,
+     v_slot_reserved, 3, NULL, 'scheduled', NULL, NULL),
+    (v_lesson_reserved_4, v_pass_reserved, v_student_a_row, v_course_vocal, v_teacher_a_row,
+     v_slot_reserved, 4, NULL, 'scheduled', NULL, NULL);
 
   FOR i IN 1..8 LOOP
     INSERT INTO public.lessons (
@@ -225,6 +237,10 @@ BEGIN
   PERFORM set_config('test.student_b', v_student_b::text, false);
   PERFORM set_config('test.pass_vocal', v_pass_vocal::text, false);
   PERFORM set_config('test.pass_reserved', v_pass_reserved::text, false);
+  PERFORM set_config('test.lesson_reserved_1', v_lesson_reserved_1::text, false);
+  PERFORM set_config('test.lesson_reserved_2', v_lesson_reserved_2::text, false);
+  PERFORM set_config('test.lesson_reserved_3', v_lesson_reserved_3::text, false);
+  PERFORM set_config('test.lesson_reserved_4', v_lesson_reserved_4::text, false);
   PERFORM set_config('test.pass_piano', v_pass_piano::text, false);
   PERFORM set_config('test.pass_sb', v_pass_sb::text, false);
   PERFORM set_config('test.pass_sb_piano', v_pass_sb_piano::text, false);
@@ -676,8 +692,23 @@ SELECT ok(
 
 SELECT ok(
   (SELECT count(*)::integer FROM public.lessons
-   WHERE pass_id = current_setting('test.pass_reserved')::uuid) = 4,
-  'automatic activation generates reserved pass lessons'
+   WHERE pass_id = current_setting('test.pass_reserved')::uuid
+     AND scheduled_at IS NOT NULL) = 4,
+  'automatic activation finalizes scheduled_at on four existing reserved lesson shells'
+);
+
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.lessons
+    WHERE pass_id = current_setting('test.pass_reserved')::uuid
+      AND id NOT IN (
+        current_setting('test.lesson_reserved_1')::uuid,
+        current_setting('test.lesson_reserved_2')::uuid,
+        current_setting('test.lesson_reserved_3')::uuid,
+        current_setting('test.lesson_reserved_4')::uuid
+      )
+  ),
+  'automatic activation preserves existing reserved lesson IDs'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_auth_as(current_setting('test.teacher_b')::uuid); END $$;

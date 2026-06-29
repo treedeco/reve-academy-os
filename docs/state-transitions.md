@@ -321,7 +321,7 @@ Refund does **not** physically delete payment, pass, or lesson data. Refund does
 |----------|------------|-------|
 | Payment pending → completed | `public.reve_complete_payment_and_renew_pass` | Owner only; idempotent |
 | New pass active vs reserved | Same RPC | Reserved when active pass has remaining lessons |
-| Reserved → active | `public.reve_activate_reserved_pass` or automatic lesson transition | Lessons generated at activation |
+| Reserved → active | `public.reve_activate_reserved_pass` or automatic lesson transition | Finalizes `scheduled_at` on existing shells (OD-14 provisional) |
 | Payment links one pass | `payments.renewed_pass_id` unique partial index | No second pass per payment |
 
 ---
