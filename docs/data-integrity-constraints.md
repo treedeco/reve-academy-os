@@ -531,6 +531,16 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Reserved pass | Exactly registered count; shells may have null `scheduled_at` |
 | Activation | Updates existing lesson IDs; no second INSERT set |
 
+## Phase 0B-3B-2B-3A profile and people protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| Auth user ↔ profile | `profiles.id` FK → `auth.users` |
+| Role/link compatibility | Deferred triggers + RPC validation |
+| Profile link 1:1 | Partial unique indexes on `students.profile_id`, `teachers.profile_id` |
+| Last active owner | Advisory lock + `REVE_LAST_OWNER` |
+| Soft deactivation | No physical DELETE on profiles/students/teachers |
+
 ---
 
 ## Related documents

@@ -279,6 +279,8 @@ Any change must update [postgresql-physical-design.md](./postgresql-physical-des
 | **UI review** | Account / profile admin UI |
 | **Affected** | `profiles`, `auth.users`, `students`, `teachers`, audit FKs |
 
+**Phase 0B-3B-2B-3A implementation note (2026-06-30)**: Database uses deactivation (`account_state`, `operational_status`, `is_active`); no physical DELETE. **Status remains Provisional** — Owner UI validation required.
+
 ---
 
 ### OD-20 — Student visibility of SMS message content
@@ -300,6 +302,8 @@ Any change must update [postgresql-physical-design.md](./postgresql-physical-des
 | **Provisional default** | **Multiple** owner profiles allowed. At least **one active owner** must always remain. The **final active owner** cannot remove or deactivate their own owner access. |
 | **UI review** | Owner-management UI before implementation |
 | **Affected** | `profiles.role`, `provision_profile`, `set_profile_role`, `is_owner()` |
+
+**Phase 0B-3B-2B-3A implementation note (2026-06-30)**: Multiple active owners allowed; `REVE_LAST_OWNER` protects final active owner from demotion/deactivation. **Status remains Provisional**.
 
 ---
 

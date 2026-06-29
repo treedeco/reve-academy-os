@@ -25,7 +25,11 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 
 ---
 
-## 1. `provision_profile`
+## 1. Profile provisioning — **Implemented (0B-3B-2B-3A)**
+
+`reve_bootstrap_first_owner` (service_role only), `reve_owner_provision_profile` (active owner). See migration `20260630120000_phase_0b3b2b3a_profile_people_master_data.sql`.
+
+Legacy design reference (`provision_profile`):
 
 | Aspect | Specification |
 |--------|---------------|
@@ -46,7 +50,11 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 
 ---
 
-## 2. `set_profile_role`
+## 2. Profile role / account state — **Implemented (0B-3B-2B-3A)**
+
+`reve_owner_set_profile_role`, `reve_owner_set_profile_active`, student/teacher owner RPCs.
+
+Legacy design reference (`set_profile_role`):
 
 | Aspect | Specification |
 |--------|---------------|
@@ -61,6 +69,76 @@ Authority: [state-transitions.md](./state-transitions.md), [permissions-matrix.m
 | Audit | Required † |
 | Failure | Rollback |
 | Prohibited | Client direct UPDATE on role |
+
+### Implemented RPCs (Phase 0B-3B-2B-3A)
+
+Migration: `20260630120000_phase_0b3b2b3a_profile_people_master_data.sql`. Account link model: `students.profile_id` / `teachers.profile_id` → `profiles.id` (= `auth.users.id`). No separate link RPCs; provisioning and role change perform atomic link updates.
+
+#### `public.reve_bootstrap_first_owner(p_auth_user_id, p_display_name)`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | **`service_role` only** — revoked from `PUBLIC`, `anon`, `authenticated` |
+| Auth boundary | Accepts existing Auth user UUID only; verifies `auth.users`; does not insert Auth rows or store passwords |
+| Preconditions | No active owner profile exists; Auth user exists; profile id unused |
+| Output | `profile_id`, `role`, `account_state`, `display_name`, `updated_at`, `idempotent_replay` |
+| Idempotency | Safe replay when same owner profile already exists with matching values; conflicting retry → `REVE_PROFILE_EXISTS` or `REVE_BOOTSTRAP_ALREADY_COMPLETED` |
+| Audit | `profile.bootstrap_first_owner`; actor NULL (system); no credentials |
+| Last-owner | Creates first owner only |
+
+#### `public.reve_owner_provision_profile(p_auth_user_id, p_role, p_display_name, p_student_id?, p_teacher_id?)`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner (`assert_active_owner_caller`; JWT role metadata ignored) |
+| Roles | `owner` (no entity link), `teacher` (active unlinked teacher), `student` (active unlinked student) |
+| Concurrency | Row lock on target entity before link |
+| Audit | `profile.provisioned` with correlation id |
+| Failure | `REVE_UNAUTHORIZED`, `REVE_AUTH_USER_NOT_FOUND`, `REVE_PROFILE_EXISTS`, `REVE_PROFILE_LINK_CONFLICT`, `REVE_ROLE_LINK_MISMATCH` |
+
+#### `public.reve_owner_set_profile_role(p_profile_id, p_new_role, p_reason, p_expected_updated_at, p_student_id?, p_teacher_id?)`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner |
+| Concurrency | Lock profile FOR UPDATE; stale → `REVE_STALE_STATE` (`22000`) |
+| Last-owner | Cannot demote/deactivate last active owner (`REVE_LAST_OWNER`; advisory lock) |
+| Links | Atomic clear + set via `clear_profile_entity_links`; deferred constraint triggers validate role/link consistency |
+| Audit | Previous and new role/link values; reason required |
+
+#### `public.reve_owner_set_profile_active(p_profile_id, p_account_state, p_reason, p_expected_updated_at)`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner |
+| States | `active`, `inactive`, `suspended` (no physical DELETE — OD-19 provisional) |
+| Last-owner | Cannot deactivate last active owner |
+| Inactive access | Existing helpers (`current_app_role`, `current_student_id`, `current_teacher_id`) fail closed |
+| Audit | State change with reason |
+
+#### Student master data — `reve_owner_create_student`, `reve_owner_update_student`, `reve_owner_set_student_active`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Create | Validates unique `student_code` (immutable after create); requires name; default `operational_status = active`; no Auth/profile auto-create |
+| Update | Mutable: name, phone, email only; optimistic concurrency |
+| Deactivate | Rejects when active linked profile exists (`REVE_PROFILE_LINK_CONFLICT`); does not cancel passes/lessons |
+| Output | Safe student projection including `linked_profile_id` |
+
+#### Teacher master data — `reve_owner_create_teacher`, `reve_owner_update_teacher`, `reve_owner_set_teacher_active`
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Create | Unique `teacher_code` (immutable); private phone/email in teacher columns only |
+| Update | Mutable: name, phone, email only |
+| Deactivate | Rejects future active lesson/slot assignments (`REVE_ACTIVE_ASSIGNMENTS_EXIST`); no silent reassignment or slot deletion |
+| Linked profile | Deactivation rejected when active profile linked |
+
+#### Security (all owner RPCs)
+
+`SECURITY DEFINER`, `search_path = ''`, fully qualified objects, owned by `postgres`, no dynamic SQL, no base-table row return type, no audit JSON in results. Base-table INSERT/UPDATE/DELETE grants remain denied for `authenticated`/`anon`.
 
 ---
 

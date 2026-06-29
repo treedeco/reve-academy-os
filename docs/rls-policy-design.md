@@ -278,4 +278,6 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions: lesson status transitions (0B-3B-2B-1), **payment renewal and reserved activation (0B-3B-2B-2)** implemented; refunds, schedule application, and remaining trusted ops **deferred**.
+Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), **profile/people master data (0B-3B-2B-3A)** implemented; refunds, schedule application, courses/products, initial pass, and remaining trusted ops **deferred**.
+
+**Phase 0B-3B-2B-3A**: `profiles`, `students`, and `teachers` base-table writes remain unavailable to clients. Owner mutations use authenticated trusted RPCs. `reve_bootstrap_first_owner` is **`service_role` only** — the service-role key must never reach browser clients.
