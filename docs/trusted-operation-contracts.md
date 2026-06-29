@@ -166,7 +166,24 @@ Migration: `20260701120000_phase_0b3b2b3b_course_product_management.sql`. Pass a
 
 ---
 
-## 3. `create_initial_pass`
+## 3. Initial enrollment — **Implemented (0B-3B-2B-3C)**
+
+`public.reve_owner_create_initial_enrollment` — migration `20260702120000_phase_0b3b2b3c_initial_enrollment.sql`.
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Purpose | First enrollment when **no** pass history exists for student+course |
+| Inputs | `student_id`, `course_product_id`, `schedule_start_date` (Seoul business date), `schedule_slots` JSON array, payment fields, `idempotency_key`, optional `owner_reason` |
+| Schedule JSON | `{teacher_id, weekday, local_time, duration_minutes, slot_order}` only; count must equal product `weekly_frequency` |
+| Start boundary | `(schedule_start_date::timestamp AT TIME ZONE 'Asia/Seoul')` — inclusive first slot on that date after midnight |
+| Output | payment/pass ids, code, sequence, counts, first/last lesson, SMS status, `idempotent_replay` |
+| Pass | sequence `1`, code ends `001`, status `active`, product snapshots |
+| Idempotency | Unique key; exact replay safe; conflict → `REVE_IDEMPOTENCY_CONFLICT` |
+| Collision | `REVE_SCHEDULE_COLLISION` rolls back entire transaction |
+| Rejection | Any existing pass (active/reserved/completed/cancelled) → `REVE_NOT_INITIAL_ENROLLMENT` |
+
+Legacy design reference (`create_initial_pass`):
 
 | Aspect | Specification |
 |--------|---------------|

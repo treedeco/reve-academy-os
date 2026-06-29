@@ -250,7 +250,8 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Payment renewal + reserved activation | `phase_0b3b2b2_payment_renewal.test.sql` | 48 | **Pass** |
 | Profile/people master data | `phase_0b3b2b3a_profile_people_master_data.test.sql` | 55 | **Pass** |
 | Course/product master data | `phase_0b3b2b3b_course_product_management.test.sql` | 69 | **Pass** |
-| **Combined** | | **465** | **Pass** |
+| Initial enrollment | `phase_0b3b2b3c_initial_enrollment.test.sql` | 85 | **Pass** |
+| **Combined** | | **550** | **Pass** |
 
 Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion with automatic reserved activation (0B-3B-2B-2), SMS state sync, audit correlation, unauthorized roles.
 
@@ -270,7 +271,11 @@ Profile/people tests cover: bootstrap service_role security, owner provisioning,
 
 Course/product tests cover: six owner RPCs security, course CRUD and lifecycle dependency checks, product CRUD (4/8 lesson counts), parent-child active consistency, pending-payment guards, pass/payment snapshot preservation, renewal integration (inactive course/product rejection, idempotent replay), lint regression for `reve_owner_create_student`.
 
-**Still deferred** (no pgTAP in this phase): TX-08–TX-14 schedule cascade and refund transactions, RC-01–RC-02 payment races (partial coverage in 0B-3B-2B-2), PV-01–PV-12 provisional policy cases, initial enrollment/pass creation.
+## 13. Phase 0B-3B-2B-3C implemented coverage
+
+Initial enrollment tests cover: `reve_owner_create_initial_enrollment` security, first pass sequence 001, 4/8 lesson generation, schedule JSON validation, Seoul start-boundary, teacher collision atomic rollback, idempotency replay/conflict, pass-history rejection (`REVE_NOT_INITIAL_ENROLLMENT`), payment-pass-slot-lesson-SMS atomicity, regression of prior phases.
+
+**Still deferred**: general schedule editing, returning-student re-enrollment, refunds, schedule-change approval/cascade, external SMS, UI.
 
 ## Related documents
 

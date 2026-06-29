@@ -553,6 +553,17 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Product deactivation | Blocks unresolved pending payments; preserves historical references |
 | No physical DELETE | Courses and products deactivated only |
 
+## Phase 0B-3B-2B-3C initial enrollment protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| First pass only | Rejects any existing pass for student+course (`REVE_NOT_INITIAL_ENROLLMENT`) |
+| Sequence 001 | Hard-coded sequence `1`; public code via `build_pass_public_code` |
+| Atomic transaction | Payment, pass, slots, lessons, SMS, audit in one transaction |
+| Idempotency | Unique `payments.idempotency_key`; fingerprinted schedule replay |
+| Collision rollback | `REVE_SCHEDULE_COLLISION` aborts all writes |
+| Direct writes denied | payments/passes/schedule_slots/lessons/sms via RPC only |
+
 ## Related documents
 
 - [data-model.md](./data-model.md)
