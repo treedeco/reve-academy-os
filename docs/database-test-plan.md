@@ -252,7 +252,8 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Course/product master data | `phase_0b3b2b3b_course_product_management.test.sql` | 69 | **Pass** |
 | Initial enrollment | `phase_0b3b2b3c_initial_enrollment.test.sql` | 85 | **Pass** |
 | Pass schedule management | `phase_0b3b2b3d1_pass_schedule_management.test.sql` | 85 | **Pass** |
-| **Combined** | | **635** | **Pass** |
+| Schedule change workflow | `phase_0b3b2b3d2a_schedule_change_workflow.test.sql` | 86 | **Pass** |
+| **Combined** | | **721** | **Pass** |
 
 Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion with automatic reserved activation (0B-3B-2B-2), SMS state sync, audit correlation, unauthorized roles.
 
@@ -280,7 +281,11 @@ Initial enrollment tests cover: `reve_owner_create_initial_enrollment` security,
 
 Pass schedule tests cover: `reve_owner_replace_pass_schedule_slots` security, active/reserved replacement, lesson preservation (`lesson_rows_changed=0`), reserved activation with new slots, completed/cancelled immutability, no-op fingerprint, stale concurrency, recurring collision with duration overlap, reserved/active predecessor exception, renewal active-slot copy regression.
 
-**Still deferred**: lesson-date realignment, schedule cascading, schedule-change approval, refunds, re-enrollment, external SMS, UI.
+## 15. Phase 0B-3B-2B-3D-2A implemented coverage
+
+Schedule-change tests cover: `reve_owner_review_schedule_change_request`, `reve_owner_apply_schedule_change_request`, separate approve/apply lifecycle, single-lesson direct move (`change_origin=direct_user`), collision leaves request approved unapplied, completed/deductible lesson protection, fixed timetable unchanged, append-only history, requester RLS INSERT regression, `cascaded_lesson_count=0`.
+
+**Still deferred**: cascade reschedule (3D-2B), refunds, re-enrollment, external SMS, UI.
 
 ## Related documents
 

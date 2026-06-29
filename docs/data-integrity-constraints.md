@@ -574,6 +574,16 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Active/reserved only | `REVE_PASS_SCHEDULE_IMMUTABLE` for completed/cancelled |
 | Renewal/activation | Copy/use `is_active = true` slots only |
 
+## Phase 0B-3B-2B-3D-2A schedule-change protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| Review vs apply | Separate RPCs; approval does not move lesson |
+| Single lesson | Apply updates one `scheduled_at`; no cascade |
+| Fixed timetable | `schedule_slot_id` unchanged |
+| Direct history | `change_origin = direct_user` |
+| Approved time | `approved_scheduled_at` column |
+
 ## Related documents
 
 - [data-model.md](./data-model.md)

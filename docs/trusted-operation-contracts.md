@@ -447,55 +447,38 @@ Lesson DELETE; silent SQL from client; teacher callers
 
 ---
 
-## 8. `approve_schedule_change_request`
+## 8. Schedule change review — **Implemented (0B-3B-2B-3D-2A)**
+
+`public.reve_owner_review_schedule_change_request` — migration `20260704120000_phase_0b3b2b3d2a_schedule_change_workflow.sql`.
 
 | Aspect | Specification |
 |--------|---------------|
-| Purpose | Owner approves pending request (OD-01) |
-| Caller | Owner |
-| Input | request_id, decision_note, expected_updated_at |
-| Preconditions | status ∈ {submitted, under_review} |
-| Output | status = approved |
-| Audit | Required |
+| Caller | Active owner only |
+| Decisions | `approve` / `reject` on `submitted` requests only |
+| Approve | Sets `approved_scheduled_at` (separate from `proposed_scheduled_at`); does **not** change lesson |
+| Reject | Requires reason; no lesson schedule-change event |
+| Idempotency | Exact replay → `no_change` without duplicate audit |
 
----
+## 9. Schedule change rejection — **Implemented (0B-3B-2B-3D-2A)**
 
-## 9. `reject_schedule_change_request`
+Merged into review RPC with `p_decision = 'reject'`.
 
-| Aspect | Specification |
-|--------|---------------|
-| Purpose | Owner rejects request |
-| Caller | Owner |
-| Input | request_id, decision_note |
-| Output | status = rejected |
-| Audit | Required |
+## 10. Schedule change application — **Implemented (0B-3B-2B-3D-2A)**
 
----
-
-## 10. `apply_schedule_change_request`
+`public.reve_owner_apply_schedule_change_request` — approved requests only.
 
 | Aspect | Specification |
 |--------|---------------|
-| Purpose | Apply approved schedule change to target lesson |
-| Caller | Owner trusted |
+| Caller | Active owner only |
+| Scope | **One lesson** only; `cascaded_lesson_count = 0` |
+| Lesson | Updates `scheduled_at` only; `postponed` → `scheduled`; slot FK unchanged |
+| History | One append-only `lesson_schedule_changes` row; `change_origin = direct_user` |
+| Collision | `REVE_SCHEDULE_COLLISION` — request stays approved, lesson unchanged |
+| Fixed timetable | `schedule_slots` not modified |
 
-### Steps
+Legacy design reference (`apply_schedule_change_request`):
 
-1. Request status = approved; not yet applied
-2. Lock request + target lesson
-3. Validate lesson not completed / not deductible terminal
-4. Detect collision (OD-17 provisional) — abort with collision list if overlap
-5. UPDATE lesson `scheduled_at` (direct change)
-6. INSERT `lesson_schedule_changes` with `change_origin = direct_user`
-7. SET request status applied, applied_at
-8. Audit + correlation_id
-9. ROLLBACK on any failure
-
-### Prohibited
-
-Modifying schedule_slots unless separate slot edit op
-
----
+| Aspect | Specification |
 
 ## 11. `cascade_reschedule_lessons`
 

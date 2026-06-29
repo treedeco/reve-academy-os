@@ -588,6 +588,7 @@ Append-only. UK on `payment_id` (OD-13).
 | `status` | text | NO | submitted | — | — | request statuses | status_idx |
 | `requested_reason` | text | NO | — | — | — | length>0 | — |
 | `proposed_scheduled_at` | timestamptz | YES | — | — | — | — | — |
+| `approved_scheduled_at` | timestamptz | YES | — | — | — | set on owner approve (3D-2A) | — |
 | `teacher_suggestion_note` | text | YES | — | — | — | — | — |
 | `owner_decision_note` | text | YES | — | — | — | — | — |
 | `decided_by_profile_id` | uuid | YES | — | FK→profiles | SET NULL | — | — |

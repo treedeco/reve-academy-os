@@ -254,6 +254,7 @@ Append-only immutable refund history. **Row existence = successfully completed r
 | `status` | text | NO | `submitted` | Workflow | mutable | see state-transitions | check | Owner†, Submitter† |
 | `requested_reason` | text | NO | — | Submitter | immutable | | non-empty | Teacher, Student |
 | `proposed_scheduled_at` | timestamptz | YES | — | Submitter | immutable | Suggested time | | Teacher, Student |
+| `approved_scheduled_at` | timestamptz | YES | — | Owner | immutable | Owner-approved final time (Phase 0B-3B-2B-3D-2A) | | Owner† |
 | `teacher_suggestion_note` | text | YES | — | Teacher | mutable | Before decision | | Teacher |
 | `owner_decision_note` | text | YES | — | Owner | immutable | On decide | | Owner |
 | `decided_by_profile_id` | uuid | YES | — | Owner | immutable | | | Owner |

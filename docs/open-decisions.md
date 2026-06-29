@@ -258,6 +258,8 @@ Any change must update [postgresql-physical-design.md](./postgresql-physical-des
 | **UI review** | Schedule change / collision presentation UI |
 | **Affected** | `apply_schedule_change_request`, `cascade_reschedule_lessons`, lesson generation |
 
+**Phase 0B-3B-2B-3D-2A implementation note (2026-06-26)**: `reve_owner_apply_schedule_change_request` raises `REVE_SCHEDULE_COLLISION`; request stays `approved`; no automatic time shift. **Status remains Provisional**.
+
 ---
 
 ### OD-18 — Payment method allowed values
