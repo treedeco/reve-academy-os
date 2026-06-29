@@ -584,6 +584,17 @@ Enforced in payment completion, activation, and deferred constraint triggers on 
 | Direct history | `change_origin = direct_user` |
 | Approved time | `approved_scheduled_at` column |
 
+## Phase 0B-3B-2B-3D-2B cascade protections
+
+| Protection | Mechanism |
+|------------|-----------|
+| Optional cascade | Owner-triggered only after direct apply |
+| Eligible lessons | `scheduled`, `postponed` only; completed/ineligible are barriers |
+| Slot realignment | Active slot ID and teacher from generated occurrence |
+| Automatic history | `change_origin = cascade_auto` per moved lesson |
+| SMS sync | After apply and cascade; sent rows preserved |
+| One-time completion | `cascade_completed_at` + count; zero-move valid |
+
 ## Related documents
 
 - [data-model.md](./data-model.md)

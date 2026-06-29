@@ -594,6 +594,10 @@ Append-only. UK on `payment_id` (OD-13).
 | `decided_by_profile_id` | uuid | YES | — | FK→profiles | SET NULL | — | — |
 | `decided_at` | timestamptz | YES | — | — | — | — | — |
 | `applied_at` | timestamptz | YES | — | — | — | — | — |
+| `cascade_completed_at` | timestamptz | YES | — | — | — | set on owner cascade (3D-2B) | — |
+| `cascade_completed_by_profile_id` | uuid | YES | — | FK→profiles | SET NULL | — | — |
+| `cascaded_lesson_count` | integer | YES | — | — | — | ≥0 when set | — |
+| `cascade_reason` | text | YES | — | — | — | — | — |
 | `created_at` | timestamptz | NO | now() | — | — | — | — |
 | `updated_at` | timestamptz | NO | now() | — | — | — | — |
 

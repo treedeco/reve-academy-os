@@ -1575,11 +1575,15 @@ SELECT is(
 );
 
 SELECT is(
-  (SELECT status FROM public.sms_notifications
+  (SELECT target_date FROM public.sms_notifications
    WHERE pass_id = current_setting('test.pass_a')::uuid
    ORDER BY created_at DESC LIMIT 1),
-  current_setting('test.sms_before_a'),
-  'apply leaves SMS notification status unchanged'
+  (
+    SELECT ((max(l.scheduled_at) AT TIME ZONE 'Asia/Seoul')::date - 1)
+    FROM public.lessons AS l
+    WHERE l.pass_id = current_setting('test.pass_a')::uuid
+  ),
+  'apply keeps SMS target_date aligned with final lesson when max scheduled_at is unchanged'
 );
 
 SELECT is(

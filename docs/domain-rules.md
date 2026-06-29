@@ -446,7 +446,9 @@ OD-02, OD-05
 - Teacher final approval or lesson record mutation via request
 - Apply without `approved` status
 
-**Phase 0B-3B-2B-3D-2A**: Owner review (`reve_owner_review_schedule_change_request`) and apply (`reve_owner_apply_schedule_change_request`) are separate trusted RPCs. Apply moves **one** lesson only; fixed timetable unchanged; cascade deferred to 3D-2B.
+**Phase 0B-3B-2B-3D-2A implementation**: Owner review and apply are separate trusted RPCs. Apply moves **one** lesson only; fixed timetable unchanged.
+
+**Phase 0B-3B-2B-3D-2B implementation**: Optional owner cascade after apply; `cascade_auto` events; SMS sync on apply and cascade.
 
 ### Related domains
 

@@ -255,7 +255,9 @@ Refund does **not** physically delete payment, pass, or lesson data. Refund does
 - Apply without `approved`
 - Cascade including `completed` lessons
 
-**Phase 0B-3B-2B-3D-2A implementation**: Owner review (`reve_owner_review_schedule_change_request`) sets `approved` + `approved_scheduled_at` without moving lessons. Owner apply (`reve_owner_apply_schedule_change_request`) moves **one** lesson (`change_origin = direct_user`); cascade deferred to 3D-2B.
+**Phase 0B-3B-2B-3D-2A implementation**: Owner review (`reve_owner_review_schedule_change_request`) sets `approved` + `approved_scheduled_at` without moving lessons. Owner apply (`reve_owner_apply_schedule_change_request`) moves **one** lesson (`change_origin = direct_user`).
+
+**Phase 0B-3B-2B-3D-2B implementation**: Optional owner cascade (`reve_owner_cascade_schedule_change_request`) after apply; `cascade_auto` events; SMS sync on apply and cascade.
 
 ---
 

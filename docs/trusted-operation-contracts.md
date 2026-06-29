@@ -475,12 +475,26 @@ Merged into review RPC with `p_decision = 'reject'`.
 | History | One append-only `lesson_schedule_changes` row; `change_origin = direct_user` |
 | Collision | `REVE_SCHEDULE_COLLISION` — request stays approved, lesson unchanged |
 | Fixed timetable | `schedule_slots` not modified |
+| SMS | `sync_pass_sms_after_schedule_change` after successful apply |
 
-Legacy design reference (`apply_schedule_change_request`):
+## 11. Schedule change cascade — **Implemented (0B-3B-2B-3D-2B)**
+
+`public.reve_owner_cascade_schedule_change_request` — migration `20260705120000_phase_0b3b2b3d2b_lesson_cascade_rescheduling.sql`.
 
 | Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Preconditions | Request `applied` with exactly one `direct_user` event; anchor timestamp unchanged; pass `active` |
+| Scope | Later eligible lessons only (`scheduled`, `postponed`); anchor unchanged |
+| Generation | Active fixed slots, Asia/Seoul, chronological merge with `slot_order` tie-break |
+| Barriers | Completed/ineligible later lessons block segments; `REVE_CASCADE_BLOCKED_BY_IMMUTABLE_LESSON` |
+| History | One `cascade_auto` event per moved lesson |
+| Collision | Full proposal validated before write; `REVE_SCHEDULE_COLLISION` rolls back all |
+| SMS | One sync after successful cascade; sent history preserved |
+| Completion | `cascade_completed_at`, `cascaded_lesson_count`, `cascade_reason`; zero-move valid |
+| Idempotency | Completed cascade → `no_change` retry |
 
-## 11. `cascade_reschedule_lessons`
+Legacy design reference (`cascade_reschedule_lessons`):
 
 | Aspect | Specification |
 |--------|---------------|

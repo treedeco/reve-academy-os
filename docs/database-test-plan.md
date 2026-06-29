@@ -253,7 +253,8 @@ Each case: **Setup → Actor → Operation → Expected result → Expected DB s
 | Initial enrollment | `phase_0b3b2b3c_initial_enrollment.test.sql` | 85 | **Pass** |
 | Pass schedule management | `phase_0b3b2b3d1_pass_schedule_management.test.sql` | 85 | **Pass** |
 | Schedule change workflow | `phase_0b3b2b3d2a_schedule_change_workflow.test.sql` | 86 | **Pass** |
-| **Combined** | | **721** | **Pass** |
+| Lesson cascade rescheduling | `phase_0b3b2b3d2b_lesson_cascade_rescheduling.test.sql` | 106 | **Pass** |
+| **Combined** | | **827** | **Pass** |
 
 Lesson-transition tests cover: RPC existence/security, ordinary matrix transitions, owner correction, derived usage counts, optimistic concurrency (`REVE_STALE_STATE`), pass completion with automatic reserved activation (0B-3B-2B-2), SMS state sync, audit correlation, unauthorized roles.
 
@@ -285,7 +286,13 @@ Pass schedule tests cover: `reve_owner_replace_pass_schedule_slots` security, ac
 
 Schedule-change tests cover: `reve_owner_review_schedule_change_request`, `reve_owner_apply_schedule_change_request`, separate approve/apply lifecycle, single-lesson direct move (`change_origin=direct_user`), collision leaves request approved unapplied, completed/deductible lesson protection, fixed timetable unchanged, append-only history, requester RLS INSERT regression, `cascaded_lesson_count=0`.
 
-**Still deferred**: cascade reschedule (3D-2B), refunds, re-enrollment, external SMS, UI.
+**Still deferred**: refunds, re-enrollment, external SMS, UI.
+
+## 16. Phase 0B-3B-2B-3D-2B implemented coverage
+
+Cascade tests cover: `reve_owner_cascade_schedule_change_request`, optional post-apply cascade, weekly-once/twice occurrence generation, immutable lesson barriers, slot/teacher realignment, `cascade_auto` history, direct-apply SMS sync correction, collision all-or-nothing rollback, idempotent zero-move completion, concurrency tokens.
+
+**Still deferred**: refunds, re-enrollment, external SMS, UI.
 
 ## Related documents
 
