@@ -307,10 +307,10 @@ File: `supabase/tests/database/phase_0b3b2b3d3b_owner_sms_sent_confirmation.test
 **RPC**: `public.reve_owner_confirm_sms_sent(p_sms_notification_id uuid)`
 **Audit action**: `sms_notification.sent_confirmed`
 **Migration**: `20260706120000_phase_0b3b2b3d3b_owner_sms_sent_confirmation.sql`
-**Concurrency test**: parallel `docker exec psql` sessions in `scripts/verify_sms_concurrency.ps1`; pgTAP assertion in `phase_0b3b2b3d3b_z_owner_sms_concurrency.test.sql`
+**Concurrency test**: parallel `docker exec psql` sessions in `scripts/verify_sms_concurrency.ps1`; dedicated pgTAP assertion in `scripts/concurrency/owner_sms_sent_concurrency.test.sql` (outside `supabase/tests/` discovery path).
 
 | # | Scenario | Status |
-|---|----------|--------|
+|---|---|---|
 | 1 | Owner confirms `scheduled` → `sent` | **Implemented** |
 | 2 | Owner confirms `target` → `sent` | **Implemented** |
 | 3 | Owner confirms `exhausted_unsent` → `sent` | **Implemented** |
@@ -328,11 +328,7 @@ File: `supabase/tests/database/phase_0b3b2b3d3b_owner_sms_sent_confirmation.test
 | 15 | Retry preserves original `sent_at` | **Implemented** |
 | 16 | Retry preserves original confirmer | **Implemented** |
 | 17 | Retry creates no additional audit | **Implemented** |
-**Concurrency test**: separate PostgreSQL sessions via parallel `docker exec psql` in `scripts/verify_sms_concurrency.ps1`; result asserted in `phase_0b3b2b3d3b_z_owner_sms_concurrency.test.sql` (Supabase local `postgres` role cannot use `dblink` with password).
-
-| # | Scenario | Status |
-|---|----------|--------|
-| 18 | Concurrent calls → one transition | **Implemented** (parallel shell + pgTAP z-file) |
+| 18 | Concurrent calls → one transition | **Implemented** (shell + dedicated pgTAP) |
 | 19 | Direct schedule change preserves `sent` on same pass | **Implemented** |
 | 20 | Cascade preserves `sent` on same pass | **Implemented** |
 | 21 | Lesson-state SMS sync preserves `sent` | **Implemented** |
@@ -343,7 +339,26 @@ File: `supabase/tests/database/phase_0b3b2b3d3b_owner_sms_sent_confirmation.test
 | 26 | Execute privileges restricted (no PUBLIC/anon) | **Implemented** |
 | 27 | Existing 827 tests still pass | **Verified via full suite** |
 
-**Phase 3D-3B file assertions**: **27** in `phase_0b3b2b3d3b_owner_sms_sent_confirmation.test.sql` + **1** concurrency assertion file. **Main pgTAP suite**: **854** (827 baseline + 27). **With concurrency file after harness**: **855**.
+**Assertion arithmetic (Case A — all meaningful)**:
+
+| Count | Value |
+|---|---|
+| Previous baseline | **827** |
+| Standard new assertions (`phase_0b3b2b3d3b_owner_sms_sent_confirmation.test.sql`) | **27** |
+| Dedicated concurrency pgTAP assertion | **1** |
+| Total new assertions | **28** |
+| Standard suite total (`npx supabase test db`) | **854** |
+| Full verified total (standard + concurrency pgTAP) | **855** |
+
+**Verification command**: `powershell -ExecutionPolicy Bypass -File scripts/verify_phase_0b3b2b3d3b.ps1`
+
+## 19. Phase 0B-3B-2B-3D-3B-H1 harness hygiene (hotfix)
+
+- Forward migration `20260707120000_phase_0b3b2b3d3b_h1_remove_test_harness.sql` drops production `reve_test` harness introduced in 3D-3B
+- Runtime concurrency harness is created only by `scripts/verify_sms_concurrency.ps1` and removed in `finally`
+- Dedicated concurrency pgTAP lives under `scripts/concurrency/` because Supabase CLI discovers all `supabase/tests/**/*.test.sql` files
+- Default `npx supabase test db` is self-contained (13 files, 854 assertions)
+- 3D-3B RPC behavior unchanged
 
 **Still deferred after 3D-3B**: refunds, re-enrollment, external SMS API, Owner UI, sent-confirmation reversal.
 

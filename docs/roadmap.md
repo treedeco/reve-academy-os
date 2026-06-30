@@ -331,6 +331,6 @@ Executable PostgreSQL migrations and pgTAP tests. **Current database checkpoint*
 **Subphases**:
 
 - **3D-3A** — Canonical documentation: authorization, state transitions, audit, idempotency, concurrency, future test plan. **No migration or RPC.**
-- **3D-3B** — **Implemented**: `public.reve_owner_confirm_sms_sent(p_sms_notification_id uuid)`; Owner-only database authorization; row `FOR UPDATE` locking; idempotent `sent` retry; audit action `sms_notification.sent_confirmed`; pgTAP (28 assertions in dedicated file; 855 total suite). Owner UI and external SMS remain deferred.
+- **3D-3B** — **Implemented**: `public.reve_owner_confirm_sms_sent(p_sms_notification_id uuid)`; Owner-only database authorization; row `FOR UPDATE` locking; idempotent `sent` retry; audit action `sms_notification.sent_confirmed`; standard pgTAP **854** + dedicated concurrency pgTAP **1** (28 new assertions total). Verified via `scripts/verify_phase_0b3b2b3d3b.ps1`. **3D-3B-H1** removed production test harness (`reve_test`) via forward migration. Owner UI and external SMS remain deferred.
 
 **Deferred** (no official Phase number assigned here): Owner UI for copy/confirm workflow; external SMS API; sent-confirmation reversal; `process_payment_refund`; re-enrollment; `correct_cancelled_pass`.
