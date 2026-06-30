@@ -1,6 +1,6 @@
 # Database Test Plan — REVE ACADEMY OS
 
-Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-3A (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
+Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-3D-3B (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
 
 Execution: `npx supabase test db` (transaction rollback per test file).
 
@@ -300,39 +300,50 @@ Canonical **Owner manual SMS sent confirmation** contract documented in [trusted
 
 **Baseline before 3D-3B implementation**: **827** existing pgTAP tests passing.
 
-## 18. Phase 0B-3B-2B-3D-3B planned coverage (not yet implemented)
+## 18. Phase 0B-3B-2B-3D-3B implemented coverage
 
-Future pgTAP tests for `confirm_sms_sent` (adapt names to canonical SMS states):
+File: `supabase/tests/database/phase_0b3b2b3d3b_owner_sms_sent_confirmation.test.sql`
 
-| # | Scenario |
-|---|----------|
-| 1 | Owner confirms `scheduled` → `sent` |
-| 2 | Owner confirms `target` → `sent` |
-| 3 | Owner confirms `exhausted_unsent` → `sent` |
-| 4 | Reject confirm from `normal` |
-| 5 | Teacher denied |
-| 6 | Student denied |
-| 7 | Unauthenticated denied |
-| 8 | Missing notification rejected |
-| 9 | Identity tampering rejected (no client pass/student override) |
-| 10 | RPC derives student and pass from notification row |
-| 11 | First success sets `sent_at` |
-| 12 | First success sets `sent_confirmed_by_profile_id` |
-| 13 | First success creates exactly one audit row |
-| 14 | Retry returns `no_change = true` |
-| 15 | Retry preserves original `sent_at` |
-| 16 | Retry preserves original confirmer |
-| 17 | Retry creates no additional audit |
-| 18 | Concurrent calls → one transition |
-| 19 | Direct schedule change preserves `sent` on same pass |
-| 20 | Cascade preserves `sent` on same pass |
-| 21 | Lesson-state SMS sync preserves `sent` |
-| 22 | Pass-count SMS sync preserves `sent` |
-| 23 | New pass gets independent SMS row |
-| 24 | Failure leaves no partial mutation |
-| 25 | SECURITY DEFINER + fixed `search_path` |
-| 26 | Execute privileges restricted (no PUBLIC/anon) |
-| 27 | Existing 827 tests still pass |
+**RPC**: `public.reve_owner_confirm_sms_sent(p_sms_notification_id uuid)`
+**Audit action**: `sms_notification.sent_confirmed`
+**Migration**: `20260706120000_phase_0b3b2b3d3b_owner_sms_sent_confirmation.sql`
+**Concurrency test**: parallel `docker exec psql` sessions in `scripts/verify_sms_concurrency.ps1`; pgTAP assertion in `phase_0b3b2b3d3b_z_owner_sms_concurrency.test.sql`
+
+| # | Scenario | Status |
+|---|----------|--------|
+| 1 | Owner confirms `scheduled` → `sent` | **Implemented** |
+| 2 | Owner confirms `target` → `sent` | **Implemented** |
+| 3 | Owner confirms `exhausted_unsent` → `sent` | **Implemented** |
+| 4 | Reject confirm from `normal` | **Implemented** |
+| 5 | Teacher denied | **Implemented** |
+| 6 | Student denied | **Implemented** |
+| 7 | Unauthenticated denied | **Implemented** |
+| 8 | Missing notification rejected | **Implemented** |
+| 9 | Identity tampering rejected (SMS id only) | **Implemented** |
+| 10 | RPC derives student and pass from notification row | **Implemented** |
+| 11 | First success sets `sent_at` | **Implemented** |
+| 12 | First success sets `sent_confirmed_by_profile_id` | **Implemented** |
+| 13 | First success creates exactly one audit row | **Implemented** |
+| 14 | Retry returns `no_change = true` | **Implemented** |
+| 15 | Retry preserves original `sent_at` | **Implemented** |
+| 16 | Retry preserves original confirmer | **Implemented** |
+| 17 | Retry creates no additional audit | **Implemented** |
+**Concurrency test**: separate PostgreSQL sessions via parallel `docker exec psql` in `scripts/verify_sms_concurrency.ps1`; result asserted in `phase_0b3b2b3d3b_z_owner_sms_concurrency.test.sql` (Supabase local `postgres` role cannot use `dblink` with password).
+
+| # | Scenario | Status |
+|---|----------|--------|
+| 18 | Concurrent calls → one transition | **Implemented** (parallel shell + pgTAP z-file) |
+| 19 | Direct schedule change preserves `sent` on same pass | **Implemented** |
+| 20 | Cascade preserves `sent` on same pass | **Implemented** |
+| 21 | Lesson-state SMS sync preserves `sent` | **Implemented** |
+| 22 | Pass-count SMS sync preserves `sent` | **Implemented** (combined with 21) |
+| 23 | New pass gets independent SMS row | **Implemented** |
+| 24 | Failure leaves no partial mutation | **Implemented** |
+| 25 | SECURITY DEFINER + fixed `search_path` | **Implemented** |
+| 26 | Execute privileges restricted (no PUBLIC/anon) | **Implemented** |
+| 27 | Existing 827 tests still pass | **Verified via full suite** |
+
+**Phase 3D-3B file assertions**: **27** in `phase_0b3b2b3d3b_owner_sms_sent_confirmation.test.sql` + **1** concurrency assertion file. **Main pgTAP suite**: **854** (827 baseline + 27). **With concurrency file after harness**: **855**.
 
 **Still deferred after 3D-3B**: refunds, re-enrollment, external SMS API, Owner UI, sent-confirmation reversal.
 

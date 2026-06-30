@@ -572,7 +572,7 @@ Cancelled pass reactivation; partial refund MVP
 
 ---
 
-## 14. `confirm_sms_sent` — **Specified (0B-3B-2B-3D-3A); implementation deferred to 3D-3B**
+## 14. `reve_owner_confirm_sms_sent` — **Implemented (0B-3B-2B-3D-3B)**
 
 **Phase 0B-3B-2B-3D-3** official name: **Owner manual SMS sent confirmation**.
 
@@ -590,15 +590,17 @@ Cancelled pass reactivation; partial refund MVP
 - Teacher and student denied
 - Service role not exposed to client
 
-### Input design (3D-3B)
+### Input design (3D-3B — implemented)
 
-**Preferred minimum input**: `p_sms_notification_id uuid` only.
+**Minimum input**: `p_sms_notification_id uuid` only.
 
-The RPC derives `student_id`, `pass_id`, current status, `target_date`, and `notification_type` from the locked row. Do not require client-supplied student or pass IDs unless a future schema audit proves otherwise.
+**Signature**: `public.reve_owner_confirm_sms_sent(p_sms_notification_id uuid)`
 
-**Legacy design reference** (Phase 0B-2): optional `message_body_snapshot` update on confirm — 3D-3B may support only when Owner explicitly revises copy at confirm time; not required for idempotent retry.
+**Returns** (table row): `sms_notification_id`, `student_id`, `pass_id`, `previous_status`, `new_status`, `sent_at`, `sent_confirmed_by_profile_id`, `no_change`.
 
-Exact signature and optional `expected_updated_at` concurrency token are **3D-3B implementation decisions**.
+The RPC derives `student_id`, `pass_id`, current status, and `message_body_snapshot` from the locked row. Client-supplied student, pass, status, timestamps, or confirmer are **not** accepted.
+
+Optional `message_body_snapshot` update at confirm was **not** implemented; existing snapshot is preserved unchanged.
 
 ### Eligible source states (canonical DB values)
 
@@ -626,17 +628,17 @@ If already `sent` with same identity: return success with `no_change = true`; do
 
 Safe after client timeout, network failure, or duplicate UI submission.
 
-### Concurrency (3D-3B)
+### Concurrency (3D-3B — implemented)
 
-Row-level lock on notification; conditional update or equivalent so concurrent confirms produce only one transition and one audit.
+Row-level `SELECT … FOR UPDATE` on the notification row; first successful caller transitions; concurrent or later callers observe `sent` and return `no_change = true` with one audit row total. Verified in pgTAP via separate `dblink` session.
 
-### Audit (3D-3A canonical — supersedes prior “optional” note for 3D-3B)
+### Audit (3D-3B — implemented)
 
 **Required** on first successful transition to `sent`. **None** on idempotent retry.
 
-Preserve: operation type, notification id, student id, pass id, previous status, new status, confirming owner, confirmation timestamp.
+**Action**: `sms_notification.sent_confirmed`.
 
-Suggested action: `sms_notification.sent_confirmed`.
+Preserve: operation type, notification id, student id, pass id, previous status, new status, confirming owner, confirmation timestamp (`sent_at`), prior and new JSON snapshots via `previous_value` / `new_value`.
 
 ### Sent-history preservation
 
