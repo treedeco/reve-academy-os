@@ -292,7 +292,49 @@ Schedule-change tests cover: `reve_owner_review_schedule_change_request`, `reve_
 
 Cascade tests cover: `reve_owner_cascade_schedule_change_request`, optional post-apply cascade, weekly-once/twice occurrence generation, immutable lesson barriers, slot/teacher realignment, `cascade_auto` history, direct-apply SMS sync correction, collision all-or-nothing rollback, idempotent zero-move completion, concurrency tokens.
 
-**Still deferred**: refunds, re-enrollment, external SMS, UI.
+**Still deferred**: refunds, re-enrollment, external SMS, Owner UI.
+
+## 17. Phase 0B-3B-2B-3D-3A specified coverage (documentation only)
+
+Canonical **Owner manual SMS sent confirmation** contract documented in [trusted-operation-contracts.md](./trusted-operation-contracts.md) §14. No migration, RPC, or pgTAP in 3D-3A.
+
+**Baseline before 3D-3B implementation**: **827** existing pgTAP tests passing.
+
+## 18. Phase 0B-3B-2B-3D-3B planned coverage (not yet implemented)
+
+Future pgTAP tests for `confirm_sms_sent` (adapt names to canonical SMS states):
+
+| # | Scenario |
+|---|----------|
+| 1 | Owner confirms `scheduled` → `sent` |
+| 2 | Owner confirms `target` → `sent` |
+| 3 | Owner confirms `exhausted_unsent` → `sent` |
+| 4 | Reject confirm from `normal` |
+| 5 | Teacher denied |
+| 6 | Student denied |
+| 7 | Unauthenticated denied |
+| 8 | Missing notification rejected |
+| 9 | Identity tampering rejected (no client pass/student override) |
+| 10 | RPC derives student and pass from notification row |
+| 11 | First success sets `sent_at` |
+| 12 | First success sets `sent_confirmed_by_profile_id` |
+| 13 | First success creates exactly one audit row |
+| 14 | Retry returns `no_change = true` |
+| 15 | Retry preserves original `sent_at` |
+| 16 | Retry preserves original confirmer |
+| 17 | Retry creates no additional audit |
+| 18 | Concurrent calls → one transition |
+| 19 | Direct schedule change preserves `sent` on same pass |
+| 20 | Cascade preserves `sent` on same pass |
+| 21 | Lesson-state SMS sync preserves `sent` |
+| 22 | Pass-count SMS sync preserves `sent` |
+| 23 | New pass gets independent SMS row |
+| 24 | Failure leaves no partial mutation |
+| 25 | SECURITY DEFINER + fixed `search_path` |
+| 26 | Execute privileges restricted (no PUBLIC/anon) |
+| 27 | Existing 827 tests still pass |
+
+**Still deferred after 3D-3B**: refunds, re-enrollment, external SMS API, Owner UI, sent-confirmation reversal.
 
 ## Related documents
 

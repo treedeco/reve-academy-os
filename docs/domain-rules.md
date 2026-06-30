@@ -603,6 +603,8 @@ OD-06, OD-11, OD-12
 - Student: mark sent
 - External SMS API in MVP
 
+**Phase 0B-3B-2B-3D-3A specification**: `confirm_sms_sent` — Owner confirms manual external send; eligible from `scheduled`, `target`, `exhausted_unsent`; idempotent when already `sent`; RPC implementation in 3D-3B. OD-20 (student message visibility) is a separate provisional decision.
+
 ### Related domains
 
 passes, lessons, lesson deduction

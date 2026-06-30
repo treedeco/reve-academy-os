@@ -317,6 +317,8 @@ Refund does **not** physically delete payment, pass, or lesson data. Refund does
 | Usage / remaining counts | Derived in RPC result | Not persisted on `lessons` |
 | SMS recalc | `reve_private.synchronize_sms_notification` | Preserves `sent` on same pass |
 
+**Phase 0B-3B-2B-3D-3A specification**: Owner manual confirm (`confirm_sms_sent`) transitions `scheduled` / `target` / `exhausted_unsent` → `sent` only; `normal` rejected; idempotent retry when already `sent`. Database RPC deferred to 3D-3B. See [trusted-operation-contracts.md](./trusted-operation-contracts.md) §14.
+
 ---
 
 ## 7. Phase 0B-3B-2B-2 payment and activation mapping

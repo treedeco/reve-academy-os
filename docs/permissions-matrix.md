@@ -170,13 +170,14 @@ Phase 0A **권한 매트릭스**. RLS SQL은 Phase 0B. **Confirmed 2026-06-26**:
 | Update | ✓† manual sent | — | — | ✓* | Recalc on correction |
 | Delete | — | — | — | — | History preserved |
 | Special | ✓ copy text, mark sent | — | — | — | MVP |
-| Server-only | — | — | — | ✓* derive states | |
-| Audit | ✓† manual sent | — | — | — | |
+| Server-only | — | — | — | ✓* derive states; ✓* confirm sent (3D-3B) | Trusted RPC only for sent confirm |
+| Audit | ✓† manual sent | — | — | — | Required on first confirm (3D-3A spec) |
 
 **Restrictions**
 
 - Student: cannot mark `sent`
 - Teacher: read-only operational view if needed; no mark sent
+- **Phase 0B-3B-2B-3D-3A**: Owner manual confirm via `confirm_sms_sent` trusted RPC (3D-3B); idempotent when already `sent`
 
 ---
 

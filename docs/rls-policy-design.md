@@ -278,7 +278,7 @@ Direct base-table access remains **denied** for teacher/student roles where prev
 | `reve_get_my_teacher_display()` | Student | `passes`, `courses`, `schedule_slots`, `lessons`, `teachers` | teacher id/code/name, course id/name | phone, email, profile role, internal state | current active/reserved pass links | — | **Implemented** |
 | `reve_get_my_current_notice()` | Student | `passes`, `courses`, `sms_notifications` | pass id/code, course name, message body, target/sent dates | SMS status, actor ids, notification type, audit | current active/reserved pass only | **OD-20 provisional** | **Implemented (provisional)** |
 
-Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), profile/people master data (0B-3B-2B-3A), course/product master data (0B-3B-2B-3B), initial enrollment (0B-3B-2B-3C), pass schedule replacement (0B-3B-2B-3D-1), schedule-change review/apply (0B-3B-2B-3D-2A), **cascade reschedule (0B-3B-2B-3D-2B)** implemented; refunds and remaining trusted ops **deferred**.
+Business mutation functions: lesson status transitions (0B-3B-2B-1), payment renewal and reserved activation (0B-3B-2B-2), profile/people master data (0B-3B-2B-3A), course/product master data (0B-3B-2B-3B), initial enrollment (0B-3B-2B-3C), pass schedule replacement (0B-3B-2B-3D-1), schedule-change review/apply (0B-3B-2B-3D-2A), cascade reschedule (0B-3B-2B-3D-2B) **implemented**; **SMS sent confirmation (0B-3B-2B-3D-3B)** specified in 3D-3A — refunds and remaining trusted ops **deferred**.
 
 **Phase 0B-3B-2B-3B**: `courses` and `course_products` base-table writes remain unavailable to clients. Owner mutations use authenticated trusted RPCs only. Teacher/student read scope unchanged.
 
@@ -289,3 +289,5 @@ Business mutation functions: lesson status transitions (0B-3B-2B-1), payment ren
 **Phase 0B-3B-2B-3D-2A**: `schedule_change_requests` review/apply and direct lesson rescheduling occur only through owner trusted RPCs. Student/teacher request INSERT policies unchanged. No direct UPDATE grants on requests, lessons, or `lesson_schedule_changes`.
 
 **Phase 0B-3B-2B-3D-2B**: Optional cascade and SMS sync occur only through owner trusted RPCs. Cascade completion fields on `schedule_change_requests` are RPC-only. No direct UPDATE grants added.
+
+**Phase 0B-3B-2B-3D-3A**: `confirm_sms_sent` specified; 3D-3B will add owner-only trusted RPC. No direct client UPDATE on `sms_notifications` for sent confirmation until RPC exists.

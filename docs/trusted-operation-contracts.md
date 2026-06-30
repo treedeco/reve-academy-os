@@ -572,16 +572,93 @@ Cancelled pass reactivation; partial refund MVP
 
 ---
 
-## 14. `confirm_sms_sent`
+## 14. `confirm_sms_sent` — **Specified (0B-3B-2B-3D-3A); implementation deferred to 3D-3B**
+
+**Phase 0B-3B-2B-3D-3** official name: **Owner manual SMS sent confirmation**.
 
 | Aspect | Specification |
 |--------|---------------|
-| Purpose | Owner confirms manual SMS sent (MVP) |
-| Caller | Owner |
-| Input | sms_notification_id, optional message_body_snapshot update |
-| Steps | SET status sent, sent_at, sent_confirmed_by_profile_id |
-| Audit | Optional |
-| Prohibited | Teacher confirm in MVP |
+| Purpose | Owner records trusted operational confirmation that an SMS was manually sent outside the application (external SMS app or other manual delivery). Does **not** verify telecom delivery. |
+| Caller | Active owner only |
+| MVP workflow | 1) Owner reviews/copies generated content 2) Owner sends externally 3) Owner confirms sent 4) System records confirmation |
+
+### Authorization (3D-3B must enforce in database)
+
+- Authenticated caller with active profile and owner role
+- Target `sms_notifications` row exists
+- Notification eligible for sent confirmation (see below)
+- Teacher and student denied
+- Service role not exposed to client
+
+### Input design (3D-3B)
+
+**Preferred minimum input**: `p_sms_notification_id uuid` only.
+
+The RPC derives `student_id`, `pass_id`, current status, `target_date`, and `notification_type` from the locked row. Do not require client-supplied student or pass IDs unless a future schema audit proves otherwise.
+
+**Legacy design reference** (Phase 0B-2): optional `message_body_snapshot` update on confirm — 3D-3B may support only when Owner explicitly revises copy at confirm time; not required for idempotent retry.
+
+Exact signature and optional `expected_updated_at` concurrency token are **3D-3B implementation decisions**.
+
+### Eligible source states (canonical DB values)
+
+| From | To | Allowed |
+|------|-----|---------|
+| `scheduled` | `sent` | Owner manual confirm |
+| `target` | `sent` | Owner manual confirm |
+| `exhausted_unsent` | `sent` | Owner manual confirm |
+| `normal` | `sent` | **Rejected** — not eligible |
+| `sent` | `sent` | Idempotent no-change |
+| `sent` | other | **Prohibited** — sent history preserved |
+
+### State mutation (first success)
+
+1. Lock notification row FOR UPDATE
+2. Validate eligibility
+3. SET `status = 'sent'`, `sent_at = now()`, `sent_confirmed_by_profile_id = owner actor`
+4. Preserve `student_id`, `pass_id`, `notification_type` unchanged
+5. Append one audit record (see below)
+6. COMMIT atomically
+
+### Idempotency
+
+If already `sent` with same identity: return success with `no_change = true`; do **not** overwrite `sent_at`, `sent_confirmed_by_profile_id`, or create duplicate audit.
+
+Safe after client timeout, network failure, or duplicate UI submission.
+
+### Concurrency (3D-3B)
+
+Row-level lock on notification; conditional update or equivalent so concurrent confirms produce only one transition and one audit.
+
+### Audit (3D-3A canonical — supersedes prior “optional” note for 3D-3B)
+
+**Required** on first successful transition to `sent`. **None** on idempotent retry.
+
+Preserve: operation type, notification id, student id, pass id, previous status, new status, confirming owner, confirmation timestamp.
+
+Suggested action: `sms_notification.sent_confirmed`.
+
+### Sent-history preservation
+
+Once `sent`, `reve_private.synchronize_sms_notification` and all automatic recalc paths must **not** revert the row to an unsent state (implemented in Phase 0B-3B-2B-1+). Applies after direct schedule change, cascade, lesson status change, pass count recalc, payment renewal, pass activation/completion.
+
+New pass → new `sms_notifications` row; old pass sent rows preserved and never reused.
+
+### Message snapshot (schema audit — 3D-3A)
+
+Existing `message_body_snapshot` column stores copy text; updated by system recalc (`synchronize_sms_notification`) while unsent. `sent_at` and `sent_confirmed_by_profile_id` are immutable after first confirm. **No new snapshot column required for 3D-3B** unless implementation audit finds gap; optional body update at confirm remains a 3D-3B decision.
+
+### Explicit exclusions (3D-3 family)
+
+- External SMS API send, delivery callbacks, telecom verification
+- Marking sent as unsent; deleting sent history; replacing original confirmer or timestamp
+- Teacher/student confirm; bulk send
+- Sent-confirmation reversal (separate future owner correction op — no Phase number assigned)
+- Refund, re-enrollment, cancelled-pass correction
+
+### Prohibited
+
+Teacher confirm in MVP; client direct UPDATE on `sms_notifications.status`
 
 ---
 
