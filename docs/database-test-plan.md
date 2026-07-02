@@ -373,11 +373,11 @@ File: `supabase/tests/database/phase_0b3b2b3e_owner_payment_refund.test.sql`
 | Count | Value |
 |---|---|
 | Previous baseline (post-H1) | **855** |
-| Standard new assertions | **26** |
+| Standard new assertions | **28** |
 | Dedicated concurrency pgTAP | **2** |
-| Total new assertions | **28** |
-| Standard suite total (`npx supabase test db`) | **880** |
-| Full verified total (standard + SMS concurrency 1 + refund concurrency 2) | **883** |
+| Total new assertions | **30** |
+| Standard suite total (`npx supabase test db`) | **882** |
+| Full verified total (standard + SMS concurrency 1 + refund concurrency 2) | **885** |
 
 **Verification command**: `powershell -ExecutionPolicy Bypass -File scripts/verify_phase_0b3b2b3e.ps1`
 

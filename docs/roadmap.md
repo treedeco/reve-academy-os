@@ -334,6 +334,6 @@ Executable PostgreSQL migrations and pgTAP tests. **Current database checkpoint*
 
 - **3D-3A** — Canonical documentation: authorization, state transitions, audit, idempotency, concurrency, future test plan. **No migration or RPC.**
 - **3D-3B-H1** — Forward migration removed production `reve_test` harness; concurrency verification isolated to scripts.
-- **3E** — **Implemented**: `public.reve_process_payment_refund`; Owner-only full refund for active/reserved passes; duplicate rejection via `REVE_REFUND_ALREADY_EXISTS`; standard pgTAP **880** + dedicated concurrency pgTAP **2**. Verified via `scripts/verify_phase_0b3b2b3e.ps1`.
+- **3E** — **Implemented**: `public.reve_process_payment_refund`; Owner-only full refund for active/reserved passes; duplicate rejection via `REVE_REFUND_ALREADY_EXISTS`; standard pgTAP **882** + dedicated concurrency pgTAP **2**. Verified via `scripts/verify_phase_0b3b2b3e.ps1`.
 
 **Deferred** (no official Phase number assigned here): Owner UI for copy/confirm workflow; external SMS API; sent-confirmation reversal; re-enrollment; `correct_cancelled_pass`.

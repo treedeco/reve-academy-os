@@ -2,7 +2,7 @@
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(28);
 
 DO $$
 DECLARE
@@ -303,9 +303,19 @@ SELECT lives_ok(
 );
 
 SELECT is(
-  (SELECT count(*)::integer FROM public.payment_refunds),
-  2,
-  'exactly two refund rows after reserved and active refunds'
+  (SELECT count(*)::integer
+   FROM public.payment_refunds
+   WHERE payment_id = current_setting('test.payment_active')::uuid),
+  1,
+  'exactly one refund row exists for active payment after refund'
+);
+
+SELECT is(
+  (SELECT count(*)::integer
+   FROM public.payment_refunds
+   WHERE payment_id = current_setting('test.payment_reserved')::uuid),
+  1,
+  'exactly one refund row exists for reserved payment after refund'
 );
 
 SELECT is(
@@ -374,6 +384,14 @@ SELECT throws_ok(
   'P0001',
   'REVE_REFUND_ALREADY_EXISTS',
   'duplicate refund attempt is rejected'
+);
+
+SELECT is(
+  (SELECT count(*)::integer
+   FROM public.payment_refunds
+   WHERE payment_id = current_setting('test.payment_active')::uuid),
+  1,
+  'duplicate refund attempt creates no second refund row for active payment'
 );
 
 SELECT * FROM finish();
