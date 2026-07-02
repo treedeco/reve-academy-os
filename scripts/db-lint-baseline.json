@@ -1,0 +1,601 @@
+{
+  "version": 1,
+  "description": "Allowlisted pre-existing Supabase db lint findings. Any finding not listed here fails verification.",
+  "sourceCommand": "npx supabase db lint",
+  "capturedAt": "2026-07-02T08:57:58.859Z",
+  "findingCount": 74,
+  "findings": [
+    {
+      "id": "extensions._cdi|warning extra|expression is not pure expression",
+      "schema": "extensions",
+      "object": "_cdi",
+      "level": "warning extra",
+      "message": "expression is not pure expression",
+      "sqlState": "42601"
+    },
+    {
+      "id": "extensions._cdi|warning extra|expression is not pure expression",
+      "schema": "extensions",
+      "object": "_cdi",
+      "level": "warning extra",
+      "message": "expression is not pure expression",
+      "sqlState": "42601"
+    },
+    {
+      "id": "extensions._constraint|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_constraint",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._constraint|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_constraint",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._currtest|error|relation \"__tresults___numb_seq\" does not exist",
+      "schema": "extensions",
+      "object": "_currtest",
+      "level": "error",
+      "message": "relation \"__tresults___numb_seq\" does not exist",
+      "sqlState": "42P01"
+    },
+    {
+      "id": "extensions._def_is|error|function is(text, integer, text) does not exist",
+      "schema": "extensions",
+      "object": "_def_is",
+      "level": "error",
+      "message": "function is(text, integer, text) does not exist",
+      "sqlState": "42883"
+    },
+    {
+      "id": "extensions._do_ne|warning extra|never read variable \"extras\"",
+      "schema": "extensions",
+      "object": "_do_ne",
+      "level": "warning extra",
+      "message": "never read variable \"extras\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions._do_ne|warning extra|never read variable \"missing\"",
+      "schema": "extensions",
+      "object": "_do_ne",
+      "level": "warning extra",
+      "message": "never read variable \"missing\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions._do_ne|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_do_ne",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._do_ne|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_do_ne",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._docomp|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "_docomp",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions._docomp|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "_docomp",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions._docomp|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_docomp",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._docomp|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_docomp",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_ac_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_ac_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_ac_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_ac_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_ac_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_ac_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_col_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_col_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_col_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_col_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_col_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_col_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_col_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_col_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_db_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_db_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_db_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_db_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_db_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_db_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_fdw_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_fdw_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_fdw_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_fdw_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_fdw_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_fdw_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_func_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_func_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_func_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_func_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_func_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_func_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_func_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_func_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_lang_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_lang_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_lang_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_lang_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_lang_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_lang_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_schema_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_schema_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_schema_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_schema_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_schema_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_schema_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_sequence_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_sequence_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_sequence_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_sequence_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_sequence_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_sequence_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_server_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_server_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_server_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_server_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_server_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_server_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_table_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_table_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_table_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_table_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_table_privs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_table_privs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_tablespaceprivs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_tablespaceprivs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_tablespaceprivs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_tablespaceprivs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._get_tablespaceprivs|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_get_tablespaceprivs",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._prokind|error|column \"proisagg\" does not exist",
+      "schema": "extensions",
+      "object": "_prokind",
+      "level": "error",
+      "message": "column \"proisagg\" does not exist",
+      "sqlState": "42703"
+    },
+    {
+      "id": "extensions._prokind|warning extra|expression is not pure expression",
+      "schema": "extensions",
+      "object": "_prokind",
+      "level": "warning extra",
+      "message": "expression is not pure expression",
+      "sqlState": "42601"
+    },
+    {
+      "id": "extensions._relcomp|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "_relcomp",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions._relcomp|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "_relcomp",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions._time_trials|warning|unused variable \"act_time\"",
+      "schema": "extensions",
+      "object": "_time_trials",
+      "level": "warning",
+      "message": "unused variable \"act_time\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions.add_result|error|relation \"__tresults___numb_seq\" does not exist",
+      "schema": "extensions",
+      "object": "add_result",
+      "level": "error",
+      "message": "relation \"__tresults___numb_seq\" does not exist",
+      "sqlState": "42P01"
+    },
+    {
+      "id": "extensions.check_test|error|relation \"__tresults___numb_seq\" does not exist",
+      "schema": "extensions",
+      "object": "check_test",
+      "level": "error",
+      "message": "relation \"__tresults___numb_seq\" does not exist",
+      "sqlState": "42P01"
+    },
+    {
+      "id": "extensions.format_type_string|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "format_type_string",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions.has_tablespace|error|column \"spclocation\" does not exist",
+      "schema": "extensions",
+      "object": "has_tablespace",
+      "level": "error",
+      "message": "column \"spclocation\" does not exist",
+      "sqlState": "42703"
+    },
+    {
+      "id": "extensions.is_empty|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "is_empty",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions.is_empty|warning|target type is different type than source type",
+      "schema": "extensions",
+      "object": "is_empty",
+      "level": "warning",
+      "message": "target type is different type than source type",
+      "sqlState": "42804"
+    },
+    {
+      "id": "extensions.isnt_empty|warning extra|never read variable \"rec\"",
+      "schema": "extensions",
+      "object": "isnt_empty",
+      "level": "warning extra",
+      "message": "never read variable \"rec\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions.isnt_empty|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "isnt_empty",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "extensions.plan|error|relation \"__tcache__\" does not exist",
+      "schema": "extensions",
+      "object": "plan",
+      "level": "error",
+      "message": "relation \"__tcache__\" does not exist",
+      "sqlState": "42P01"
+    },
+    {
+      "id": "extensions.row_eq|error|operator does not exist: record = integer",
+      "schema": "extensions",
+      "object": "row_eq",
+      "level": "error",
+      "message": "operator does not exist: record = integer",
+      "sqlState": "42883"
+    },
+    {
+      "id": "extensions.row_eq|warning|cannot determinate a result of dynamic SQL",
+      "schema": "extensions",
+      "object": "row_eq",
+      "level": "warning",
+      "message": "cannot determinate a result of dynamic SQL",
+      "sqlState": "00000"
+    },
+    {
+      "id": "public.reve_owner_cascade_schedule_change_request|warning extra|auto variable \"v_move_idx\" shadows a previously defined variable",
+      "schema": "public",
+      "object": "reve_owner_cascade_schedule_change_request",
+      "level": "warning extra",
+      "message": "auto variable \"v_move_idx\" shadows a previously defined variable",
+      "sqlState": "00000"
+    },
+    {
+      "id": "public.reve_owner_cascade_schedule_change_request|warning|unused variable \"v_move_idx\"",
+      "schema": "public",
+      "object": "reve_owner_cascade_schedule_change_request",
+      "level": "warning",
+      "message": "unused variable \"v_move_idx\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.initialize_pass_sms_notification|warning extra|unused parameter \"p_is_reserved\"",
+      "schema": "reve_private",
+      "object": "initialize_pass_sms_notification",
+      "level": "warning extra",
+      "message": "unused parameter \"p_is_reserved\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.next_slot_occurrence_after|warning extra|control reached end of function without RETURN",
+      "schema": "reve_private",
+      "object": "next_slot_occurrence_after",
+      "level": "warning extra",
+      "message": "control reached end of function without RETURN",
+      "sqlState": "2F005"
+    },
+    {
+      "id": "reve_private.synchronize_sms_notification|warning extra|unused parameter \"p_student_id\"",
+      "schema": "reve_private",
+      "object": "synchronize_sms_notification",
+      "level": "warning extra",
+      "message": "unused parameter \"p_student_id\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.validate_cascade_proposal_collisions|warning extra|auto variable \"v_idx\" shadows a previously defined variable",
+      "schema": "reve_private",
+      "object": "validate_cascade_proposal_collisions",
+      "level": "warning extra",
+      "message": "auto variable \"v_idx\" shadows a previously defined variable",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.validate_cascade_proposal_collisions|warning extra|auto variable \"v_jdx\" shadows a previously defined variable",
+      "schema": "reve_private",
+      "object": "validate_cascade_proposal_collisions",
+      "level": "warning extra",
+      "message": "auto variable \"v_jdx\" shadows a previously defined variable",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.validate_cascade_proposal_collisions|warning|unused variable \"v_idx\"",
+      "schema": "reve_private",
+      "object": "validate_cascade_proposal_collisions",
+      "level": "warning",
+      "message": "unused variable \"v_idx\"",
+      "sqlState": "00000"
+    },
+    {
+      "id": "reve_private.validate_cascade_proposal_collisions|warning|unused variable \"v_jdx\"",
+      "schema": "reve_private",
+      "object": "validate_cascade_proposal_collisions",
+      "level": "warning",
+      "message": "unused variable \"v_jdx\"",
+      "sqlState": "00000"
+    }
+  ]
+}

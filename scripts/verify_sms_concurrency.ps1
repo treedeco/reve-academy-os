@@ -3,7 +3,9 @@
 
 $ErrorActionPreference = 'Stop'
 
-$container = 'supabase_db_reve-academy-os'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+. "$PSScriptRoot/lib/reve-supabase-local.ps1"
+$container = Get-ReveSupabaseDbContainer -RepoRoot $repoRoot
 $owner = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa039'
 $sms = '88888888-8888-8888-8888-888888888039'
 $pass = '66666666-6666-6666-6666-666666666039'

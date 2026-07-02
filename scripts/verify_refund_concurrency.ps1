@@ -2,7 +2,9 @@
 
 $ErrorActionPreference = 'Stop'
 
-$container = 'supabase_db_reve-academy-os'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+. "$PSScriptRoot/lib/reve-supabase-local.ps1"
+$container = Get-ReveSupabaseDbContainer -RepoRoot $repoRoot
 $owner = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa049'
 $teacher = 'dddddddd-dddd-dddd-dddd-ddddddddd049'
 $student = '44444444-4444-4444-4444-444444444049'
@@ -20,7 +22,6 @@ $payment = '12121212-1212-1212-1212-121212121249'
 $paymentDup = '12121212-1212-1212-1212-12121212124a'
 $passDup = '66666666-6666-6666-6666-66666666604a'
 $runtimeSchema = 'reve_concurrency_runtime'
-$repoRoot = Split-Path -Parent $PSScriptRoot
 
 function Invoke-AdminSql {
   param(

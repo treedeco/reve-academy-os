@@ -74,7 +74,11 @@ Owner Alpha seed credentials (`scripts/seed-owner-alpha.sql`):
 - Email: `owner-alpha@test.local`
 - Password: `OwnerAlphaTest123!`
 
+Manual browser checklist: [docs/manual-verification-owner-alpha.md](./docs/manual-verification-owner-alpha.md)
+
 **Note**: `supabase/seed.sql` is intentionally empty so pgTAP bootstrap tests are not polluted. Use `npm run db:seed:alpha` for app dev and Playwright.
+
+`scripts/seed-owner-alpha.sql` is **local demo/E2E only**. It mutates auth users and domain rows with fixed UUIDs. Do **not** run it against hosted/production Supabase. Demo credentials must never be reused in production.
 
 ## 로컬 데이터베이스 (Phase 0B-3A ~ 0B-3B-2B-3E + 1A read)
 

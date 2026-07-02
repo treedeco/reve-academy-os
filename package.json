@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "db:seed:alpha": "docker cp scripts/seed-owner-alpha.sql supabase_db_reve-academy-os:/tmp/seed-owner-alpha.sql && docker exec -i supabase_db_reve-academy-os psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /tmp/seed-owner-alpha.sql"
+    "db:seed:alpha": "powershell -ExecutionPolicy Bypass -File scripts/seed-owner-alpha.ps1"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

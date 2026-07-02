@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { mapDatabaseError, formatLessonStatus, formatTimeSeoul } from '@/lib/domain/format';
 import {
@@ -13,7 +12,6 @@ import {
 } from '@/lib/domain/types';
 
 export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLessonRow[] }) {
-  const router = useRouter();
   const [lessons, setLessons] = useState(initialLessons);
   const [pendingLessonId, setPendingLessonId] = useState<string | null>(null);
   const [errorByLesson, setErrorByLesson] = useState<Record<string, string>>({});
@@ -70,14 +68,12 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
           lesson.id === lessonId
             ? {
                 ...lesson,
-                status: row.new_status,
+                status: row.new_status as LessonStatus,
                 updated_at: row.lesson_updated_at,
               }
             : lesson,
         ),
       );
-
-      router.refresh();
     } catch (error) {
       setLessons((prev) =>
         prev.map((lesson) => (lesson.id === lessonId ? previous : lesson)),

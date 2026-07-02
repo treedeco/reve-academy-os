@@ -22,7 +22,7 @@
 # production
 /build
 
-# misc
+/artifacts/
 .DS_Store
 *.pem
 .env*.local

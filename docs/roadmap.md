@@ -350,6 +350,22 @@ Deliver the first browser-usable Owner application against the verified Supabase
 
 ---
 
+## Phase 1A-H1 — Owner Alpha Verification and Runtime Hardening (active)
+
+### Goal
+
+Formalize verification gates and harden Owner Alpha runtime behavior without adding business features.
+
+### Deliverables
+
+- Deterministic db lint baseline verifier (`scripts/verify_db_lint_baseline.ps1`)
+- Phase 1A aggregate verification script (`scripts/verify_phase_1a.ps1`)
+- Scoped lesson-status UI refresh (no route-wide `router.refresh()`)
+- Local-only demo seed safety checks
+- Manual browser verification checklist (`docs/manual-verification-owner-alpha.md`)
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
