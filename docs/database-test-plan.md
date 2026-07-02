@@ -1,6 +1,6 @@
 # Database Test Plan — REVE ACADEMY OS
 
-Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-3D-3B (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
+Phase **0B-2** database-level test specification. **pgTAP harness implemented** for Phase 0B-3A through 0B-3B-2B-3E (local Supabase). Remaining design cases from this document are deferred until their trusted operations exist.
 
 Execution: `npx supabase test db` (transaction rollback per test file).
 
@@ -361,6 +361,27 @@ File: `supabase/tests/database/phase_0b3b2b3d3b_owner_sms_sent_confirmation.test
 - 3D-3B RPC behavior unchanged
 
 **Still deferred after 3D-3B**: refunds, re-enrollment, external SMS API, Owner UI, sent-confirmation reversal.
+
+## 20. Phase 0B-3B-2B-3E implemented coverage
+
+File: `supabase/tests/database/phase_0b3b2b3e_owner_payment_refund.test.sql`
+
+**RPC**: `public.reve_process_payment_refund(p_payment_id uuid, p_refunded_amount_krw integer, p_reason text)`
+**Migration**: `20260708120000_phase_0b3b2b3e_owner_payment_refund.sql`
+**Concurrency**: `scripts/verify_refund_concurrency.ps1` + `scripts/concurrency/owner_payment_refund_concurrency.test.sql` (RC-05 + duplicate refund)
+
+| Count | Value |
+|---|---|
+| Previous baseline (post-H1) | **855** |
+| Standard new assertions | **26** |
+| Dedicated concurrency pgTAP | **2** |
+| Total new assertions | **28** |
+| Standard suite total (`npx supabase test db`) | **880** |
+| Full verified total (standard + SMS concurrency 1 + refund concurrency 2) | **883** |
+
+**Verification command**: `powershell -ExecutionPolicy Bypass -File scripts/verify_phase_0b3b2b3e.ps1`
+
+**Still deferred after 3E**: re-enrollment, external SMS API, Owner UI, sent-confirmation reversal, `correct_cancelled_pass`.
 
 ## Related documents
 

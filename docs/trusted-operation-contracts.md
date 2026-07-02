@@ -535,26 +535,35 @@ Legacy design reference (`replace_pass_schedule_slots`):
 
 ---
 
-## 13. `process_payment_refund`
+## 13. `process_payment_refund` — **Implemented (0B-3B-2B-3E)**
 
 | Aspect | Specification |
 |--------|---------------|
 | Purpose | Active or reserved pass full refund (OD-12, OD-13) |
 | Caller | Owner trusted |
+| PostgreSQL name | `public.reve_process_payment_refund(p_payment_id uuid, p_refunded_amount_krw integer, p_reason text)` |
+| Returns | `refund_id`, `payment_id`, `pass_id`, `payment_status`, `pass_status`, `pass_disposition`, `refunded_amount_krw`, `lessons_advanced_cancelled`, `correlation_id` |
+
+### Lock order
+
+1. `payments` row FOR UPDATE
+2. `passes` row FOR UPDATE (via `renewed_pass_id`)
+3. All `lessons` on pass FOR UPDATE (deterministic `id` order)
+4. Existing refund check before mutation
 
 ### Ordered steps (OD-12)
 
-1. Owner authorization
+1. Owner authorization (`reve_private.assert_active_owner_caller`)
 2. Lock payment + pass FOR UPDATE
 3. Verify no existing payment_refunds row for payment
 4. Validate amount = paid_amount_krw (full refund MVP)
 5. Mandatory reason
-6. INSERT single immutable payment_refunds row
-7. Preserve deductible historical lessons unchanged
-8. UPDATE future non-deducted lessons → advance_cancelled
-9. SET pass status cancelled + cancelled_at
-10. UPDATE payment status refunded
-11. Recalculate SMS
+6. Active path: future non-deducted lessons (`scheduled_at > now()`, not deductible, not already `advance_cancelled`) → `advance_cancelled` with audit preserving scheduled data
+7. SET pass status `cancelled` + `cancelled_at`
+8. UPDATE payment status `refunded`
+9. INSERT single immutable payment_refunds row
+10. Preserve deductible historical lessons unchanged
+11. Recalculate SMS via `reve_private.synchronize_sms_notification`
 12. Audit entries with one correlation_id
 13. COMMIT atomically
 
@@ -562,9 +571,9 @@ Legacy design reference (`replace_pass_schedule_slots`):
 
 ROLLBACK — no refund row
 
-### Idempotency
+### Duplicate request
 
-Second attempt after success → reject (refund row exists)
+Second attempt after success → `REVE_REFUND_ALREADY_EXISTS` (deterministic rejection; not idempotent replay)
 
 ### Prohibited
 

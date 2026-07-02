@@ -887,12 +887,9 @@ SELECT ok(
     SELECT 1 FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
-      AND p.proname IN (
-        'reve_process_payment_refund',
-        'reve_apply_schedule_change_request'
-      )
+      AND p.proname = 'reve_apply_schedule_change_request'
   ),
-  'refund and schedule application RPCs remain deferred'
+  'legacy schedule application RPC name remains absent'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_reset_role(); END $$;
