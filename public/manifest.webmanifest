@@ -1,0 +1,9 @@
+{
+  "name": "REVE ACADEMY OS",
+  "short_name": "REVE OS",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#364fc7",
+  "lang": "ko-KR"
+}

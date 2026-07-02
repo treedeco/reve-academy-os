@@ -1,0 +1,6 @@
+-- REVE ACADEMY OS — default db reset seed (intentionally empty)
+--
+-- pgTAP database tests require no committed owner profile before bootstrap tests run.
+-- For Owner Alpha local dev and Playwright E2E, run after db reset:
+--   psql ... -f scripts/seed-owner-alpha.sql
+-- or: npm run db:seed:alpha

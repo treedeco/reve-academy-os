@@ -307,13 +307,52 @@ Google Sheets 데이터를 이전하고, 병행 운영·비교·오류 수정 �
 | 5 | SMS & dashboard | Yes |
 | 6 | Migration | Yes |
 
-**Current status**: Phase 0A documentation (domain rules, permissions, state transitions; OD-01~OD-12 confirmed) **ready for checkpoint**. Phase 0B (ERD, RLS design) **not started**. Application implementation not started.
+**Current status**: Phase **1A — Owner Alpha Core Operations** is **active**. Phase 0B database trusted operations through **0B-3B-2B-3E** remain **authoritative** (tag `phase-0b3b2b3e-owner-payment-refund`). Application implementation has started with the Owner Alpha vertical slice.
+
+---
+
+## Phase 1A — Owner Alpha Core Operations (active)
+
+### Goal
+
+Deliver the first browser-usable Owner application against the verified Supabase database. This is an operational vertical slice, **not** full product completion.
+
+### Entry Conditions
+
+- Phase 0B-3B-2B-3E database checkpoint verified locally
+- Completed trusted operations remain authoritative (`reve_transition_lesson_status`, `reve_owner_get_pass_usage`, etc.)
+
+### Deliverables
+
+- Next.js + React + TypeScript (strict) + Tailwind + Supabase Auth
+- Owner login/logout and protected routes
+- Owner shell (responsive navigation, loading/empty/error states)
+- `/dashboard`, `/lessons/today`, `/students`, `/students/[studentId]`
+- Lesson status changes **only** via `reve_transition_lesson_status`
+- Scoped refresh after mutations (lesson, pass summary, student summary, dashboard counts)
+- Vitest unit/integration tests + Playwright browser tests
+- Read-only migration `reve_owner_get_pass_usage` when required for derived counts
+
+### Validation Requirements
+
+- Owner can sign in, view today’s lessons, change lesson status, reload, and see persisted state in a real browser
+- Failed mutations restore previous UI and show readable errors
+- No service-role key in client code; RLS preserved
+- Standard pgTAP baseline **882** + SMS concurrency **1** + refund concurrency **2** must not regress
+- Phase 1A pgTAP assertions counted separately (**6** in `phase_1a_owner_read_projections.test.sql`)
+
+### Explicitly Excluded (Phase 1A)
+
+- `correct_cancelled_pass`, general re-enrollment, refund reversal UI
+- Payment UI, refund UI, SMS management UI
+- Teacher/Student login UI, schedule-change request UI
+- Weekly schedule editing, advanced dashboard analytics
 
 ---
 
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
-Executable PostgreSQL migrations and pgTAP tests. **Current database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
+Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
 
 | Phase | Name | Status |
 |-------|------|--------|
@@ -324,7 +363,8 @@ Executable PostgreSQL migrations and pgTAP tests. **Current database checkpoint*
 | 0B-3B-2B-3D-3A | SMS sent confirmation specification (docs only) | **Implemented** |
 | 0B-3B-2B-3D-3B | SMS sent confirmation database RPC + pgTAP | **Implemented** |
 | 0B-3B-2B-3D-3B-H1 | SMS concurrency harness hygiene | **Implemented** |
-| 0B-3B-2B-3E | Owner payment refund trusted operation | **Current** |
+| 0B-3B-2B-3E | Owner payment refund trusted operation | **Implemented** |
+| 1A (read) | Owner pass usage read projection | **Implemented** |
 
 ### Phase 0B-3B-2B-3D-3 — Owner manual SMS sent confirmation
 
@@ -336,4 +376,15 @@ Executable PostgreSQL migrations and pgTAP tests. **Current database checkpoint*
 - **3D-3B-H1** — Forward migration removed production `reve_test` harness; concurrency verification isolated to scripts.
 - **3E** — **Implemented**: `public.reve_process_payment_refund`; Owner-only full refund for active/reserved passes; duplicate rejection via `REVE_REFUND_ALREADY_EXISTS`; standard pgTAP **882** + dedicated concurrency pgTAP **2**. Verified via `scripts/verify_phase_0b3b2b3e.ps1`.
 
-**Deferred** (no official Phase number assigned here): Owner UI for copy/confirm workflow; external SMS API; sent-confirmation reversal; re-enrollment; `correct_cancelled_pass`.
+---
+
+## Deferred after Owner Alpha (post-Alpha)
+
+These database exception / correction workflows remain specified but **not scheduled** until Owner Alpha is operational in daily use:
+
+- **`correct_cancelled_pass`** (formerly planned Phase 0B-3B-2B-3F)
+- General **re-enrollment** workflows
+- **Refund reversal** and related payment correction UI
+- Owner UI for SMS copy/confirm workflow; external SMS API; sent-confirmation reversal
+- Payment UI, schedule-change request UI, Teacher/Student portals
+- Advanced dashboard statistics, accounting integration, multi-branch support
