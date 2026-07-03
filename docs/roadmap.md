@@ -307,15 +307,19 @@ Google Sheets 데이터를 이전하고, 병행 운영·비교·오류 수정 �
 | 5 | SMS & dashboard | Yes |
 | 6 | Migration | Yes |
 
-**Current status**: Phase **1A — Owner Alpha Core Operations** is **active**. Phase 0B database trusted operations through **0B-3B-2B-3E** remain **authoritative** (tag `phase-0b3b2b3e-owner-payment-refund`). Application implementation has started with the Owner Alpha vertical slice.
+**Current status**: Phase **1A — Owner Alpha Core Operations** is **complete** (tag `phase-1a-owner-alpha-runtime-verified`). Phase 0B database trusted operations through **0B-3B-2B-3E** remain **authoritative** (tag `phase-0b3b2b3e-owner-payment-refund`).
 
 ---
 
-## Phase 1A — Owner Alpha Core Operations (active)
+## Phase 1A — Owner Alpha Core Operations (complete)
 
 ### Goal
 
 Deliver the first browser-usable Owner application against the verified Supabase database. This is an operational vertical slice, **not** full product completion.
+
+### Status
+
+**Complete** — automated verification (H1), migration ordering audit (H2), and Owner manual browser verification (H3) passed on 2026-07-03. Checkpoint tag: `phase-1a-owner-alpha-runtime-verified`.
 
 ### Entry Conditions
 
@@ -350,11 +354,15 @@ Deliver the first browser-usable Owner application against the verified Supabase
 
 ---
 
-## Phase 1A-H1 — Owner Alpha Verification and Runtime Hardening (active)
+## Phase 1A-H1 — Owner Alpha Verification and Runtime Hardening (complete)
 
 ### Goal
 
 Formalize verification gates and harden Owner Alpha runtime behavior without adding business features.
+
+### Status
+
+**Complete** — tag `phase-1a-h1-owner-alpha-verification-hardened`.
 
 ### Deliverables
 
@@ -363,6 +371,30 @@ Formalize verification gates and harden Owner Alpha runtime behavior without add
 - Scoped lesson-status UI refresh (no route-wide `router.refresh()`)
 - Local-only demo seed safety checks
 - Manual browser verification checklist (`docs/manual-verification-owner-alpha.md`)
+
+---
+
+## Phase 1A-H2 — Migration Ordering Audit (complete)
+
+### Goal
+
+Audit and normalize Phase 1A migration filenames without changing SQL behavior.
+
+### Status
+
+**Complete** — tag `phase-1a-h2-migration-order-audited`. Phase 1A migrations ordered immediately after `20260708120000_phase_0b3b2b3e_owner_payment_refund.sql` (`08130100`, `08130200`). Accepted ordering exception relative to project calendar date 2026-07-03.
+
+---
+
+## Phase 1A-H3 — Owner Manual Runtime Verification (complete)
+
+### Goal
+
+Owner performs all 15 manual browser checklist steps; record explicit sign-off.
+
+### Status
+
+**Complete** — Owner confirmed all steps PASS on 2026-07-03. Evidence: `docs/manual-verification-owner-alpha.md`. Final tag: `phase-1a-owner-alpha-runtime-verified`.
 
 ---
 
