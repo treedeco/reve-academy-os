@@ -4,6 +4,7 @@ import {
   fetchPassUsage,
   fetchStudentDetail,
   fetchTodayLessons,
+  fetchWeeklySchedule,
   transitionLessonStatus,
 } from '@/lib/data/owner-queries';
 import { mapDatabaseError } from '@/lib/domain/format';
@@ -60,6 +61,14 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     const detail = await fetchStudentDetail(ownerClient, alphaStudentId);
     expect(detail.student.name).toBe('Alpha Student');
     expect(detail.current_pass?.pass_code).toBe('V-S1A1-001');
+  });
+
+  it('loads weekly schedule entries for authenticated owner', async () => {
+    const entries = await fetchWeeklySchedule(ownerClient);
+    expect(entries.length).toBeGreaterThanOrEqual(3);
+    expect(entries.some((entry) => entry.student_name === 'Alpha Student' && entry.weekday === 1)).toBe(true);
+    expect(entries.some((entry) => entry.student_name === 'Beta Student' && entry.weekday === 3)).toBe(true);
+    expect(entries.every((entry) => entry.pass_status === 'active')).toBe(true);
   });
 
   it('maps RPC transition errors to readable messages', async () => {

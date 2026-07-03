@@ -3,11 +3,18 @@ import type {
   DashboardSummary,
   LessonTransitionResult,
   PassUsageSummary,
+  PassStatus,
   StudentDetailData,
   StudentListRow,
   TodayLessonRow,
 } from '@/lib/domain/types';
 import { getSeoulDayBounds } from '@/lib/domain/format';
+import {
+  buildActiveStudentCourseKeys,
+  pickNextLessonForSlot,
+  shouldIncludePassSlot,
+  type WeeklyScheduleEntry,
+} from '@/lib/domain/weekly-schedule';
 
 export async function fetchTodayLessons(supabase: SupabaseClient): Promise<TodayLessonRow[]> {
   const { startIso, endIso } = getSeoulDayBounds();
@@ -335,4 +342,158 @@ export async function transitionLessonStatus(
   }
 
   return row as LessonTransitionResult;
+}
+
+type ScheduleSlotPassJoin = {
+  id: string;
+  pass_code: string;
+  status: PassStatus;
+  student_id: string;
+  course_id: string;
+  weekly_frequency_snapshot: number;
+  registered_lesson_count_snapshot: number;
+  students: { id: string; name: string } | { id: string; name: string }[] | null;
+  courses: { id: string; name: string } | { id: string; name: string }[] | null;
+};
+
+type ScheduleSlotTeacherJoin = { id: string; name: string } | { id: string; name: string }[] | null;
+
+type ScheduleSlotRow = {
+  id: string;
+  weekday: number;
+  local_start_time: string;
+  duration_minutes: number;
+  slot_order: number;
+  pass_id: string;
+  teacher_id: string;
+  passes: ScheduleSlotPassJoin | ScheduleSlotPassJoin[] | null;
+  teachers: ScheduleSlotTeacherJoin;
+};
+
+function readJoinedRow<T>(value: T | T[] | null): T | null {
+  if (!value) {
+    return null;
+  }
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+/**
+ * Owner weekly fixed schedule read.
+ * Query count: 2 (active schedule_slots+joins, batched upcoming lessons). Zero per-row requests.
+ */
+export async function fetchWeeklySchedule(supabase: SupabaseClient): Promise<WeeklyScheduleEntry[]> {
+  const { data: slots, error } = await supabase
+    .from('schedule_slots')
+    .select(
+      `
+      id,
+      weekday,
+      local_start_time,
+      duration_minutes,
+      slot_order,
+      pass_id,
+      teacher_id,
+      passes!inner (
+        id,
+        pass_code,
+        status,
+        student_id,
+        course_id,
+        weekly_frequency_snapshot,
+        registered_lesson_count_snapshot,
+        students ( id, name ),
+        courses ( id, name )
+      ),
+      teachers ( id, name )
+    `,
+    )
+    .eq('is_active', true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const slotRows = (slots ?? []) as ScheduleSlotRow[];
+  if (slotRows.length === 0) {
+    return [];
+  }
+
+  const passRows = slotRows
+    .map((slot) => {
+      const pass = readJoinedRow(slot.passes);
+      if (!pass) {
+        return null;
+      }
+      return {
+        student_id: pass.student_id,
+        course_id: pass.course_id,
+        pass_status: pass.status,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  const activeStudentCourseKeys = buildActiveStudentCourseKeys(passRows);
+
+  const filteredSlots = slotRows.filter((slot) => {
+    const pass = readJoinedRow(slot.passes);
+    if (!pass) {
+      return false;
+    }
+    return shouldIncludePassSlot(
+      pass.status,
+      pass.student_id,
+      pass.course_id,
+      activeStudentCourseKeys,
+    );
+  });
+
+  if (filteredSlots.length === 0) {
+    return [];
+  }
+
+  const passIds = [...new Set(filteredSlots.map((slot) => slot.pass_id))];
+  const referenceIso = new Date().toISOString();
+
+  const { data: lessons, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, pass_id, schedule_slot_id, scheduled_at, status')
+    .in('pass_id', passIds)
+    .gte('scheduled_at', referenceIso)
+    .order('scheduled_at', { ascending: true });
+
+  if (lessonsError) {
+    throw new Error(lessonsError.message);
+  }
+
+  const lessonRows = lessons ?? [];
+
+  return filteredSlots.map((slot) => {
+    const pass = readJoinedRow(slot.passes);
+    const student = pass ? readJoinedRow(pass.students) : null;
+    const course = pass ? readJoinedRow(pass.courses) : null;
+    const teacher = readJoinedRow(slot.teachers);
+    const nextLesson = pickNextLessonForSlot(lessonRows, slot.id, referenceIso);
+
+    return {
+      slot_id: slot.id,
+      pass_id: slot.pass_id,
+      pass_code: pass?.pass_code ?? '',
+      pass_status: pass?.status ?? 'active',
+      weekday: slot.weekday,
+      local_start_time: slot.local_start_time,
+      duration_minutes: slot.duration_minutes,
+      slot_order: slot.slot_order,
+      student_id: pass?.student_id ?? '',
+      student_name: student?.name ?? '',
+      teacher_id: slot.teacher_id,
+      teacher_name: teacher?.name ?? '',
+      course_id: pass?.course_id ?? '',
+      course_name: course?.name ?? '',
+      weekly_frequency: pass?.weekly_frequency_snapshot ?? 0,
+      registered_lesson_count: pass?.registered_lesson_count_snapshot ?? 0,
+      next_lesson_id: nextLesson?.id ?? null,
+      next_lesson_scheduled_at: nextLesson?.scheduled_at ?? null,
+      next_lesson_status: nextLesson?.status ?? null,
+    };
+  });
 }

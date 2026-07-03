@@ -398,6 +398,26 @@ Owner performs all 15 manual browser checklist steps; record explicit sign-off.
 
 ---
 
+## Phase 1B-1 — Owner Weekly Schedule Read (active)
+
+### Goal
+
+Read-only Owner weekly fixed schedule view grouped by weekday and local time (Asia/Seoul).
+
+### Deliverables
+
+- Route `/schedule` with navigation **주간 시간표**
+- Server-side `fetchWeeklySchedule` (2 DB queries, zero per-row N+1)
+- Desktop column + mobile list layouts from one normalized model
+- Extended local demo seed for multi-weekday coverage
+- Unit, Playwright, and `scripts/verify_phase_1b1.ps1` verification
+
+### Status
+
+**Implementation complete — Owner manual verification pending** (`docs/manual-verification-owner-weekly-schedule.md`).
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
