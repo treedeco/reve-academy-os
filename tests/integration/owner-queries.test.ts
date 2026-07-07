@@ -1,7 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  confirmOwnerSmsSent,
   fetchPassUsage,
+  fetchOwnerSmsNotifications,
   fetchStudentDetail,
   fetchTodayLessons,
   fetchWeeklySchedule,
@@ -17,6 +19,7 @@ const teacherEmail = 'teacher-alpha@test.local';
 const teacherPassword = 'TeacherAlpha123!';
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaStudentId = '44444444-4444-4444-4444-444444444101';
+const deltaSmsId = '88888888-8888-8888-8888-888888888103';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -69,6 +72,42 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     expect(entries.some((entry) => entry.student_name === 'Alpha Student' && entry.weekday === 1)).toBe(true);
     expect(entries.some((entry) => entry.student_name === 'Beta Student' && entry.weekday === 3)).toBe(true);
     expect(entries.every((entry) => entry.pass_status === 'active')).toBe(true);
+  });
+
+  it('loads eligible owner SMS notifications in one query', async () => {
+    const notifications = await fetchOwnerSmsNotifications(ownerClient);
+    expect(notifications.length).toBeGreaterThanOrEqual(3);
+    expect(notifications.every((row) => ['scheduled', 'target', 'exhausted_unsent'].includes(row.status))).toBe(true);
+    expect(notifications.some((row) => row.student_name === 'Beta Student' && row.status === 'scheduled')).toBe(true);
+    expect(notifications.some((row) => row.student_name === 'Delta Student' && row.status === 'target')).toBe(true);
+    expect(notifications.some((row) => row.student_name === 'Gamma Student' && row.status === 'exhausted_unsent')).toBe(true);
+    expect(notifications.some((row) => row.student_name === 'Alpha Student')).toBe(false);
+  });
+
+  it('confirms SMS sent via trusted RPC and handles idempotent retry', async () => {
+    const result = await confirmOwnerSmsSent(ownerClient, deltaSmsId);
+    expect(result.new_status).toBe('sent');
+    expect(result.no_change).toBe(false);
+
+    const retry = await confirmOwnerSmsSent(ownerClient, deltaSmsId);
+    expect(retry.new_status).toBe('sent');
+    expect(retry.no_change).toBe(true);
+
+    const notifications = await fetchOwnerSmsNotifications(ownerClient);
+    expect(notifications.some((row) => row.id === deltaSmsId)).toBe(false);
+  });
+
+  it('maps SMS confirmation errors to readable messages', async () => {
+    const alphaNormalSmsId = '88888888-8888-8888-8888-888888888101';
+    await expect(confirmOwnerSmsSent(ownerClient, alphaNormalSmsId)).rejects.toThrow(
+      /REVE_SMS_NOT_CONFIRMABLE/,
+    );
+    try {
+      await confirmOwnerSmsSent(ownerClient, alphaNormalSmsId);
+      expect.unreachable('expected non-confirmable SMS to fail');
+    } catch (error) {
+      expect(mapDatabaseError(error as { message?: string })).toMatch(/발송 확인할 수 없는/);
+    }
   });
 
   it('maps RPC transition errors to readable messages', async () => {

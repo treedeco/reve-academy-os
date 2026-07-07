@@ -418,6 +418,27 @@ Read-only Owner weekly fixed schedule view grouped by weekday and local time (As
 
 ---
 
+## Phase 1B-2 — Owner SMS Sent Confirmation (implemented)
+
+### Goal
+
+Owner-only UI to view eligible SMS notifications, copy prepared message text, send externally, and confirm sent via existing trusted RPC `reve_owner_confirm_sms_sent`.
+
+### Deliverables
+
+- Route `/sms` with navigation **SMS 발송 확인**
+- Server-side `fetchOwnerSmsNotifications` (1 DB query, zero per-row N+1)
+- Client `confirmOwnerSmsSent` RPC wrapper with scoped row update (no `router.refresh()`)
+- Extended local demo seed for `scheduled`, `target`, `exhausted_unsent`, and exclusion fixtures (`normal`, `sent`)
+- Unit, integration, Playwright, and `scripts/verify_phase_1b2.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-sms.md`
+
+### Status
+
+**Implemented** — automated verification via `scripts/verify_phase_1b2.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b2-owner-sms-sent-confirmation-implemented`. Runtime tag **not** created in this step.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).

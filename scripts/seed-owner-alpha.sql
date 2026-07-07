@@ -198,6 +198,59 @@ BEGIN
     ('99999999-9999-9999-9999-999999999304', '66666666-6666-6666-6666-666666666102', '44444444-4444-4444-4444-444444444103', v_course, v_teacher, '77777777-7777-7777-7777-777777777102', 4, v_today - interval '59 days', 'completed')
   ON CONFLICT (id) DO NOTHING;
 
+  -- Phase 1B-2 SMS sent confirmation fixtures
+  INSERT INTO public.sms_notifications (
+    id, student_id, pass_id, notification_type, status, message_body_snapshot, target_date,
+    sent_at, sent_confirmed_by_profile_id
+  ) VALUES
+    ('88888888-8888-8888-8888-888888888102', '44444444-4444-4444-4444-444444444102', '66666666-6666-6666-6666-666666666105', 'renewal_reminder', 'scheduled',
+     '[Beta] Alpha 4 Lessons 수강권 갱신 안내 SMS', CURRENT_DATE + 3, NULL, NULL),
+    ('88888888-8888-8888-8888-888888888103', '44444444-4444-4444-4444-444444444104', '66666666-6666-6666-6666-666666666103', 'renewal_reminder', 'target',
+     '[Delta] Alpha 4 Lessons 수강권 갱신 안내 SMS', CURRENT_DATE, NULL, NULL),
+    ('88888888-8888-8888-8888-888888888104', '44444444-4444-4444-4444-444444444103', '66666666-6666-6666-6666-666666666102', 'renewal_reminder', 'exhausted_unsent',
+     '[Gamma] Alpha 4 Lessons 수강권 갱신 안내 SMS (미발송 소진)', CURRENT_DATE - 1, NULL, NULL)
+  ON CONFLICT (id) DO NOTHING;
+
+  UPDATE public.sms_notifications
+  SET
+    status = 'normal',
+    message_body_snapshot = 'Alpha SMS reminder',
+    target_date = CURRENT_DATE + 14,
+    sent_at = NULL,
+    sent_confirmed_by_profile_id = NULL,
+    updated_at = now()
+  WHERE id = '88888888-8888-8888-8888-888888888101';
+
+  UPDATE public.sms_notifications
+  SET
+    status = 'scheduled',
+    message_body_snapshot = '[Beta] Alpha 4 Lessons 수강권 갱신 안내 SMS',
+    target_date = CURRENT_DATE + 3,
+    sent_at = NULL,
+    sent_confirmed_by_profile_id = NULL,
+    updated_at = now()
+  WHERE id = '88888888-8888-8888-8888-888888888102';
+
+  UPDATE public.sms_notifications
+  SET
+    status = 'target',
+    message_body_snapshot = '[Delta] Alpha 4 Lessons 수강권 갱신 안내 SMS',
+    target_date = CURRENT_DATE,
+    sent_at = NULL,
+    sent_confirmed_by_profile_id = NULL,
+    updated_at = now()
+  WHERE id = '88888888-8888-8888-8888-888888888103';
+
+  UPDATE public.sms_notifications
+  SET
+    status = 'exhausted_unsent',
+    message_body_snapshot = '[Gamma] Alpha 4 Lessons 수강권 갱신 안내 SMS (미발송 소진)',
+    target_date = CURRENT_DATE - 1,
+    sent_at = NULL,
+    sent_confirmed_by_profile_id = NULL,
+    updated_at = now()
+  WHERE id = '88888888-8888-8888-8888-888888888104';
+
   UPDATE public.lessons
   SET
     status = 'postponed',

@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: '대시보드' },
   { href: '/lessons/today', label: '오늘의 수업' },
   { href: '/schedule', label: '주간 시간표' },
+  { href: '/sms', label: 'SMS 발송 확인' },
   { href: '/students', label: '학생' },
 ];
 

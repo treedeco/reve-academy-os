@@ -165,3 +165,29 @@ export const STATUS_LABELS: Record<LessonStatus, string> = {
 };
 
 export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+export interface OwnerSmsNotificationRow {
+  id: string;
+  status: string;
+  message_body_snapshot: string | null;
+  target_date: string | null;
+  notification_type: string;
+  student_id: string;
+  student_name: string;
+  pass_id: string;
+  pass_code: string;
+  pass_status: PassStatus;
+  product_name: string | null;
+  course_name: string | null;
+}
+
+export interface SmsConfirmResult {
+  sms_notification_id: string;
+  student_id: string;
+  pass_id: string;
+  previous_status: string;
+  new_status: string;
+  sent_at: string | null;
+  sent_confirmed_by_profile_id: string | null;
+  no_change: boolean;
+}

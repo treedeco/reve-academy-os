@@ -2,13 +2,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   DashboardSummary,
   LessonTransitionResult,
+  OwnerSmsNotificationRow,
   PassUsageSummary,
   PassStatus,
+  SmsConfirmResult,
   StudentDetailData,
   StudentListRow,
   TodayLessonRow,
 } from '@/lib/domain/types';
 import { getSeoulDayBounds } from '@/lib/domain/format';
+import { ELIGIBLE_SMS_STATUSES } from '@/lib/domain/sms';
 import {
   buildActiveStudentCourseKeys,
   pickNextLessonForSlot,
@@ -496,4 +499,104 @@ export async function fetchWeeklySchedule(supabase: SupabaseClient): Promise<Wee
       next_lesson_status: nextLesson?.status ?? null,
     };
   });
+}
+
+type SmsPassJoin = {
+  id: string;
+  pass_code: string;
+  status: PassStatus;
+  product_name_snapshot: string | null;
+  courses: { name: string } | { name: string }[] | null;
+};
+
+type SmsStudentJoin = { name: string } | { name: string }[] | null;
+
+type SmsNotificationRow = {
+  id: string;
+  status: string;
+  message_body_snapshot: string | null;
+  target_date: string | null;
+  notification_type: string;
+  student_id: string;
+  pass_id: string;
+  students: SmsStudentJoin;
+  passes: SmsPassJoin | SmsPassJoin[] | null;
+};
+
+/**
+ * Owner eligible SMS notifications for manual send confirmation.
+ * Query count: 1 (sms_notifications + student/pass/course joins). Zero per-row requests.
+ */
+export async function fetchOwnerSmsNotifications(
+  supabase: SupabaseClient,
+): Promise<OwnerSmsNotificationRow[]> {
+  const { data, error } = await supabase
+    .from('sms_notifications')
+    .select(
+      `
+      id,
+      status,
+      message_body_snapshot,
+      target_date,
+      notification_type,
+      student_id,
+      pass_id,
+      students ( name ),
+      passes (
+        id,
+        pass_code,
+        status,
+        product_name_snapshot,
+        courses ( name )
+      )
+    `,
+    )
+    .in('status', [...ELIGIBLE_SMS_STATUSES])
+    .order('target_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as SmsNotificationRow[]).map((row) => {
+    const student = readJoinedRow(row.students);
+    const pass = readJoinedRow(row.passes);
+    const course = pass ? readJoinedRow(pass.courses) : null;
+
+    return {
+      id: row.id,
+      status: row.status,
+      message_body_snapshot: row.message_body_snapshot,
+      target_date: row.target_date,
+      notification_type: row.notification_type,
+      student_id: row.student_id,
+      student_name: student?.name ?? '',
+      pass_id: row.pass_id,
+      pass_code: pass?.pass_code ?? '',
+      pass_status: pass?.status ?? 'active',
+      product_name: pass?.product_name_snapshot ?? null,
+      course_name: course?.name ?? null,
+    };
+  });
+}
+
+export async function confirmOwnerSmsSent(
+  supabase: SupabaseClient,
+  smsNotificationId: string,
+): Promise<SmsConfirmResult> {
+  const { data, error } = await supabase.rpc('reve_owner_confirm_sms_sent', {
+    p_sms_notification_id: smsNotificationId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('SMS confirmation returned no data');
+  }
+
+  return row as SmsConfirmResult;
 }

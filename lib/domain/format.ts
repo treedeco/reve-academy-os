@@ -6,6 +6,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_INVALID_TRANSITION: '허용되지 않는 상태 변경입니다.',
   REVE_REASON_REQUIRED: '변경 사유를 입력해 주세요.',
   REVE_INVALID_PROFILE: '활성 Owner 계정이 아닙니다.',
+  REVE_SMS_NOT_CONFIRMABLE: '발송 확인할 수 없는 SMS 상태입니다.',
 };
 
 export function mapDatabaseError(error: { message?: string; code?: string } | null): string {
@@ -47,6 +48,15 @@ export function formatTimeSeoul(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(iso));
+}
+
+export function formatDateSeoul(dateKey: string): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(`${dateKey}T12:00:00+09:00`));
 }
 
 export function getSeoulDayBounds(reference = new Date()): { startIso: string; endIso: string; dateKey: string } {
