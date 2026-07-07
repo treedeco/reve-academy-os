@@ -398,7 +398,7 @@ Owner performs all 15 manual browser checklist steps; record explicit sign-off.
 
 ---
 
-## Phase 1B-1 — Owner Weekly Schedule Read (active)
+## Phase 1B-1 — Owner Weekly Schedule Read (complete)
 
 ### Goal
 
@@ -414,7 +414,7 @@ Read-only Owner weekly fixed schedule view grouped by weekday and local time (As
 
 ### Status
 
-**Implementation complete — Owner manual verification pending** (`docs/manual-verification-owner-weekly-schedule.md`).
+**Complete** — Owner manual browser verification passed on 2026-07-07. Evidence: `docs/manual-verification-owner-weekly-schedule.md`. Runtime tag: `phase-1b1-owner-weekly-schedule-runtime-verified`.
 
 ---
 
