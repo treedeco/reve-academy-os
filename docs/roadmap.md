@@ -435,7 +435,7 @@ Owner-only UI to view eligible SMS notifications, copy prepared message text, se
 
 ### Status
 
-**Implemented** — automated verification via `scripts/verify_phase_1b2.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b2-owner-sms-sent-confirmation-implemented`. Runtime tag **not** created in this step.
+**Complete** — Owner manual browser verification passed on 2026-07-08. Evidence: `docs/manual-verification-owner-sms.md`. Runtime tag: `phase-1b2-owner-sms-sent-confirmation-runtime-verified`.
 
 ---
 
