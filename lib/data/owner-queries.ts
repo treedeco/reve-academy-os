@@ -2,9 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   DashboardSummary,
   LessonTransitionResult,
+  OwnerRefundablePaymentRow,
   OwnerSmsNotificationRow,
   PassUsageSummary,
   PassStatus,
+  PaymentRefundResult,
   SmsConfirmResult,
   StudentDetailData,
   StudentListRow,
@@ -12,6 +14,7 @@ import type {
 } from '@/lib/domain/types';
 import { getSeoulDayBounds } from '@/lib/domain/format';
 import { ELIGIBLE_SMS_STATUSES } from '@/lib/domain/sms';
+import { isRefundablePassStatus } from '@/lib/domain/refund';
 import {
   buildActiveStudentCourseKeys,
   pickNextLessonForSlot,
@@ -599,4 +602,124 @@ export async function confirmOwnerSmsSent(
   }
 
   return row as SmsConfirmResult;
+}
+
+type RefundPassJoin = {
+  id: string;
+  pass_code: string;
+  status: PassStatus;
+  product_name_snapshot: string | null;
+};
+
+type RefundStudentJoin = { name: string } | { name: string }[] | null;
+type RefundCourseJoin = { name: string } | { name: string }[] | null;
+type RefundRowJoin = { id: string } | { id: string }[] | null;
+
+type RefundablePaymentRow = {
+  id: string;
+  paid_amount_krw: number;
+  paid_at: string | null;
+  status: string;
+  student_id: string;
+  course_id: string;
+  renewed_pass_id: string | null;
+  students: RefundStudentJoin;
+  courses: RefundCourseJoin;
+  passes: RefundPassJoin | RefundPassJoin[] | null;
+  payment_refunds: RefundRowJoin;
+};
+
+/**
+ * Owner refundable completed payments (full refund MVP).
+ * Query count: 1 (payments + joins + refund anti-filter in mapper). Zero per-row requests.
+ */
+export async function fetchOwnerRefundablePayments(
+  supabase: SupabaseClient,
+): Promise<OwnerRefundablePaymentRow[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select(
+      `
+      id,
+      paid_amount_krw,
+      paid_at,
+      status,
+      student_id,
+      course_id,
+      renewed_pass_id,
+      students ( name ),
+      courses ( name ),
+      passes!payments_renewed_pass_id_fkey!inner (
+        id,
+        pass_code,
+        status,
+        product_name_snapshot
+      ),
+      payment_refunds ( id )
+    `,
+    )
+    .eq('status', 'completed')
+    .not('renewed_pass_id', 'is', null)
+    .in('passes.status', ['active', 'reserved'])
+    .order('paid_at', { ascending: true, nullsFirst: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as RefundablePaymentRow[])
+    .filter((row) => {
+      const refund = readJoinedRow(row.payment_refunds);
+      return !refund;
+    })
+    .filter((row) => {
+      const pass = readJoinedRow(row.passes);
+      return pass ? isRefundablePassStatus(pass.status) : false;
+    })
+    .map((row) => {
+      const student = readJoinedRow(row.students);
+      const course = readJoinedRow(row.courses);
+      const pass = readJoinedRow(row.passes);
+
+      return {
+        id: row.id,
+        paid_amount_krw: row.paid_amount_krw,
+        paid_at: row.paid_at,
+        payment_status: row.status,
+        student_id: row.student_id,
+        student_name: student?.name ?? '',
+        course_id: row.course_id,
+        course_name: course?.name ?? '',
+        pass_id: pass?.id ?? row.renewed_pass_id ?? '',
+        pass_code: pass?.pass_code ?? '',
+        pass_status: pass?.status ?? 'active',
+        product_name: pass?.product_name_snapshot ?? null,
+      };
+    });
+}
+
+export async function processOwnerPaymentRefund(
+  supabase: SupabaseClient,
+  input: {
+    paymentId: string;
+    refundedAmountKrw: number;
+    reason: string;
+  },
+): Promise<PaymentRefundResult> {
+  const { data, error } = await supabase.rpc('reve_process_payment_refund', {
+    p_payment_id: input.paymentId,
+    p_refunded_amount_krw: input.refundedAmountKrw,
+    p_reason: input.reason,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Payment refund returned no data');
+  }
+
+  return row as PaymentRefundResult;
 }

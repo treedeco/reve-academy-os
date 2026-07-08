@@ -191,3 +191,30 @@ export interface SmsConfirmResult {
   sent_confirmed_by_profile_id: string | null;
   no_change: boolean;
 }
+
+export interface OwnerRefundablePaymentRow {
+  id: string;
+  paid_amount_krw: number;
+  paid_at: string | null;
+  payment_status: string;
+  student_id: string;
+  student_name: string;
+  course_id: string;
+  course_name: string;
+  pass_id: string;
+  pass_code: string;
+  pass_status: PassStatus;
+  product_name: string | null;
+}
+
+export interface PaymentRefundResult {
+  refund_id: string;
+  payment_id: string;
+  pass_id: string;
+  payment_status: string;
+  pass_status: string;
+  pass_disposition: string;
+  refunded_amount_krw: number;
+  lessons_advanced_cancelled: number;
+  correlation_id: string;
+}

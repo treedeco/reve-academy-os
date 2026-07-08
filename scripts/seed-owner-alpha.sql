@@ -251,6 +251,129 @@ BEGIN
     updated_at = now()
   WHERE id = '88888888-8888-8888-8888-888888888104';
 
+  -- Phase 1B-3 payment refund fixtures
+  INSERT INTO public.students (id, student_code, profile_id, name, operational_status) VALUES
+    ('44444444-4444-4444-4444-444444444105', 'S1E1', NULL, 'Epsilon Student', 'active'),
+    ('44444444-4444-4444-4444-444444444106', 'S1Z1', NULL, 'Zeta Student', 'active')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.passes (
+    id, pass_code, student_id, course_id, course_product_id,
+    sequence_number, status, registered_lesson_count_snapshot,
+    weekly_frequency_snapshot, product_name_snapshot, tuition_amount_krw_snapshot,
+    start_date, activated_at
+  ) VALUES
+    ('66666666-6666-6666-6666-666666666109', 'V-S1E1-001', '44444444-4444-4444-4444-444444444105', v_course, v_product,
+     1, 'reserved', 4, 1, 'Alpha 4 Lessons', 200000, CURRENT_DATE + 30, NULL),
+    ('66666666-6666-6666-6666-666666666110', 'V-S1Z1-001', '44444444-4444-4444-4444-444444444106', v_course, v_product,
+     1, 'cancelled', 4, 1, 'Alpha 4 Lessons', 200000, CURRENT_DATE - 30, now() - interval '30 days')
+  ON CONFLICT (id) DO NOTHING;
+
+  DELETE FROM public.schedule_slots
+  WHERE id = '77777777-7777-7777-7777-777777777109';
+
+  INSERT INTO public.lessons (
+    id, pass_id, student_id, course_id, assigned_teacher_id, schedule_slot_id,
+    sequence_number, scheduled_at, status
+  ) VALUES
+    ('99999999-9999-9999-9999-999999999401', '66666666-6666-6666-6666-666666666109', '44444444-4444-4444-4444-444444444105', v_course, v_teacher, NULL, 1, v_today + interval '30 days', 'scheduled'),
+    ('99999999-9999-9999-9999-999999999402', '66666666-6666-6666-6666-666666666109', '44444444-4444-4444-4444-444444444105', v_course, v_teacher, NULL, 2, v_today + interval '37 days', 'scheduled'),
+    ('99999999-9999-9999-9999-999999999403', '66666666-6666-6666-6666-666666666109', '44444444-4444-4444-4444-444444444105', v_course, v_teacher, NULL, 3, v_today + interval '44 days', 'scheduled'),
+    ('99999999-9999-9999-9999-999999999404', '66666666-6666-6666-6666-666666666109', '44444444-4444-4444-4444-444444444105', v_course, v_teacher, NULL, 4, v_today + interval '51 days', 'scheduled'),
+    ('99999999-9999-9999-9999-999999999501', '66666666-6666-6666-6666-666666666110', '44444444-4444-4444-4444-444444444106', v_course, v_teacher, v_slot, 1, v_today - interval '20 days', 'advance_cancelled'),
+    ('99999999-9999-9999-9999-999999999502', '66666666-6666-6666-6666-666666666110', '44444444-4444-4444-4444-444444444106', v_course, v_teacher, v_slot, 2, v_today - interval '13 days', 'advance_cancelled'),
+    ('99999999-9999-9999-9999-999999999503', '66666666-6666-6666-6666-666666666110', '44444444-4444-4444-4444-444444444106', v_course, v_teacher, v_slot, 3, v_today - interval '6 days', 'advance_cancelled'),
+    ('99999999-9999-9999-9999-999999999504', '66666666-6666-6666-6666-666666666110', '44444444-4444-4444-4444-444444444106', v_course, v_teacher, v_slot, 4, v_today + interval '1 day', 'advance_cancelled')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.payments (
+    id, student_id, course_id, course_product_id, related_pass_id, renewed_pass_id,
+    paid_amount_krw, payment_method, status, paid_at, idempotency_key, processed_at, created_by_profile_id
+  ) VALUES
+    ('12121212-1212-1212-1212-121212121101', '44444444-4444-4444-4444-444444444104', v_course, v_product, NULL, '66666666-6666-6666-6666-666666666103',
+     200000, 'card', 'completed', now() - interval '7 days', 'alpha-seed-refund-delta-101', now() - interval '7 days', v_owner),
+    ('12121212-1212-1212-1212-121212121102', '44444444-4444-4444-4444-444444444102', v_course, v_product, NULL, '66666666-6666-6666-6666-666666666105',
+     200000, 'bank_transfer', 'completed', now() - interval '14 days', 'alpha-seed-refund-beta-102', now() - interval '14 days', v_owner),
+    ('12121212-1212-1212-1212-121212121103', v_student, v_course, v_product, NULL, v_pass,
+     200000, NULL, 'pending', NULL, 'alpha-seed-refund-pending-103', NULL, v_owner),
+    ('12121212-1212-1212-1212-121212121104', '44444444-4444-4444-4444-444444444106', v_course, v_product, NULL, '66666666-6666-6666-6666-666666666110',
+     200000, 'card', 'refunded', now() - interval '25 days', 'alpha-seed-refund-done-104', now() - interval '25 days', v_owner),
+    ('12121212-1212-1212-1212-121212121105', '44444444-4444-4444-4444-444444444105', v_course, v_product, NULL, '66666666-6666-6666-6666-666666666109',
+     200000, 'cash', 'completed', now() - interval '3 days', 'alpha-seed-refund-reserved-105', now() - interval '3 days', v_owner)
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.payment_refunds (
+    id, payment_id, refunded_amount_krw, reason, actor_profile_id, pass_disposition
+  ) VALUES (
+    'abababab-abab-abab-abab-ababababa201', '12121212-1212-1212-1212-121212121104', 200000,
+    'Alpha seed already refunded payment', v_owner, 'active_cancelled_future_advance_cancelled'
+  ) ON CONFLICT (id) DO NOTHING;
+
+  ALTER TABLE public.payment_refunds DISABLE TRIGGER trg_payment_refunds_block_mutation;
+  DELETE FROM public.payment_refunds
+  WHERE payment_id IN (
+    '12121212-1212-1212-1212-121212121101',
+    '12121212-1212-1212-1212-121212121102',
+    '12121212-1212-1212-1212-121212121105'
+  );
+  ALTER TABLE public.payment_refunds ENABLE TRIGGER trg_payment_refunds_block_mutation;
+
+  UPDATE public.payments
+  SET
+    status = 'completed',
+    paid_amount_krw = 200000,
+    paid_at = now() - interval '7 days',
+    processed_at = now() - interval '7 days',
+    updated_at = now()
+  WHERE id = '12121212-1212-1212-1212-121212121101';
+
+  UPDATE public.payments
+  SET
+    status = 'completed',
+    paid_amount_krw = 200000,
+    paid_at = now() - interval '14 days',
+    processed_at = now() - interval '14 days',
+    updated_at = now()
+  WHERE id = '12121212-1212-1212-1212-121212121102';
+
+  UPDATE public.payments
+  SET
+    status = 'pending',
+    paid_at = NULL,
+    processed_at = NULL,
+    payment_method = NULL,
+    updated_at = now()
+  WHERE id = '12121212-1212-1212-1212-121212121103';
+
+  UPDATE public.payments
+  SET
+    status = 'completed',
+    paid_amount_krw = 200000,
+    paid_at = now() - interval '3 days',
+    processed_at = now() - interval '3 days',
+    updated_at = now()
+  WHERE id = '12121212-1212-1212-1212-121212121105';
+
+  UPDATE public.passes
+  SET status = 'active', cancelled_at = NULL, updated_at = now()
+  WHERE id = '66666666-6666-6666-6666-666666666103';
+
+  UPDATE public.passes
+  SET status = 'active', cancelled_at = NULL, updated_at = now()
+  WHERE id = '66666666-6666-6666-6666-666666666105';
+
+  UPDATE public.passes
+  SET status = 'reserved', cancelled_at = NULL, activated_at = NULL, updated_at = now()
+  WHERE id = '66666666-6666-6666-6666-666666666109';
+
+  UPDATE public.lessons
+  SET status = 'scheduled', change_reason = NULL, updated_at = now()
+  WHERE pass_id IN ('66666666-6666-6666-6666-666666666103', '66666666-6666-6666-6666-666666666105');
+
+  UPDATE public.lessons
+  SET status = 'scheduled', change_reason = NULL, updated_at = now()
+  WHERE pass_id = '66666666-6666-6666-6666-666666666109';
+
   UPDATE public.lessons
   SET
     status = 'postponed',

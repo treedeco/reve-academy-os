@@ -7,6 +7,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_REASON_REQUIRED: '변경 사유를 입력해 주세요.',
   REVE_INVALID_PROFILE: '활성 Owner 계정이 아닙니다.',
   REVE_SMS_NOT_CONFIRMABLE: '발송 확인할 수 없는 SMS 상태입니다.',
+  REVE_REFUND_ALREADY_EXISTS: '이미 환불 처리된 결제입니다.',
+  REVE_PAYMENT_NOT_REFUNDABLE: '환불할 수 없는 결제입니다.',
+  REVE_REFUND_AMOUNT_MISMATCH: '환불 금액이 결제 금액과 일치하지 않습니다.',
 };
 
 export function mapDatabaseError(error: { message?: string; code?: string } | null): string {

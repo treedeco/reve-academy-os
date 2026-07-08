@@ -2,14 +2,17 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   confirmOwnerSmsSent,
+  fetchOwnerRefundablePayments,
   fetchPassUsage,
   fetchOwnerSmsNotifications,
   fetchStudentDetail,
   fetchTodayLessons,
   fetchWeeklySchedule,
+  processOwnerPaymentRefund,
   transitionLessonStatus,
 } from '@/lib/data/owner-queries';
 import { mapDatabaseError } from '@/lib/domain/format';
+import { mapRefundError } from '@/lib/domain/refund';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -20,6 +23,9 @@ const teacherPassword = 'TeacherAlpha123!';
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaStudentId = '44444444-4444-4444-4444-444444444101';
 const deltaSmsId = '88888888-8888-8888-8888-888888888103';
+const betaPaymentId = '12121212-1212-1212-1212-121212121102';
+const deltaPaymentId = '12121212-1212-1212-1212-121212121101';
+const alreadyRefundedPaymentId = '12121212-1212-1212-1212-121212121104';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -74,6 +80,16 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     expect(entries.every((entry) => entry.pass_status === 'active')).toBe(true);
   });
 
+  it('loads refundable owner payments in one query', async () => {
+    const payments = await fetchOwnerRefundablePayments(ownerClient);
+    expect(payments.length).toBeGreaterThanOrEqual(3);
+    expect(payments.some((row) => row.student_name === 'Delta Student')).toBe(true);
+    expect(payments.some((row) => row.student_name === 'Beta Student')).toBe(true);
+    expect(payments.some((row) => row.student_name === 'Epsilon Student' && row.pass_status === 'reserved')).toBe(true);
+    expect(payments.some((row) => row.student_name === 'Alpha Student')).toBe(false);
+    expect(payments.some((row) => row.student_name === 'Zeta Student')).toBe(false);
+  });
+
   it('loads eligible owner SMS notifications in one query', async () => {
     const notifications = await fetchOwnerSmsNotifications(ownerClient);
     expect(notifications.length).toBeGreaterThanOrEqual(3);
@@ -107,6 +123,56 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
       expect.unreachable('expected non-confirmable SMS to fail');
     } catch (error) {
       expect(mapDatabaseError(error as { message?: string })).toMatch(/발송 확인할 수 없는/);
+    }
+  });
+
+  it('processes payment refund via trusted RPC and rejects duplicate attempts', async () => {
+    const eligible = await fetchOwnerRefundablePayments(ownerClient);
+    const beta = eligible.find((row) => row.id === betaPaymentId);
+    expect(beta).toBeDefined();
+
+    const result = await processOwnerPaymentRefund(ownerClient, {
+      paymentId: betaPaymentId,
+      refundedAmountKrw: beta!.paid_amount_krw,
+      reason: 'Integration test refund',
+    });
+    expect(result.payment_status).toBe('refunded');
+    expect(result.pass_status).toBe('cancelled');
+    expect(result.refunded_amount_krw).toBe(200000);
+
+    const afterRefund = await fetchOwnerRefundablePayments(ownerClient);
+    expect(afterRefund.some((row) => row.id === betaPaymentId)).toBe(false);
+
+    await expect(
+      processOwnerPaymentRefund(ownerClient, {
+        paymentId: betaPaymentId,
+        refundedAmountKrw: 200000,
+        reason: 'Duplicate refund attempt',
+      }),
+    ).rejects.toThrow(/REVE_REFUND_ALREADY_EXISTS/);
+  });
+
+  it('maps payment refund errors to readable messages', async () => {
+    try {
+      await processOwnerPaymentRefund(ownerClient, {
+        paymentId: alreadyRefundedPaymentId,
+        refundedAmountKrw: 200000,
+        reason: 'Should fail',
+      });
+      expect.unreachable('expected already refunded payment to fail');
+    } catch (error) {
+      expect(mapRefundError(error as { message?: string })).toMatch(/이미 환불/);
+    }
+
+    try {
+      await processOwnerPaymentRefund(ownerClient, {
+        paymentId: deltaPaymentId,
+        refundedAmountKrw: 200000,
+        reason: '   ',
+      });
+      expect.unreachable('expected missing reason to fail');
+    } catch (error) {
+      expect(mapRefundError(error as { message?: string })).toMatch(/사유/);
     }
   });
 

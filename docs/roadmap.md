@@ -439,6 +439,27 @@ Owner-only UI to view eligible SMS notifications, copy prepared message text, se
 
 ---
 
+## Phase 1B-3 — Owner Payment Refund (implemented)
+
+### Goal
+
+Owner-only UI to view refundable completed payments and process full refunds via existing trusted RPC `reve_process_payment_refund`.
+
+### Deliverables
+
+- Route `/refunds` with navigation **환불 처리**
+- Server-side `fetchOwnerRefundablePayments` (1 DB query, zero per-row N+1)
+- Client `processOwnerPaymentRefund` RPC wrapper with scoped row update (no `router.refresh()`)
+- Extended local demo seed for eligible active/reserved, pending, and already-refunded fixtures
+- Unit, integration, Playwright, and `scripts/verify_phase_1b3.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-refunds.md`
+
+### Status
+
+**Implemented** — automated verification via `scripts/verify_phase_1b3.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b3-owner-payment-refund-implemented`. Runtime tag **not** created in this step.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
