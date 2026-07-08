@@ -456,7 +456,7 @@ Owner-only UI to view refundable completed payments and process full refunds via
 
 ### Status
 
-**Implemented** — automated verification via `scripts/verify_phase_1b3.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b3-owner-payment-refund-implemented`. Runtime tag **not** created in this step.
+**Complete** — Owner manual browser verification passed on 2026-07-08. Evidence: `docs/manual-verification-owner-refunds.md`. Runtime tag: `phase-1b3-owner-payment-refund-runtime-verified`.
 
 ---
 
