@@ -477,7 +477,7 @@ Owner-only UI to review submitted schedule change requests, approve or reject th
 
 ### Status
 
-**Implemented** — automated verification via `scripts/verify_phase_1b4.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b4-owner-schedule-change-request-review-implemented`. Runtime tag **not** created in this step.
+**Complete** — Owner manual browser verification passed on 2026-07-08. Evidence: `docs/manual-verification-owner-schedule-requests.md`. Runtime tag: `phase-1b4-owner-schedule-change-request-review-runtime-verified`.
 
 ---
 
