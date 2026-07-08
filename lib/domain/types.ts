@@ -218,3 +218,52 @@ export interface PaymentRefundResult {
   lessons_advanced_cancelled: number;
   correlation_id: string;
 }
+
+export interface OwnerScheduleChangeRequestRow {
+  id: string;
+  status: string;
+  updated_at: string;
+  requested_reason: string;
+  proposed_scheduled_at: string | null;
+  approved_scheduled_at: string | null;
+  request_source_role: string;
+  applied_at: string | null;
+  student_id: string;
+  student_name: string;
+  lesson_id: string;
+  lesson_sequence_number: number;
+  lesson_scheduled_at: string;
+  lesson_status: LessonStatus;
+  lesson_updated_at: string;
+  pass_id: string;
+  pass_code: string;
+  pass_status: PassStatus;
+  course_id: string;
+  course_name: string;
+  product_name: string | null;
+}
+
+export interface ScheduleChangeReviewResult {
+  request_id: string;
+  previous_request_status: string;
+  new_request_status: string;
+  request_updated_at: string;
+  approved_scheduled_at: string | null;
+  decision: string;
+  no_change: boolean;
+}
+
+export interface ScheduleChangeApplyResult {
+  request_id: string;
+  request_status: string;
+  request_updated_at: string;
+  lesson_id: string;
+  previous_lesson_status: string;
+  new_lesson_status: string;
+  previous_scheduled_at: string;
+  new_scheduled_at: string;
+  lesson_updated_at: string;
+  schedule_change_event_id: string;
+  cascaded_lesson_count: number;
+  no_change: boolean;
+}

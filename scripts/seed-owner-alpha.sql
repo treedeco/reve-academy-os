@@ -381,4 +381,88 @@ BEGIN
     change_reason = 'Alpha seed postponed lesson',
     updated_at = now()
   WHERE id = '99999999-9999-9999-9999-999999999102';
+
+  -- Phase 1B-4 schedule change request fixtures
+  UPDATE public.lessons
+  SET
+    scheduled_at = v_today + interval '3 days',
+    status = 'scheduled',
+    change_reason = NULL,
+    updated_at = now()
+  WHERE id = '99999999-9999-9999-9999-999999999211';
+
+  INSERT INTO public.schedule_change_requests (
+    id, student_id, target_lesson_id, requesting_profile_id, request_source_role,
+    status, requested_reason, proposed_scheduled_at,
+    approved_scheduled_at, owner_decision_note, decided_by_profile_id, decided_at, applied_at
+  ) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa301', '44444444-4444-4444-4444-444444444102',
+     '99999999-9999-9999-9999-999999999201', v_teacher_b_profile, 'teacher',
+     'submitted', 'Alpha seed Beta lesson reschedule request', v_today + interval '6 days',
+     NULL, NULL, NULL, NULL, NULL),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa302', '44444444-4444-4444-4444-444444444104',
+     '99999999-9999-9999-9999-999999999211', v_teacher_b_profile, 'teacher',
+     'approved', 'Alpha seed Delta pre-approved request', v_today + interval '11 days',
+     v_today + interval '40 days', 'Alpha seed pre-approved schedule time', v_owner, now() - interval '1 day', NULL),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa303', '44444444-4444-4444-4444-444444444102',
+     '99999999-9999-9999-9999-999999999202', v_teacher_b_profile, 'teacher',
+     'rejected', 'Alpha seed rejected request', v_today + interval '7 days',
+     NULL, 'Alpha seed rejected', v_owner, now() - interval '2 days', NULL),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304', '44444444-4444-4444-4444-444444444104',
+     '99999999-9999-9999-9999-999999999212', v_teacher_b_profile, 'teacher',
+     'applied', 'Alpha seed already applied request', v_today + interval '15 days',
+     v_today + interval '16 days', 'Alpha seed applied', v_owner, now() - interval '3 days', now() - interval '2 days')
+  ON CONFLICT (id) DO NOTHING;
+
+  UPDATE public.schedule_change_requests
+  SET
+    status = 'submitted',
+    proposed_scheduled_at = v_today + interval '6 days',
+    approved_scheduled_at = NULL,
+    owner_decision_note = NULL,
+    decided_by_profile_id = NULL,
+    decided_at = NULL,
+    applied_at = NULL,
+    requested_reason = 'Alpha seed Beta lesson reschedule request',
+    updated_at = now()
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa301';
+
+  UPDATE public.schedule_change_requests
+  SET
+    status = 'approved',
+    proposed_scheduled_at = v_today + interval '11 days',
+    approved_scheduled_at = v_today + interval '40 days',
+    owner_decision_note = 'Alpha seed pre-approved schedule time',
+    decided_by_profile_id = v_owner,
+    decided_at = now() - interval '1 day',
+    applied_at = NULL,
+    requested_reason = 'Alpha seed Delta pre-approved request',
+    updated_at = now()
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa302';
+
+  UPDATE public.schedule_change_requests
+  SET
+    status = 'rejected',
+    proposed_scheduled_at = v_today + interval '7 days',
+    approved_scheduled_at = NULL,
+    owner_decision_note = 'Alpha seed rejected',
+    decided_by_profile_id = v_owner,
+    decided_at = now() - interval '2 days',
+    applied_at = NULL,
+    requested_reason = 'Alpha seed rejected request',
+    updated_at = now()
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa303';
+
+  UPDATE public.schedule_change_requests
+  SET
+    status = 'applied',
+    proposed_scheduled_at = v_today + interval '15 days',
+    approved_scheduled_at = v_today + interval '16 days',
+    owner_decision_note = 'Alpha seed applied',
+    decided_by_profile_id = v_owner,
+    decided_at = now() - interval '3 days',
+    applied_at = now() - interval '2 days',
+    requested_reason = 'Alpha seed already applied request',
+    updated_at = now()
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304';
 END $$;

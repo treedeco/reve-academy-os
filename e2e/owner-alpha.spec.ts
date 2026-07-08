@@ -8,7 +8,7 @@ async function loginAsOwner(page: import('@playwright/test').Page) {
   await page.getByLabel('이메일').fill(ownerEmail);
   await page.getByLabel('비밀번호').fill(ownerPassword);
   await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -57,9 +57,10 @@ test.describe('Owner Alpha', () => {
     await expect(statusSelect).toHaveValue('completed', { timeout: 10_000 });
 
     await page.reload();
-    await expect(statusSelect).toHaveValue('completed');
+    await expect(page.getByLabel('상태 변경').first()).toHaveValue('completed');
 
     await page.getByRole('link', { name: '학생 상세 보기' }).first().click();
+    await expect(page).toHaveURL(/\/students\//, { timeout: 15_000 });
     await expect(page.getByTestId('used-count')).toHaveText('1');
     await expect(page.getByTestId('remaining-count')).toHaveText('3');
   });

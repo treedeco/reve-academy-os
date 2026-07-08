@@ -460,6 +460,27 @@ Owner-only UI to view refundable completed payments and process full refunds via
 
 ---
 
+## Phase 1B-4 — Owner Schedule Change Request Review (implemented)
+
+### Goal
+
+Owner-only UI to review submitted schedule change requests, approve or reject them, and apply approved single-lesson schedule changes via existing trusted RPCs.
+
+### Deliverables
+
+- Route `/schedule-requests` with navigation **일정 변경 요청**
+- Server-side `fetchOwnerScheduleChangeRequests` (1 DB query, zero per-row N+1)
+- Client RPC wrappers for review and apply with scoped row update (no `router.refresh()`)
+- Extended local demo seed for submitted, approved, rejected, and applied fixtures
+- Unit, integration, Playwright, and `scripts/verify_phase_1b4.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-schedule-requests.md`
+
+### Status
+
+**Implemented** — automated verification via `scripts/verify_phase_1b4.ps1`. Owner manual browser verification **pending**. Implementation tag: `phase-1b4-owner-schedule-change-request-review-implemented`. Runtime tag **not** created in this step.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).

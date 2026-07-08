@@ -1,18 +1,22 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  applyOwnerScheduleChangeRequest,
   confirmOwnerSmsSent,
   fetchOwnerRefundablePayments,
+  fetchOwnerScheduleChangeRequests,
   fetchPassUsage,
   fetchOwnerSmsNotifications,
   fetchStudentDetail,
   fetchTodayLessons,
   fetchWeeklySchedule,
   processOwnerPaymentRefund,
+  reviewOwnerScheduleChangeRequest,
   transitionLessonStatus,
 } from '@/lib/data/owner-queries';
 import { mapDatabaseError } from '@/lib/domain/format';
 import { mapRefundError } from '@/lib/domain/refund';
+import { mapScheduleChangeError } from '@/lib/domain/schedule-change';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -26,6 +30,10 @@ const deltaSmsId = '88888888-8888-8888-8888-888888888103';
 const betaPaymentId = '12121212-1212-1212-1212-121212121102';
 const deltaPaymentId = '12121212-1212-1212-1212-121212121101';
 const alreadyRefundedPaymentId = '12121212-1212-1212-1212-121212121104';
+const submittedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa301';
+const approvedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa302';
+const rejectedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa303';
+const appliedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -124,6 +132,82 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     } catch (error) {
       expect(mapDatabaseError(error as { message?: string })).toMatch(/발송 확인할 수 없는/);
     }
+  });
+
+  it('loads actionable owner schedule change requests in one query', async () => {
+    const requests = await fetchOwnerScheduleChangeRequests(ownerClient);
+    expect(requests.length).toBeGreaterThanOrEqual(2);
+    expect(requests.some((row) => row.id === submittedScheduleRequestId && row.status === 'submitted')).toBe(true);
+    expect(requests.some((row) => row.id === approvedScheduleRequestId && row.status === 'approved')).toBe(true);
+    expect(requests.some((row) => row.id === rejectedScheduleRequestId)).toBe(false);
+    expect(requests.some((row) => row.id === appliedScheduleRequestId)).toBe(false);
+    expect(requests.some((row) => row.student_name === 'Beta Student')).toBe(true);
+    expect(requests.some((row) => row.student_name === 'Delta Student')).toBe(true);
+  });
+
+  it('maps schedule change errors to readable messages', async () => {
+    const queue = await fetchOwnerScheduleChangeRequests(ownerClient);
+    const submitted = queue.find((row) => row.id === submittedScheduleRequestId);
+    expect(submitted).toBeDefined();
+
+    try {
+      await reviewOwnerScheduleChangeRequest(ownerClient, {
+        requestId: rejectedScheduleRequestId,
+        decision: 'approve',
+        expectedRequestUpdatedAt: new Date().toISOString(),
+        decisionReason: 'Should fail',
+        approvedScheduledAt: new Date().toISOString(),
+      });
+      expect.unreachable('expected non-reviewable request to fail');
+    } catch (error) {
+      expect(mapScheduleChangeError(error as { message?: string })).toMatch(/검토할 수 없는/);
+    }
+
+    try {
+      await reviewOwnerScheduleChangeRequest(ownerClient, {
+        requestId: submittedScheduleRequestId,
+        decision: 'approve',
+        expectedRequestUpdatedAt: submitted!.updated_at,
+        decisionReason: '   ',
+        approvedScheduledAt: submitted!.proposed_scheduled_at,
+      });
+      expect.unreachable('expected missing reason to fail');
+    } catch (error) {
+      expect(mapScheduleChangeError(error as { message?: string })).toMatch(/사유/);
+    }
+  });
+
+  it('reviews and applies schedule change requests via trusted RPCs', async () => {
+    const queue = await fetchOwnerScheduleChangeRequests(ownerClient);
+    const submitted = queue.find((row) => row.id === submittedScheduleRequestId);
+    const approved = queue.find((row) => row.id === approvedScheduleRequestId);
+    expect(submitted).toBeDefined();
+    expect(approved).toBeDefined();
+
+    const reviewResult = await reviewOwnerScheduleChangeRequest(ownerClient, {
+      requestId: submittedScheduleRequestId,
+      decision: 'approve',
+      expectedRequestUpdatedAt: submitted!.updated_at,
+      decisionReason: 'Integration test approval',
+      approvedScheduledAt: submitted!.proposed_scheduled_at,
+    });
+    expect(reviewResult.new_request_status).toBe('approved');
+    expect(reviewResult.approved_scheduled_at).toBeTruthy();
+
+    const afterApprove = await fetchOwnerScheduleChangeRequests(ownerClient);
+    const approvedSubmitted = afterApprove.find((row) => row.id === submittedScheduleRequestId);
+    expect(approvedSubmitted?.status).toBe('approved');
+
+    const applyResult = await applyOwnerScheduleChangeRequest(ownerClient, {
+      requestId: approvedScheduleRequestId,
+      expectedRequestUpdatedAt: approved!.updated_at,
+      expectedLessonUpdatedAt: approved!.lesson_updated_at,
+    });
+    expect(applyResult.request_status).toBe('applied');
+    expect(applyResult.new_scheduled_at).toBeTruthy();
+
+    const afterApply = await fetchOwnerScheduleChangeRequests(ownerClient);
+    expect(afterApply.some((row) => row.id === approvedScheduleRequestId)).toBe(false);
   });
 
   it('processes payment refund via trusted RPC and rejects duplicate attempts', async () => {

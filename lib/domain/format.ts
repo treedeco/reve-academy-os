@@ -10,6 +10,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_REFUND_ALREADY_EXISTS: '이미 환불 처리된 결제입니다.',
   REVE_PAYMENT_NOT_REFUNDABLE: '환불할 수 없는 결제입니다.',
   REVE_REFUND_AMOUNT_MISMATCH: '환불 금액이 결제 금액과 일치하지 않습니다.',
+  REVE_SCHEDULE_COLLISION: '강사 일정이 겹칩니다. 다른 시간을 선택해 주세요.',
+  REVE_REQUEST_NOT_REVIEWABLE: '검토할 수 없는 요청 상태입니다.',
+  REVE_REQUEST_NOT_APPLICABLE: '적용할 수 없는 요청 상태입니다.',
+  REVE_APPROVED_TIME_REQUIRED: '승인 일시를 입력해 주세요.',
+  REVE_INVALID_DECISION: '허용되지 않는 검토 결정입니다.',
 };
 
 export function mapDatabaseError(error: { message?: string; code?: string } | null): string {

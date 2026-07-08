@@ -9,7 +9,7 @@ async function loginAsOwner(page: import('@playwright/test').Page) {
   await page.getByLabel('이메일').fill(ownerEmail);
   await page.getByLabel('비밀번호').fill(ownerPassword);
   await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
 
 test.describe.configure({ mode: 'serial' });

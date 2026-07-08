@@ -3,18 +3,23 @@ import type {
   DashboardSummary,
   LessonTransitionResult,
   OwnerRefundablePaymentRow,
+  OwnerScheduleChangeRequestRow,
   OwnerSmsNotificationRow,
   PassUsageSummary,
   PassStatus,
   PaymentRefundResult,
+  ScheduleChangeApplyResult,
+  ScheduleChangeReviewResult,
   SmsConfirmResult,
   StudentDetailData,
   StudentListRow,
   TodayLessonRow,
+  LessonStatus,
 } from '@/lib/domain/types';
 import { getSeoulDayBounds } from '@/lib/domain/format';
 import { ELIGIBLE_SMS_STATUSES } from '@/lib/domain/sms';
 import { isRefundablePassStatus } from '@/lib/domain/refund';
+import { isActionableScheduleChangeRequest } from '@/lib/domain/schedule-change';
 import {
   buildActiveStudentCourseKeys,
   pickNextLessonForSlot,
@@ -722,4 +727,177 @@ export async function processOwnerPaymentRefund(
   }
 
   return row as PaymentRefundResult;
+}
+
+type ScheduleLessonPassJoin = {
+  pass_code: string;
+  product_name_snapshot: string | null;
+  status: PassStatus;
+  courses: ScheduleLessonCourseJoin | ScheduleLessonCourseJoin[] | null;
+};
+
+type ScheduleLessonCourseJoin = { name: string };
+type ScheduleStudentJoin = { name: string };
+type ScheduleLessonJoin = {
+  id: string;
+  sequence_number: number;
+  scheduled_at: string;
+  status: LessonStatus;
+  updated_at: string;
+  pass_id: string;
+  course_id: string;
+  passes: ScheduleLessonPassJoin | ScheduleLessonPassJoin[] | null;
+};
+
+type ScheduleChangeRequestRow = {
+  id: string;
+  status: string;
+  updated_at: string;
+  requested_reason: string;
+  proposed_scheduled_at: string | null;
+  approved_scheduled_at: string | null;
+  request_source_role: string;
+  applied_at: string | null;
+  student_id: string;
+  students: ScheduleStudentJoin | ScheduleStudentJoin[] | null;
+  lessons: ScheduleLessonJoin | ScheduleLessonJoin[] | null;
+};
+
+/**
+ * Owner actionable schedule change requests (submitted + approved pending apply).
+ * Query count: 1 (schedule_change_requests + joins). Zero per-row requests.
+ */
+export async function fetchOwnerScheduleChangeRequests(
+  supabase: SupabaseClient,
+): Promise<OwnerScheduleChangeRequestRow[]> {
+  const { data, error } = await supabase
+    .from('schedule_change_requests')
+    .select(
+      `
+      id,
+      status,
+      updated_at,
+      requested_reason,
+      proposed_scheduled_at,
+      approved_scheduled_at,
+      request_source_role,
+      applied_at,
+      student_id,
+      students ( name ),
+      lessons!schedule_change_requests_target_lesson_id_fkey (
+        id,
+        sequence_number,
+        scheduled_at,
+        status,
+        updated_at,
+        pass_id,
+        course_id,
+        passes!lessons_pass_student_course_fkey (
+          pass_code,
+          product_name_snapshot,
+          status,
+          courses ( name )
+        )
+      )
+    `,
+    )
+    .in('status', ['submitted', 'approved'])
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as ScheduleChangeRequestRow[])
+    .filter((row) => isActionableScheduleChangeRequest(row))
+    .map((row) => {
+      const student = readJoinedRow(row.students);
+      const lesson = readJoinedRow(row.lessons);
+      const pass = lesson ? readJoinedRow(lesson.passes) : null;
+      const course = pass ? readJoinedRow(pass.courses) : null;
+
+      if (!lesson) {
+        throw new Error('Schedule change request is missing lesson context');
+      }
+
+      return {
+        id: row.id,
+        status: row.status,
+        updated_at: row.updated_at,
+        requested_reason: row.requested_reason,
+        proposed_scheduled_at: row.proposed_scheduled_at,
+        approved_scheduled_at: row.approved_scheduled_at,
+        request_source_role: row.request_source_role,
+        applied_at: row.applied_at,
+        student_id: row.student_id,
+        student_name: student?.name ?? '',
+        lesson_id: lesson.id,
+        lesson_sequence_number: lesson.sequence_number,
+        lesson_scheduled_at: lesson.scheduled_at,
+        lesson_status: lesson.status,
+        lesson_updated_at: lesson.updated_at,
+        pass_id: lesson.pass_id,
+        pass_code: pass?.pass_code ?? '',
+        pass_status: pass?.status ?? 'active',
+        course_id: lesson.course_id,
+        course_name: course?.name ?? '',
+        product_name: pass?.product_name_snapshot ?? null,
+      };
+    });
+}
+
+export async function reviewOwnerScheduleChangeRequest(
+  supabase: SupabaseClient,
+  input: {
+    requestId: string;
+    decision: 'approve' | 'reject';
+    expectedRequestUpdatedAt: string;
+    decisionReason: string;
+    approvedScheduledAt?: string | null;
+  },
+): Promise<ScheduleChangeReviewResult> {
+  const { data, error } = await supabase.rpc('reve_owner_review_schedule_change_request', {
+    p_request_id: input.requestId,
+    p_decision: input.decision,
+    p_expected_request_updated_at: input.expectedRequestUpdatedAt,
+    p_decision_reason: input.decisionReason,
+    p_approved_scheduled_at: input.approvedScheduledAt ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Schedule change review returned no data');
+  }
+
+  return row as ScheduleChangeReviewResult;
+}
+
+export async function applyOwnerScheduleChangeRequest(
+  supabase: SupabaseClient,
+  input: {
+    requestId: string;
+    expectedRequestUpdatedAt: string;
+    expectedLessonUpdatedAt: string;
+  },
+): Promise<ScheduleChangeApplyResult> {
+  const { data, error } = await supabase.rpc('reve_owner_apply_schedule_change_request', {
+    p_request_id: input.requestId,
+    p_expected_request_updated_at: input.expectedRequestUpdatedAt,
+    p_expected_lesson_updated_at: input.expectedLessonUpdatedAt,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Schedule change apply returned no data');
+  }
+
+  return row as ScheduleChangeApplyResult;
 }
