@@ -39,6 +39,22 @@ export function canApplyScheduleRequest(status: string, appliedAt: string | null
   return status === 'approved' && appliedAt === null;
 }
 
+export function isCascadePendingScheduleChangeRequest(input: {
+  status: string;
+  applied_at: string | null;
+  cascade_completed_at: string | null;
+}): boolean {
+  return input.status === 'applied' && input.applied_at !== null && input.cascade_completed_at === null;
+}
+
+export function canCascadeScheduleRequest(input: {
+  status: string;
+  applied_at: string | null;
+  cascade_completed_at: string | null;
+}): boolean {
+  return isCascadePendingScheduleChangeRequest(input);
+}
+
 export function formatScheduleRequestStatusLabel(status: string): string {
   return SCHEDULE_REQUEST_STATUS_LABELS[status] ?? status;
 }
@@ -125,6 +141,18 @@ export function mapScheduleChangeError(error: { message?: string } | null): stri
   }
   if (error.message.includes('REVE_INVALID_DECISION')) {
     return '허용되지 않는 검토 결정입니다.';
+  }
+  if (error.message.includes('REVE_CASCADE_NOT_READY')) {
+    return '연쇄 재배치할 수 없는 요청 상태입니다.';
+  }
+  if (error.message.includes('REVE_CASCADE_BLOCKED_BY_IMMUTABLE_LESSON')) {
+    return '완료된 수업이 있어 연쇄 재배치를 진행할 수 없습니다.';
+  }
+  if (error.message.includes('REVE_CASCADE_ANCHOR_CHANGED')) {
+    return '기준 수업 일정이 변경되어 연쇄 재배치를 진행할 수 없습니다.';
+  }
+  if (error.message.includes('REVE_PASS_SCHEDULE_IMMUTABLE')) {
+    return '종료된 회차권은 연쇄 재배치할 수 없습니다.';
   }
 
   return error.message;

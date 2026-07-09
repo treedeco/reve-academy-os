@@ -481,6 +481,27 @@ Owner-only UI to review submitted schedule change requests, approve or reject th
 
 ---
 
+## Phase 1B-5 — Owner Schedule Change Cascade (implemented)
+
+### Goal
+
+Owner-only UI to run optional post-apply cascade rescheduling for later eligible lessons via existing trusted RPC `reve_owner_cascade_schedule_change_request`.
+
+### Deliverables
+
+- Extend route `/schedule-requests` with **연쇄 재배치 대기** section (no new route or nav)
+- Server-side `fetchOwnerScheduleChangeQueue` (1 DB query, zero per-row N+1)
+- Client `cascadeOwnerScheduleChangeRequest` RPC wrapper with scoped row update (no `router.refresh()`)
+- Extended local demo seed for cascade-pending and cascade-completed fixtures
+- Unit, integration, Playwright, and `scripts/verify_phase_1b5.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-schedule-cascade.md`
+
+### Status
+
+**Implemented** — automated verification pending Owner manual browser verification. Implementation tag: `phase-1b5-owner-schedule-change-cascade-implemented`.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).

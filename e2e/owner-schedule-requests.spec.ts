@@ -4,6 +4,7 @@ const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
 const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 const submittedRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa301';
 const approvedRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa302';
+const cascadePendingRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305';
 
 async function loginAsOwner(page: import('@playwright/test').Page) {
   await page.goto('/login');
@@ -21,7 +22,7 @@ test.describe('Owner schedule change requests', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('renders actionable requests and navigation', async ({ page }) => {
+  test('renders review and cascade sections with navigation', async ({ page }) => {
     await loginAsOwner(page);
     await page.goto('/schedule-requests');
 
@@ -30,8 +31,11 @@ test.describe('Owner schedule change requests', () => {
 
     const panel = page.getByTestId('schedule-change-requests-panel');
     await expect(panel).toBeVisible();
-    await expect(panel.getByText('Beta Student')).toBeVisible();
-    await expect(panel.getByText('Delta Student')).toBeVisible();
+    await expect(page.getByTestId('schedule-review-section')).toBeVisible();
+    await expect(page.getByTestId('schedule-cascade-pending-section')).toBeVisible();
+    await expect(panel.getByTestId(`schedule-request-item-${submittedRequestId}`)).toBeVisible();
+    await expect(panel.getByTestId(`schedule-request-item-${approvedRequestId}`)).toBeVisible();
+    await expect(panel.getByTestId(`schedule-cascade-item-${cascadePendingRequestId}`)).toBeVisible();
     await expect(panel.getByText('Alpha seed rejected request')).toHaveCount(0);
     await expect(panel.getByText('Alpha seed already applied request')).toHaveCount(0);
   });
@@ -60,6 +64,18 @@ test.describe('Owner schedule change requests', () => {
     await expect(rejectButton).toBeEnabled();
   });
 
+  test('requires cascade reason before enabling cascade', async ({ page }) => {
+    await loginAsOwner(page);
+    await page.goto('/schedule-requests');
+
+    const row = page.getByTestId(`schedule-cascade-item-${cascadePendingRequestId}`);
+    const cascadeButton = row.getByTestId(`cascade-${cascadePendingRequestId}`);
+    await expect(cascadeButton).toBeDisabled();
+
+    await row.getByTestId(`cascade-reason-${cascadePendingRequestId}`).fill('Owner Playwright cascade reason');
+    await expect(cascadeButton).toBeEnabled();
+  });
+
   test('approves submitted request and applies pre-approved request with persistence', async ({ page }) => {
     await loginAsOwner(page);
     await page.goto('/schedule-requests');
@@ -79,13 +95,31 @@ test.describe('Owner schedule change requests', () => {
     await expect(panel.getByTestId(`schedule-request-item-${approvedRequestId}`)).toHaveCount(0, {
       timeout: 10_000,
     });
+    await expect(panel.getByTestId(`schedule-cascade-item-${approvedRequestId}`)).toBeVisible({
+      timeout: 10_000,
+    });
 
     await page.reload();
-    await expect(page.getByTestId('schedule-change-requests-panel').getByText('Delta Student')).toHaveCount(0);
+    await expect(page.getByTestId(`schedule-cascade-item-${approvedRequestId}`)).toBeVisible();
     await expect(page.getByTestId(`schedule-request-item-${submittedRequestId}`)).toBeVisible();
 
     await page.goto('/schedule');
     await expect(page.getByRole('heading', { name: '주간 시간표' })).toBeVisible();
+  });
+
+  test('executes cascade for pending request', async ({ page }) => {
+    await loginAsOwner(page);
+    await page.goto('/schedule-requests');
+
+    const row = page.getByTestId(`schedule-cascade-item-${cascadePendingRequestId}`);
+    await row.getByTestId(`cascade-reason-${cascadePendingRequestId}`).fill('Owner Playwright cascade reason');
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await row.getByTestId(`cascade-${cascadePendingRequestId}`).click();
+
+    await expect(page.getByTestId(`schedule-cascade-item-${cascadePendingRequestId}`)).toHaveCount(0, {
+      timeout: 10_000,
+    });
   });
 
   test('mobile layout remains usable', async ({ page }) => {
@@ -95,7 +129,7 @@ test.describe('Owner schedule change requests', () => {
 
     const panel = page.getByTestId('schedule-change-requests-panel');
     await expect(panel).toBeVisible();
-    await expect(panel.getByRole('button', { name: /승인$|일정 변경 적용/ }).first()).toBeVisible();
+    await expect(panel.getByRole('button', { name: /승인$|일정 변경 적용|연쇄 재배치 실행/ }).first()).toBeVisible();
     await expect(panel.getByText(/Beta Student|Delta Student/).first()).toBeVisible();
   });
 });

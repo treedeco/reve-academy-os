@@ -228,6 +228,8 @@ export interface OwnerScheduleChangeRequestRow {
   approved_scheduled_at: string | null;
   request_source_role: string;
   applied_at: string | null;
+  cascade_completed_at: string | null;
+  cascaded_lesson_count: number | null;
   student_id: string;
   student_name: string;
   lesson_id: string;
@@ -238,9 +240,15 @@ export interface OwnerScheduleChangeRequestRow {
   pass_id: string;
   pass_code: string;
   pass_status: PassStatus;
+  pass_updated_at: string;
   course_id: string;
   course_name: string;
   product_name: string | null;
+}
+
+export interface OwnerScheduleChangeQueue {
+  reviewRequests: OwnerScheduleChangeRequestRow[];
+  cascadePendingRequests: OwnerScheduleChangeRequestRow[];
 }
 
 export interface ScheduleChangeReviewResult {
@@ -265,5 +273,22 @@ export interface ScheduleChangeApplyResult {
   lesson_updated_at: string;
   schedule_change_event_id: string;
   cascaded_lesson_count: number;
+  no_change: boolean;
+}
+
+export interface ScheduleChangeCascadeResult {
+  request_id: string;
+  request_status: string;
+  request_updated_at: string;
+  anchor_lesson_id: string;
+  pass_id: string;
+  pass_updated_at: string;
+  eligible_lesson_count: number;
+  cascaded_lesson_count: number;
+  skipped_immutable_lesson_count: number;
+  first_cascaded_lesson_at: string | null;
+  last_cascaded_lesson_at: string | null;
+  sms_notification_status: string | null;
+  cascade_completed_at: string;
   no_change: boolean;
 }

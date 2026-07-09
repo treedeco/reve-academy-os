@@ -409,9 +409,13 @@ BEGIN
      'rejected', 'Alpha seed rejected request', v_today + interval '7 days',
      NULL, 'Alpha seed rejected', v_owner, now() - interval '2 days', NULL),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304', '44444444-4444-4444-4444-444444444104',
-     '99999999-9999-9999-9999-999999999212', v_teacher_b_profile, 'teacher',
+     '99999999-9999-9999-9999-999999999214', v_teacher_b_profile, 'teacher',
      'applied', 'Alpha seed already applied request', v_today + interval '15 days',
-     v_today + interval '16 days', 'Alpha seed applied', v_owner, now() - interval '3 days', now() - interval '2 days')
+     v_today + interval '24 days', 'Alpha seed applied', v_owner, now() - interval '3 days', now() - interval '2 days'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305', '44444444-4444-4444-4444-444444444104',
+     '99999999-9999-9999-9999-999999999212', v_teacher_b_profile, 'teacher',
+     'applied', 'Alpha seed cascade pending request', v_today + interval '12 days',
+     v_today + interval '38 days', 'Alpha seed cascade pending apply', v_owner, now() - interval '2 days', now() - interval '1 day')
   ON CONFLICT (id) DO NOTHING;
 
   UPDATE public.schedule_change_requests
@@ -457,12 +461,67 @@ BEGIN
   SET
     status = 'applied',
     proposed_scheduled_at = v_today + interval '15 days',
-    approved_scheduled_at = v_today + interval '16 days',
+    approved_scheduled_at = v_today + interval '24 days',
     owner_decision_note = 'Alpha seed applied',
     decided_by_profile_id = v_owner,
     decided_at = now() - interval '3 days',
     applied_at = now() - interval '2 days',
     requested_reason = 'Alpha seed already applied request',
+    cascade_completed_at = now() - interval '1 day',
+    cascaded_lesson_count = 0,
+    cascade_reason = 'Alpha seed completed cascade',
     updated_at = now()
   WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304';
+
+  UPDATE public.schedule_change_requests
+  SET
+    status = 'applied',
+    proposed_scheduled_at = v_today + interval '12 days',
+    approved_scheduled_at = v_today + interval '38 days',
+    owner_decision_note = 'Alpha seed cascade pending apply',
+    decided_by_profile_id = v_owner,
+    decided_at = now() - interval '2 days',
+    applied_at = now() - interval '1 day',
+    requested_reason = 'Alpha seed cascade pending request',
+    cascade_completed_at = NULL,
+    cascaded_lesson_count = NULL,
+    cascade_reason = NULL,
+    updated_at = now()
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305';
+
+  UPDATE public.lessons
+  SET
+    scheduled_at = v_today + interval '24 days',
+    status = 'scheduled',
+    change_reason = NULL,
+    updated_at = now()
+  WHERE id = '99999999-9999-9999-9999-999999999214';
+
+  UPDATE public.lessons
+  SET
+    scheduled_at = v_today + interval '38 days',
+    status = 'scheduled',
+    change_reason = NULL,
+    updated_at = now()
+  WHERE id = '99999999-9999-9999-9999-999999999212';
+
+  UPDATE public.lessons
+  SET
+    scheduled_at = v_today + interval '17 days',
+    status = 'scheduled',
+    change_reason = NULL,
+    updated_at = now()
+  WHERE id = '99999999-9999-9999-9999-999999999213';
+
+  INSERT INTO public.lesson_schedule_changes (
+    id, lesson_id, schedule_change_request_id, change_origin,
+    previous_scheduled_at, new_scheduled_at, reason, actor_profile_id
+  ) VALUES
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb304', '99999999-9999-9999-9999-999999999214',
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304', 'direct_user',
+     v_today + interval '23 days', v_today + interval '24 days', 'Alpha seed applied direct move', v_owner),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb305', '99999999-9999-9999-9999-999999999212',
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305', 'direct_user',
+     v_today + interval '10 days', v_today + interval '38 days', 'Alpha seed cascade pending direct move', v_owner)
+  ON CONFLICT (id) DO NOTHING;
 END $$;

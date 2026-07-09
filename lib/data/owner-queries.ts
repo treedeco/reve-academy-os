@@ -4,11 +4,13 @@ import type {
   LessonTransitionResult,
   OwnerRefundablePaymentRow,
   OwnerScheduleChangeRequestRow,
+  OwnerScheduleChangeQueue,
   OwnerSmsNotificationRow,
   PassUsageSummary,
   PassStatus,
   PaymentRefundResult,
   ScheduleChangeApplyResult,
+  ScheduleChangeCascadeResult,
   ScheduleChangeReviewResult,
   SmsConfirmResult,
   StudentDetailData,
@@ -19,7 +21,10 @@ import type {
 import { getSeoulDayBounds } from '@/lib/domain/format';
 import { ELIGIBLE_SMS_STATUSES } from '@/lib/domain/sms';
 import { isRefundablePassStatus } from '@/lib/domain/refund';
-import { isActionableScheduleChangeRequest } from '@/lib/domain/schedule-change';
+import {
+  isActionableScheduleChangeRequest,
+  isCascadePendingScheduleChangeRequest,
+} from '@/lib/domain/schedule-change';
 import {
   buildActiveStudentCourseKeys,
   pickNextLessonForSlot,
@@ -733,6 +738,7 @@ type ScheduleLessonPassJoin = {
   pass_code: string;
   product_name_snapshot: string | null;
   status: PassStatus;
+  updated_at: string;
   courses: ScheduleLessonCourseJoin | ScheduleLessonCourseJoin[] | null;
 };
 
@@ -758,18 +764,58 @@ type ScheduleChangeRequestRow = {
   approved_scheduled_at: string | null;
   request_source_role: string;
   applied_at: string | null;
+  cascade_completed_at: string | null;
+  cascaded_lesson_count: number | null;
   student_id: string;
   students: ScheduleStudentJoin | ScheduleStudentJoin[] | null;
   lessons: ScheduleLessonJoin | ScheduleLessonJoin[] | null;
 };
 
+function mapOwnerScheduleChangeRequestRow(row: ScheduleChangeRequestRow): OwnerScheduleChangeRequestRow {
+  const student = readJoinedRow(row.students);
+  const lesson = readJoinedRow(row.lessons);
+  const pass = lesson ? readJoinedRow(lesson.passes) : null;
+  const course = pass ? readJoinedRow(pass.courses) : null;
+
+  if (!lesson) {
+    throw new Error('Schedule change request is missing lesson context');
+  }
+
+  return {
+    id: row.id,
+    status: row.status,
+    updated_at: row.updated_at,
+    requested_reason: row.requested_reason,
+    proposed_scheduled_at: row.proposed_scheduled_at,
+    approved_scheduled_at: row.approved_scheduled_at,
+    request_source_role: row.request_source_role,
+    applied_at: row.applied_at,
+    cascade_completed_at: row.cascade_completed_at,
+    cascaded_lesson_count: row.cascaded_lesson_count,
+    student_id: row.student_id,
+    student_name: student?.name ?? '',
+    lesson_id: lesson.id,
+    lesson_sequence_number: lesson.sequence_number,
+    lesson_scheduled_at: lesson.scheduled_at,
+    lesson_status: lesson.status,
+    lesson_updated_at: lesson.updated_at,
+    pass_id: lesson.pass_id,
+    pass_code: pass?.pass_code ?? '',
+    pass_status: pass?.status ?? 'active',
+    pass_updated_at: pass?.updated_at ?? '',
+    course_id: lesson.course_id,
+    course_name: course?.name ?? '',
+    product_name: pass?.product_name_snapshot ?? null,
+  };
+}
+
 /**
- * Owner actionable schedule change requests (submitted + approved pending apply).
+ * Owner schedule change queue: review/apply requests plus cascade-pending applied requests.
  * Query count: 1 (schedule_change_requests + joins). Zero per-row requests.
  */
-export async function fetchOwnerScheduleChangeRequests(
+export async function fetchOwnerScheduleChangeQueue(
   supabase: SupabaseClient,
-): Promise<OwnerScheduleChangeRequestRow[]> {
+): Promise<OwnerScheduleChangeQueue> {
   const { data, error } = await supabase
     .from('schedule_change_requests')
     .select(
@@ -782,6 +828,8 @@ export async function fetchOwnerScheduleChangeRequests(
       approved_scheduled_at,
       request_source_role,
       applied_at,
+      cascade_completed_at,
+      cascaded_lesson_count,
       student_id,
       students ( name ),
       lessons!schedule_change_requests_target_lesson_id_fkey (
@@ -796,54 +844,45 @@ export async function fetchOwnerScheduleChangeRequests(
           pass_code,
           product_name_snapshot,
           status,
+          updated_at,
           courses ( name )
         )
       )
     `,
     )
-    .in('status', ['submitted', 'approved'])
+    .in('status', ['submitted', 'approved', 'applied'])
     .order('created_at', { ascending: true });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as ScheduleChangeRequestRow[])
-    .filter((row) => isActionableScheduleChangeRequest(row))
-    .map((row) => {
-      const student = readJoinedRow(row.students);
-      const lesson = readJoinedRow(row.lessons);
-      const pass = lesson ? readJoinedRow(lesson.passes) : null;
-      const course = pass ? readJoinedRow(pass.courses) : null;
+  const reviewRequests: OwnerScheduleChangeRequestRow[] = [];
+  const cascadePendingRequests: OwnerScheduleChangeRequestRow[] = [];
 
-      if (!lesson) {
-        throw new Error('Schedule change request is missing lesson context');
-      }
+  for (const row of (data ?? []) as ScheduleChangeRequestRow[]) {
+    const mapped = mapOwnerScheduleChangeRequestRow(row);
+    if (isActionableScheduleChangeRequest(row)) {
+      reviewRequests.push(mapped);
+      continue;
+    }
+    if (isCascadePendingScheduleChangeRequest(row)) {
+      cascadePendingRequests.push(mapped);
+    }
+  }
 
-      return {
-        id: row.id,
-        status: row.status,
-        updated_at: row.updated_at,
-        requested_reason: row.requested_reason,
-        proposed_scheduled_at: row.proposed_scheduled_at,
-        approved_scheduled_at: row.approved_scheduled_at,
-        request_source_role: row.request_source_role,
-        applied_at: row.applied_at,
-        student_id: row.student_id,
-        student_name: student?.name ?? '',
-        lesson_id: lesson.id,
-        lesson_sequence_number: lesson.sequence_number,
-        lesson_scheduled_at: lesson.scheduled_at,
-        lesson_status: lesson.status,
-        lesson_updated_at: lesson.updated_at,
-        pass_id: lesson.pass_id,
-        pass_code: pass?.pass_code ?? '',
-        pass_status: pass?.status ?? 'active',
-        course_id: lesson.course_id,
-        course_name: course?.name ?? '',
-        product_name: pass?.product_name_snapshot ?? null,
-      };
-    });
+  return { reviewRequests, cascadePendingRequests };
+}
+
+/**
+ * Owner actionable schedule change requests (submitted + approved pending apply).
+ * Query count: 1 (same fetch as queue; review slice only).
+ */
+export async function fetchOwnerScheduleChangeRequests(
+  supabase: SupabaseClient,
+): Promise<OwnerScheduleChangeRequestRow[]> {
+  const queue = await fetchOwnerScheduleChangeQueue(supabase);
+  return queue.reviewRequests;
 }
 
 export async function reviewOwnerScheduleChangeRequest(
@@ -900,4 +939,34 @@ export async function applyOwnerScheduleChangeRequest(
   }
 
   return row as ScheduleChangeApplyResult;
+}
+
+export async function cascadeOwnerScheduleChangeRequest(
+  supabase: SupabaseClient,
+  input: {
+    requestId: string;
+    expectedRequestUpdatedAt: string;
+    expectedAnchorLessonUpdatedAt: string;
+    expectedPassUpdatedAt: string;
+    reason: string;
+  },
+): Promise<ScheduleChangeCascadeResult> {
+  const { data, error } = await supabase.rpc('reve_owner_cascade_schedule_change_request', {
+    p_request_id: input.requestId,
+    p_expected_request_updated_at: input.expectedRequestUpdatedAt,
+    p_expected_anchor_lesson_updated_at: input.expectedAnchorLessonUpdatedAt,
+    p_expected_pass_updated_at: input.expectedPassUpdatedAt,
+    p_reason: input.reason,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Schedule change cascade returned no data');
+  }
+
+  return row as ScheduleChangeCascadeResult;
 }

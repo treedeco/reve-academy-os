@@ -2,8 +2,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   applyOwnerScheduleChangeRequest,
+  cascadeOwnerScheduleChangeRequest,
   confirmOwnerSmsSent,
   fetchOwnerRefundablePayments,
+  fetchOwnerScheduleChangeQueue,
   fetchOwnerScheduleChangeRequests,
   fetchPassUsage,
   fetchOwnerSmsNotifications,
@@ -34,6 +36,7 @@ const submittedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa301';
 const approvedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa302';
 const rejectedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa303';
 const appliedScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa304';
+const cascadePendingScheduleRequestId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -134,15 +137,19 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     }
   });
 
-  it('loads actionable owner schedule change requests in one query', async () => {
-    const requests = await fetchOwnerScheduleChangeRequests(ownerClient);
-    expect(requests.length).toBeGreaterThanOrEqual(2);
-    expect(requests.some((row) => row.id === submittedScheduleRequestId && row.status === 'submitted')).toBe(true);
-    expect(requests.some((row) => row.id === approvedScheduleRequestId && row.status === 'approved')).toBe(true);
-    expect(requests.some((row) => row.id === rejectedScheduleRequestId)).toBe(false);
-    expect(requests.some((row) => row.id === appliedScheduleRequestId)).toBe(false);
-    expect(requests.some((row) => row.student_name === 'Beta Student')).toBe(true);
-    expect(requests.some((row) => row.student_name === 'Delta Student')).toBe(true);
+  it('loads owner schedule change queue in one query', async () => {
+    const queue = await fetchOwnerScheduleChangeQueue(ownerClient);
+    expect(queue.reviewRequests.length).toBeGreaterThanOrEqual(2);
+    expect(queue.reviewRequests.some((row) => row.id === submittedScheduleRequestId && row.status === 'submitted')).toBe(true);
+    expect(queue.reviewRequests.some((row) => row.id === approvedScheduleRequestId && row.status === 'approved')).toBe(true);
+    expect(queue.reviewRequests.some((row) => row.id === rejectedScheduleRequestId)).toBe(false);
+    expect(queue.reviewRequests.some((row) => row.id === appliedScheduleRequestId)).toBe(false);
+    expect(queue.cascadePendingRequests.some((row) => row.id === cascadePendingScheduleRequestId)).toBe(true);
+    expect(queue.cascadePendingRequests.some((row) => row.id === appliedScheduleRequestId)).toBe(false);
+    expect(queue.cascadePendingRequests.some((row) => row.student_name === 'Delta Student')).toBe(true);
+
+    const reviewOnly = await fetchOwnerScheduleChangeRequests(ownerClient);
+    expect(reviewOnly).toEqual(queue.reviewRequests);
   });
 
   it('maps schedule change errors to readable messages', async () => {
@@ -206,8 +213,28 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     expect(applyResult.request_status).toBe('applied');
     expect(applyResult.new_scheduled_at).toBeTruthy();
 
-    const afterApply = await fetchOwnerScheduleChangeRequests(ownerClient);
-    expect(afterApply.some((row) => row.id === approvedScheduleRequestId)).toBe(false);
+    const afterApply = await fetchOwnerScheduleChangeQueue(ownerClient);
+    expect(afterApply.reviewRequests.some((row) => row.id === approvedScheduleRequestId)).toBe(false);
+    expect(afterApply.cascadePendingRequests.some((row) => row.id === approvedScheduleRequestId)).toBe(true);
+  });
+
+  it('cascades applied schedule change requests via trusted RPC', async () => {
+    const queue = await fetchOwnerScheduleChangeQueue(ownerClient);
+    const pending = queue.cascadePendingRequests.find((row) => row.id === cascadePendingScheduleRequestId);
+    expect(pending).toBeDefined();
+
+    const result = await cascadeOwnerScheduleChangeRequest(ownerClient, {
+      requestId: cascadePendingScheduleRequestId,
+      expectedRequestUpdatedAt: pending!.updated_at,
+      expectedAnchorLessonUpdatedAt: pending!.lesson_updated_at,
+      expectedPassUpdatedAt: pending!.pass_updated_at,
+      reason: 'Integration test cascade',
+    });
+    expect(result.cascade_completed_at).toBeTruthy();
+    expect(result.cascaded_lesson_count).toBeGreaterThanOrEqual(0);
+
+    const afterCascade = await fetchOwnerScheduleChangeQueue(ownerClient);
+    expect(afterCascade.cascadePendingRequests.some((row) => row.id === cascadePendingScheduleRequestId)).toBe(false);
   });
 
   it('processes payment refund via trusted RPC and rejects duplicate attempts', async () => {

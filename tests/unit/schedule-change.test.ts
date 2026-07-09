@@ -3,10 +3,12 @@ import { mapDatabaseError } from '@/lib/domain/format';
 import {
   canApplyScheduleRequest,
   canApproveScheduleRequest,
+  canCascadeScheduleRequest,
   formatScheduleRequestSourceRoleLabel,
   formatScheduleRequestStatusLabel,
   isActionableScheduleChangeRequest,
   isActionableScheduleRequestStatus,
+  isCascadePendingScheduleChangeRequest,
   mapScheduleChangeError,
   parseSeoulDateTimeLocal,
 } from '@/lib/domain/schedule-change';
@@ -34,11 +36,49 @@ describe('schedule change domain helpers', () => {
     expect(formatScheduleRequestSourceRoleLabel('teacher')).toBe('강사');
   });
 
-  it('controls approve and apply affordances', () => {
+  it('controls approve, apply, and cascade affordances', () => {
     expect(canApproveScheduleRequest('submitted')).toBe(true);
     expect(canApproveScheduleRequest('approved')).toBe(false);
     expect(canApplyScheduleRequest('approved', null)).toBe(true);
     expect(canApplyScheduleRequest('submitted', null)).toBe(false);
+    expect(
+      canCascadeScheduleRequest({
+        status: 'applied',
+        applied_at: '2026-07-01T00:00:00Z',
+        cascade_completed_at: null,
+      }),
+    ).toBe(true);
+    expect(
+      canCascadeScheduleRequest({
+        status: 'applied',
+        applied_at: '2026-07-01T00:00:00Z',
+        cascade_completed_at: '2026-07-02T00:00:00Z',
+      }),
+    ).toBe(false);
+  });
+
+  it('determines cascade pending queue membership', () => {
+    expect(
+      isCascadePendingScheduleChangeRequest({
+        status: 'applied',
+        applied_at: '2026-07-01T00:00:00Z',
+        cascade_completed_at: null,
+      }),
+    ).toBe(true);
+    expect(
+      isCascadePendingScheduleChangeRequest({
+        status: 'applied',
+        applied_at: '2026-07-01T00:00:00Z',
+        cascade_completed_at: '2026-07-02T00:00:00Z',
+      }),
+    ).toBe(false);
+    expect(
+      isCascadePendingScheduleChangeRequest({
+        status: 'approved',
+        applied_at: null,
+        cascade_completed_at: null,
+      }),
+    ).toBe(false);
   });
 
   it('parses Seoul datetime-local values', () => {
@@ -54,6 +94,9 @@ describe('schedule change domain helpers', () => {
     expect(mapScheduleChangeError({ message: 'REVE_REQUEST_NOT_APPLICABLE' })).toMatch(/적용할 수 없는/);
     expect(mapScheduleChangeError({ message: 'REVE_APPROVED_TIME_REQUIRED' })).toMatch(/승인 일시/);
     expect(mapScheduleChangeError({ message: 'REVE_REASON_REQUIRED' })).toMatch(/사유/);
+    expect(mapScheduleChangeError({ message: 'REVE_CASCADE_NOT_READY' })).toMatch(/연쇄 재배치/);
+    expect(mapScheduleChangeError({ message: 'REVE_CASCADE_BLOCKED_BY_IMMUTABLE_LESSON' })).toMatch(/완료된 수업/);
+    expect(mapScheduleChangeError({ message: 'REVE_CASCADE_ANCHOR_CHANGED' })).toMatch(/기준 수업/);
     expect(mapScheduleChangeError(null)).toMatch(/실패/);
     expect(mapScheduleChangeError({ message: 'unexpected database fault' })).toBe('unexpected database fault');
   });
