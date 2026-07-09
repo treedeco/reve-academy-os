@@ -498,7 +498,7 @@ Owner-only UI to run optional post-apply cascade rescheduling for later eligible
 
 ### Status
 
-**Implemented** — automated verification pending Owner manual browser verification. Implementation tag: `phase-1b5-owner-schedule-change-cascade-implemented`.
+**Complete** — Owner manual browser verification passed on 2026-07-09. Evidence: `docs/manual-verification-owner-schedule-cascade.md`. Runtime tag: `phase-1b5-owner-schedule-change-cascade-runtime-verified`.
 
 ---
 
