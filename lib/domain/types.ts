@@ -96,6 +96,52 @@ export interface StudentDetailData {
   }>;
 }
 
+export interface StudentPaymentHistoryRow {
+  id: string;
+  status: string;
+  paid_amount_krw: number;
+  paid_at: string | null;
+  created_at: string;
+  pass_code: string | null;
+  product_name: string | null;
+  course_name: string | null;
+}
+
+export interface StudentRefundHistoryRow {
+  id: string;
+  payment_id: string;
+  refunded_amount_krw: number;
+  refunded_at: string;
+  reason: string;
+  pass_disposition: string;
+  payment_paid_at: string | null;
+  pass_code: string | null;
+  course_name: string | null;
+}
+
+export interface StudentScheduleRequestHistoryRow {
+  id: string;
+  status: string;
+  requested_reason: string;
+  lesson_sequence_number: number;
+  lesson_scheduled_at: string;
+  proposed_scheduled_at: string | null;
+  approved_scheduled_at: string | null;
+  applied_at: string | null;
+  cascade_completed_at: string | null;
+  cascaded_lesson_count: number | null;
+  pass_code: string;
+  course_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentOperationalHistory {
+  payments: StudentPaymentHistoryRow[];
+  refunds: StudentRefundHistoryRow[];
+  schedule_requests: StudentScheduleRequestHistoryRow[];
+}
+
 export interface DashboardSummary {
   total_today: number;
   scheduled_count: number;

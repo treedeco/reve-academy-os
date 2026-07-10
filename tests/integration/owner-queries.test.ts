@@ -10,6 +10,7 @@ import {
   fetchPassUsage,
   fetchOwnerSmsNotifications,
   fetchStudentDetail,
+  fetchStudentOperationalHistory,
   fetchTodayLessons,
   fetchWeeklySchedule,
   processOwnerPaymentRefund,
@@ -28,6 +29,10 @@ const teacherEmail = 'teacher-alpha@test.local';
 const teacherPassword = 'TeacherAlpha123!';
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaStudentId = '44444444-4444-4444-4444-444444444101';
+const betaStudentId = '44444444-4444-4444-4444-444444444102';
+const gammaStudentId = '44444444-4444-4444-4444-444444444103';
+const deltaStudentId = '44444444-4444-4444-4444-444444444104';
+const zetaStudentId = '44444444-4444-4444-4444-444444444106';
 const deltaSmsId = '88888888-8888-8888-8888-888888888103';
 const betaPaymentId = '12121212-1212-1212-1212-121212121102';
 const deltaPaymentId = '12121212-1212-1212-1212-121212121101';
@@ -81,6 +86,28 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
     const detail = await fetchStudentDetail(ownerClient, alphaStudentId);
     expect(detail.student.name).toBe('Alpha Student');
     expect(detail.current_pass?.pass_code).toBe('V-S1A1-001');
+  });
+
+  it('loads student operational history in two bounded queries', async () => {
+    const deltaHistory = await fetchStudentOperationalHistory(ownerClient, deltaStudentId);
+    expect(deltaHistory.payments.length).toBeGreaterThanOrEqual(1);
+    expect(deltaHistory.payments.some((row) => row.pass_code === 'V-S1D1-001')).toBe(true);
+    expect(deltaHistory.schedule_requests.length).toBeGreaterThanOrEqual(3);
+    expect(deltaHistory.refunds).toHaveLength(0);
+
+    const betaHistory = await fetchStudentOperationalHistory(ownerClient, betaStudentId);
+    expect(betaHistory.payments.length).toBeGreaterThanOrEqual(1);
+    expect(betaHistory.schedule_requests.length).toBeGreaterThanOrEqual(2);
+    expect(betaHistory.refunds).toHaveLength(0);
+
+    const zetaHistory = await fetchStudentOperationalHistory(ownerClient, zetaStudentId);
+    expect(zetaHistory.refunds.length).toBe(1);
+    expect(zetaHistory.payments.some((row) => row.status === 'refunded')).toBe(true);
+
+    const gammaHistory = await fetchStudentOperationalHistory(ownerClient, gammaStudentId);
+    expect(gammaHistory.payments).toHaveLength(0);
+    expect(gammaHistory.refunds).toHaveLength(0);
+    expect(gammaHistory.schedule_requests).toHaveLength(0);
   });
 
   it('loads weekly schedule entries for authenticated owner', async () => {

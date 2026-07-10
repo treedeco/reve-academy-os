@@ -502,6 +502,27 @@ Owner-only UI to run optional post-apply cascade rescheduling for later eligible
 
 ---
 
+## Phase 1B-6 — Owner Student Operational History (implemented)
+
+### Goal
+
+Extend the existing Owner student detail page (`/students/[studentId]`) with read-only operational history: payment history, refund history, and schedule change request history.
+
+### Deliverables
+
+- Reuse route `/students/[studentId]` (no new route or nav)
+- Server-side `fetchStudentOperationalHistory` (2 DB queries, zero per-row N+1)
+- Read-only UI sections below existing student detail content
+- Alpha seed fixtures for payment/refund/schedule-request history and empty-state coverage
+- Unit, integration, Playwright, and `scripts/verify_phase_1b6.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-student-history.md`
+
+### Status
+
+**Implemented** — automated verification pending Owner manual browser sign-off. Implementation tag: `phase-1b6-owner-student-operational-history-implemented`.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).

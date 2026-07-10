@@ -15,6 +15,10 @@ import type {
   SmsConfirmResult,
   StudentDetailData,
   StudentListRow,
+  StudentOperationalHistory,
+  StudentPaymentHistoryRow,
+  StudentRefundHistoryRow,
+  StudentScheduleRequestHistoryRow,
   TodayLessonRow,
   LessonStatus,
 } from '@/lib/domain/types';
@@ -25,6 +29,7 @@ import {
   isActionableScheduleChangeRequest,
   isCascadePendingScheduleChangeRequest,
 } from '@/lib/domain/schedule-change';
+import { buildStudentOperationalHistory } from '@/lib/domain/student-history';
 import {
   buildActiveStudentCourseKeys,
   pickNextLessonForSlot,
@@ -391,6 +396,207 @@ function readJoinedRow<T>(value: T | T[] | null): T | null {
     return null;
   }
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+type StudentPaymentPassJoin = {
+  pass_code: string;
+  product_name_snapshot: string | null;
+};
+
+type StudentPaymentCourseJoin = { name: string };
+
+type StudentPaymentRefundJoin = {
+  id: string;
+  refunded_amount_krw: number;
+  refunded_at: string;
+  reason: string;
+  pass_disposition: string;
+};
+
+type StudentPaymentHistoryQueryRow = {
+  id: string;
+  status: string;
+  paid_amount_krw: number;
+  paid_at: string | null;
+  created_at: string;
+  courses: StudentPaymentCourseJoin | StudentPaymentCourseJoin[] | null;
+  passes: StudentPaymentPassJoin | StudentPaymentPassJoin[] | null;
+  payment_refunds: StudentPaymentRefundJoin | StudentPaymentRefundJoin[] | null;
+};
+
+type StudentScheduleHistoryLessonPassJoin = {
+  pass_code: string;
+  courses: StudentPaymentCourseJoin | StudentPaymentCourseJoin[] | null;
+};
+
+type StudentScheduleHistoryLessonJoin = {
+  sequence_number: number;
+  scheduled_at: string;
+  passes: StudentScheduleHistoryLessonPassJoin | StudentScheduleHistoryLessonPassJoin[] | null;
+};
+
+type StudentScheduleRequestHistoryQueryRow = {
+  id: string;
+  status: string;
+  requested_reason: string;
+  proposed_scheduled_at: string | null;
+  approved_scheduled_at: string | null;
+  applied_at: string | null;
+  cascade_completed_at: string | null;
+  cascaded_lesson_count: number | null;
+  created_at: string;
+  updated_at: string;
+  lessons: StudentScheduleHistoryLessonJoin | StudentScheduleHistoryLessonJoin[] | null;
+};
+
+function mapStudentPaymentHistoryRow(row: StudentPaymentHistoryQueryRow): {
+  payment: StudentPaymentHistoryRow;
+  refund: StudentRefundHistoryRow | null;
+} {
+  const course = readJoinedRow(row.courses);
+  const pass = readJoinedRow(row.passes);
+  const refundJoin = readJoinedRow(row.payment_refunds);
+
+  const payment: StudentPaymentHistoryRow = {
+    id: row.id,
+    status: row.status,
+    paid_amount_krw: row.paid_amount_krw,
+    paid_at: row.paid_at,
+    created_at: row.created_at,
+    pass_code: pass?.pass_code ?? null,
+    product_name: pass?.product_name_snapshot ?? null,
+    course_name: course?.name ?? null,
+  };
+
+  const refund = refundJoin
+    ? {
+        id: refundJoin.id,
+        payment_id: row.id,
+        refunded_amount_krw: refundJoin.refunded_amount_krw,
+        refunded_at: refundJoin.refunded_at,
+        reason: refundJoin.reason,
+        pass_disposition: refundJoin.pass_disposition,
+        payment_paid_at: row.paid_at,
+        pass_code: pass?.pass_code ?? null,
+        course_name: course?.name ?? null,
+      }
+    : null;
+
+  return { payment, refund };
+}
+
+function mapStudentScheduleRequestHistoryRow(
+  row: StudentScheduleRequestHistoryQueryRow,
+): StudentScheduleRequestHistoryRow {
+  const lesson = readJoinedRow(row.lessons);
+  const pass = lesson ? readJoinedRow(lesson.passes) : null;
+  const course = pass ? readJoinedRow(pass.courses) : null;
+
+  return {
+    id: row.id,
+    status: row.status,
+    requested_reason: row.requested_reason,
+    lesson_sequence_number: lesson?.sequence_number ?? 0,
+    lesson_scheduled_at: lesson?.scheduled_at ?? '',
+    proposed_scheduled_at: row.proposed_scheduled_at,
+    approved_scheduled_at: row.approved_scheduled_at,
+    applied_at: row.applied_at,
+    cascade_completed_at: row.cascade_completed_at,
+    cascaded_lesson_count: row.cascaded_lesson_count,
+    pass_code: pass?.pass_code ?? '',
+    course_name: course?.name ?? '',
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+/**
+ * Owner student operational history (payments, refunds, schedule change requests).
+ * Query count: 2 (payments+refund joins, schedule_change_requests+joins). Zero per-row requests.
+ */
+export async function fetchStudentOperationalHistory(
+  supabase: SupabaseClient,
+  studentId: string,
+): Promise<StudentOperationalHistory> {
+  const [paymentsResult, scheduleRequestsResult] = await Promise.all([
+    supabase
+      .from('payments')
+      .select(
+        `
+        id,
+        status,
+        paid_amount_krw,
+        paid_at,
+        created_at,
+        courses ( name ),
+        passes!payments_renewed_pass_id_fkey (
+          pass_code,
+          product_name_snapshot
+        ),
+        payment_refunds (
+          id,
+          refunded_amount_krw,
+          refunded_at,
+          reason,
+          pass_disposition
+        )
+      `,
+      )
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('schedule_change_requests')
+      .select(
+        `
+        id,
+        status,
+        requested_reason,
+        proposed_scheduled_at,
+        approved_scheduled_at,
+        applied_at,
+        cascade_completed_at,
+        cascaded_lesson_count,
+        created_at,
+        updated_at,
+        lessons!schedule_change_requests_target_lesson_id_fkey (
+          sequence_number,
+          scheduled_at,
+          passes!lessons_pass_student_course_fkey (
+            pass_code,
+            courses ( name )
+          )
+        )
+      `,
+      )
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ]);
+
+  if (paymentsResult.error) {
+    throw new Error(paymentsResult.error.message);
+  }
+  if (scheduleRequestsResult.error) {
+    throw new Error(scheduleRequestsResult.error.message);
+  }
+
+  const payments: StudentPaymentHistoryRow[] = [];
+  const refunds: StudentRefundHistoryRow[] = [];
+
+  for (const row of (paymentsResult.data ?? []) as StudentPaymentHistoryQueryRow[]) {
+    const mapped = mapStudentPaymentHistoryRow(row);
+    payments.push(mapped.payment);
+    if (mapped.refund) {
+      refunds.push(mapped.refund);
+    }
+  }
+
+  const schedule_requests = ((scheduleRequestsResult.data ?? []) as StudentScheduleRequestHistoryQueryRow[]).map(
+    mapStudentScheduleRequestHistoryRow,
+  );
+
+  return buildStudentOperationalHistory({ payments, refunds, schedule_requests });
 }
 
 /**

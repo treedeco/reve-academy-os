@@ -302,19 +302,21 @@ BEGIN
      200000, 'cash', 'completed', now() - interval '3 days', 'alpha-seed-refund-reserved-105', now() - interval '3 days', v_owner)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.payment_refunds (
-    id, payment_id, refunded_amount_krw, reason, actor_profile_id, pass_disposition
-  ) VALUES (
-    'abababab-abab-abab-abab-ababababa201', '12121212-1212-1212-1212-121212121104', 200000,
-    'Alpha seed already refunded payment', v_owner, 'active_cancelled_future_advance_cancelled'
-  ) ON CONFLICT (id) DO NOTHING;
-
   ALTER TABLE public.payment_refunds DISABLE TRIGGER trg_payment_refunds_block_mutation;
   DELETE FROM public.payment_refunds
   WHERE payment_id IN (
     '12121212-1212-1212-1212-121212121101',
     '12121212-1212-1212-1212-121212121102',
     '12121212-1212-1212-1212-121212121105'
+  );
+  DELETE FROM public.payment_refunds
+  WHERE id = 'abababab-abab-abab-abab-ababababa201';
+  INSERT INTO public.payment_refunds (
+    id, payment_id, refunded_amount_krw, refunded_at, reason, actor_profile_id, pass_disposition
+  ) VALUES (
+    'abababab-abab-abab-abab-ababababa201', '12121212-1212-1212-1212-121212121104', 200000,
+    now() - interval '20 days', 'Alpha seed already refunded payment', v_owner,
+    'active_cancelled_future_advance_cancelled'
   );
   ALTER TABLE public.payment_refunds ENABLE TRIGGER trg_payment_refunds_block_mutation;
 
@@ -513,6 +515,12 @@ BEGIN
     updated_at = now()
   WHERE id = '99999999-9999-9999-9999-999999999213';
 
+  ALTER TABLE public.lesson_schedule_changes DISABLE TRIGGER trg_lesson_schedule_changes_block_mutation;
+  DELETE FROM public.lesson_schedule_changes
+  WHERE id IN (
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb304',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb305'
+  );
   INSERT INTO public.lesson_schedule_changes (
     id, lesson_id, schedule_change_request_id, change_origin,
     previous_scheduled_at, new_scheduled_at, reason, actor_profile_id
@@ -522,6 +530,6 @@ BEGIN
      v_today + interval '23 days', v_today + interval '24 days', 'Alpha seed applied direct move', v_owner),
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb305', '99999999-9999-9999-9999-999999999212',
      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa305', 'direct_user',
-     v_today + interval '10 days', v_today + interval '38 days', 'Alpha seed cascade pending direct move', v_owner)
-  ON CONFLICT (id) DO NOTHING;
+     v_today + interval '10 days', v_today + interval '38 days', 'Alpha seed cascade pending direct move', v_owner);
+  ALTER TABLE public.lesson_schedule_changes ENABLE TRIGGER trg_lesson_schedule_changes_block_mutation;
 END $$;

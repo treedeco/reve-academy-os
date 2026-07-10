@@ -39,6 +39,8 @@ export function formatLessonStatus(status: LessonStatus): string {
   return STATUS_LABELS[status] ?? status;
 }
 
+export { formatPaymentStatusLabel } from '@/lib/domain/student-history';
+
 export function formatDateTimeSeoul(iso: string): string {
   return new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',

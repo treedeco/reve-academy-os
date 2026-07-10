@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import { StudentOperationalHistoryPanel } from '@/components/owner/student-operational-history-panel';
 import { StudentPassSummary } from '@/components/owner/student-pass-summary';
 import { ErrorState } from '@/components/ui/state-blocks';
 import { formatDateTimeSeoul, formatLessonStatus } from '@/lib/domain/format';
 import { WEEKDAY_LABELS, type LessonStatus } from '@/lib/domain/types';
-import { fetchStudentDetail } from '@/lib/data/owner-queries';
+import { fetchStudentDetail, fetchStudentOperationalHistory } from '@/lib/data/owner-queries';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function StudentDetailPage({
@@ -12,10 +13,13 @@ export default async function StudentDetailPage({
   params: Promise<{ studentId: string }>;
 }) {
   const { studentId } = await params;
-  const supabase = await createClient();
 
   try {
-    const detail = await fetchStudentDetail(supabase, studentId);
+    const supabaseClient = await createClient();
+    const [detail, operationalHistory] = await Promise.all([
+      fetchStudentDetail(supabaseClient, studentId),
+      fetchStudentOperationalHistory(supabaseClient, studentId),
+    ]);
 
     return (
       <div className="space-y-6">
@@ -108,6 +112,8 @@ export default async function StudentDetailPage({
             </ul>
           </section>
         ) : null}
+
+        <StudentOperationalHistoryPanel history={operationalHistory} />
       </div>
     );
   } catch (error) {
