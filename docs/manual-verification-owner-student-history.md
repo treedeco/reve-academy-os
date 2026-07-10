@@ -1,61 +1,50 @@
-# Manual verification — Owner student operational history (Phase 1B-6)
+# Owner Student Operational History — Manual Browser Verification Checklist
 
-Use this checklist after automated verification passes locally.
+Status: **passed — Owner runtime verification complete**
 
-## Prerequisites
+Automated Playwright tests do **not** substitute for this checklist. This record reflects **Owner-provided** browser verification on commit `3650eb0e8ce7ab372f6a3be8343f5bdd228bc57e` (tag `phase-1b6-owner-student-operational-history-implemented`).
 
-- Supabase local running
-- `.env.local` configured for local Supabase
-- Node.js dependencies installed (`npm ci`)
+## Owner quick reference
 
-## Checklist
+| Item | Value |
+|------|-------|
+| Local app URL | `http://127.0.0.1:3000` |
+| Students route | `http://127.0.0.1:3000/students` |
+| Demo seed | `npm run db:seed:alpha` (**local only**) |
+| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
 
-1. **Start Supabase local**
-   - Run `npx supabase start` if not already running.
+## Verification environment
 
-2. **Reset DB**
-   - Run `npx supabase db reset`.
+| Item | Value |
+|------|-------|
+| Supabase | Local (`npx supabase start`, `db reset`, `npm run db:seed:alpha`) |
+| App | `npm run dev` → `http://127.0.0.1:3000` |
+| Tested commit | `3650eb0e8ce7ab372f6a3be8343f5bdd228bc57e` |
+| Implementation tag | `phase-1b6-owner-student-operational-history-implemented` |
+| Runtime verification date | **2026-07-09** |
 
-3. **Seed alpha data**
-   - Run `npm run db:seed:alpha`.
+---
 
-4. **Start app**
-   - Run `npm run dev` and open the local app URL (typically `http://localhost:3000`).
+## 12-step verification checklist
 
-5. **Login as Owner**
-   - Email: `owner-alpha@test.local`
-   - Password: `OwnerAlphaTest123!`
+| # | Action | Expected UI | Expected DB / behavior | Pass |
+|---|--------|-------------|------------------------|------|
+| 1 | Start Supabase local | Services healthy | `npx supabase status` OK | ☑ |
+| 2 | Reset DB | Clean schema | `npx supabase db reset` | ☑ |
+| 3 | Seed alpha data | Seed script completes | `npm run db:seed:alpha` | ☑ |
+| 4 | Start app | Login page loads | `npm run dev` | ☑ |
+| 5 | Login as `owner-alpha@test.local` | Redirect to dashboard | Owner session active | ☑ |
+| 6 | Open `/students` | Student list loads without errors | Owner-only route | ☑ |
+| 7 | Open student detail with operational history | Delta detail page loads | `/students/[studentId]` | ☑ |
+| 8 | Verify payment history section | **결제 이력** visible; status, amount, pass, course; no payment buttons | `fetchStudentOperationalHistory.payments` | ☑ |
+| 9 | Verify refund history section | Delta empty state; Zeta refund row; no refund buttons | `fetchStudentOperationalHistory.refunds` | ☑ |
+| 10 | Verify schedule change request history section | Status, sequence, times, cascade label, reason; no review/apply/cascade buttons | `fetchStudentOperationalHistory.schedule_requests` | ☑ |
+| 11 | Verify existing student detail sections | **현재 회차권**, **고정 일정**, **수업 이력** still render; no new write actions | Existing `fetchStudentDetail` unchanged | ☑ |
+| 12 | Mobile/responsive layout and runtime errors | Sections readable; no blocking console/network/server errors | `/schedule`, `/sms`, `/refunds`, `/schedule-requests` still accessible | ☑ |
 
-6. **Open `/students`**
-   - Confirm the student list loads without errors.
+**Checklist: 12/12 PASS**
 
-7. **Open a student detail page with operational history**
-   - Open **Delta Student** (`/students/44444444-4444-4444-4444-444444444104`).
-   - Optional: also spot-check **Zeta Student** for refund history and **Gamma Student** for empty states.
-
-8. **Verify payment history section**
-   - Section heading **결제 이력** is visible.
-   - At least one completed payment row shows status, amount, pass code, and course context.
-   - No payment creation or renewal buttons appear.
-
-9. **Verify refund history section**
-   - On Delta: empty state **환불 이력이 없습니다.** is shown.
-   - On Zeta: one refund row shows amount, reason, and linked pass/course context.
-   - No refund processing buttons appear.
-
-10. **Verify schedule change request history section**
-    - Section heading **일정 변경 요청 이력** is visible on Delta.
-    - Rows show request status, target lesson sequence, time summary, cascade status, and reason.
-    - No review/apply/cascade action buttons appear in this section.
-
-11. **Verify existing student detail sections still work**
-    - **현재 회차권**, **고정 일정**, **수업 이력** (and other existing sections) still render.
-    - Confirm no new write actions were added to operational history sections.
-
-12. **Verify mobile/responsive layout and runtime errors**
-    - Resize to mobile width (~390px) or use device emulation.
-    - Operational history sections remain readable (horizontal scroll acceptable for tables).
-    - No blocking browser console or server runtime errors during navigation.
+---
 
 ## Expected seed fixtures
 
@@ -66,7 +55,22 @@ Use this checklist after automated verification passes locally.
 | Zeta    | 1 refunded | 1 | 0 |
 | Gamma   | 0 | 0 | 0 (empty states) |
 
-## Notes
+---
 
-- This phase is **read-only**; mutations remain on `/refunds` and `/schedule-requests`.
-- Do not create the runtime-verified tag until manual browser verification is complete.
+## Sign-off
+
+- Verifier: **Owner**
+- Date: **2026-07-09**
+- Browser / device: **Desktop browser; mobile/responsive layout**
+- Result: **passed**
+- Notes: Owner confirmed PASS for student operational history using local Supabase, alpha seed (`npm run db:seed:alpha`), and `owner-alpha@test.local`. Verified student list navigation, student detail rendering, payment history, refund history, schedule change request history, empty states, existing student detail sections, no write actions in history sections, responsive layout, and no blocking console/network/server errors.
+
+## Non-blocking observations
+
+- Operational history sections are read-only; payment creation, refund processing, and schedule request review/apply/cascade remain on their dedicated routes.
+- Gamma Student provides empty-state coverage when payment, refund, and schedule request history are all absent.
+
+## Remaining risks
+
+- Owner Alpha login requires `npm run db:seed:alpha` after every `db reset`; credentials are not in migration seed alone.
+- Supabase auth may be transiently unavailable immediately after `db reset`; retry after seed if login fails.

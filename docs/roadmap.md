@@ -519,7 +519,7 @@ Extend the existing Owner student detail page (`/students/[studentId]`) with rea
 
 ### Status
 
-**Implemented** — automated verification pending Owner manual browser sign-off. Implementation tag: `phase-1b6-owner-student-operational-history-implemented`.
+**Complete** — Owner manual browser verification passed on 2026-07-09. Evidence: `docs/manual-verification-owner-student-history.md`. Runtime tag: `phase-1b6-owner-student-operational-history-runtime-verified`.
 
 ---
 
