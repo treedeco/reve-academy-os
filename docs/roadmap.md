@@ -534,7 +534,7 @@ Add an Owner-only `/teachers` application surface for teacher master data manage
 - Route `/teachers` with navigation **강사**
 - Server-side `fetchOwnerTeacherList` (1 DB query, zero per-row N+1)
 - Client RPC wrappers for create, update, and active-state changes (no `router.refresh()`)
-- Unit, integration, Playwright, and `scripts/verify_phase_2b1.ps1` verification
+- Unit, integration, Playwright (including deterministic `/teachers` empty-state browser coverage), and `scripts/verify_phase_2b1.ps1` verification
 - Manual checklist: `docs/manual-verification-owner-teachers.md`
 
 ### Status

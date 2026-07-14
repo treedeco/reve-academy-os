@@ -67,9 +67,11 @@ try {
   & "$PSScriptRoot/seed-owner-alpha.ps1"
   if ($LASTEXITCODE -ne 0) { throw "Owner Alpha demo seed failed with exit code $LASTEXITCODE" }
 
-  Write-Host '=== Pre-Playwright: fresh dev server after db reset ==='
-  Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Write-Host '=== Pre-Playwright: ensure fresh dev server after db reset ==='
+  # CI disables Playwright reuseExistingServer so each npx playwright test starts a new dev server.
   $env:CI = '1'
+  . "$PSScriptRoot/lib/reve-playwright-server.ps1"
+  Stop-RevePlaywrightDevServerIfStale -RepoRoot $repoRoot -Port 3000
 
   Invoke-Step 'Step 12: playwright (full e2e suite)' { npx playwright test }
   Invoke-Step 'Step 13: Phase 2B-1 focused Playwright' { npx playwright test e2e/owner-teachers.spec.ts }

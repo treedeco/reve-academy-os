@@ -2,7 +2,7 @@
 
 Status: **implementation-ready — Owner runtime verification not yet signed off**
 
-Automated Playwright tests do **not** substitute for this checklist.
+Automated Playwright tests do **not** substitute for this checklist. Browser-level empty-state coverage exists in `e2e/owner-teachers.spec.ts` (isolated SQL fixture); manual runtime verification is still pending.
 
 ## Owner quick reference
 
@@ -39,7 +39,7 @@ Automated Playwright tests do **not** substitute for this checklist.
 | 10 | Deactivate unassigned teacher | Confirmation required; status becomes **비활성** | ☐ |
 | 11 | Attempt deactivate assigned teacher (e.g. T-A1) | Korean error about active assignments; teacher stays active | ☐ |
 | 12 | Reactivate previously deactivated teacher | Status returns to **활성** when contract allows | ☐ |
-| 13 | Empty state (optional) | Unit-tested empty panel copy matches product expectation | ☐ |
+| 13 | Empty state (optional) | Automated Playwright empty-state test passes; manual browser confirmation still pending | ☐ |
 | 14 | Responsive layout (~390px width) | No horizontal overflow; forms usable | ☐ |
 | 15 | Console/network/server | No blocking errors during create/edit/deactivate flows | ☐ |
 | 16 | No physical delete | No delete button; teacher rows remain in database when deactivated | ☐ |

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedOwnerAlphaFixture, seedOwnerOnlyAlphaFixture } from './helpers/apply-sql-fixture';
 
 const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
 const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
@@ -148,5 +149,55 @@ test.describe('Owner teacher master data', () => {
     await page.getByRole('link', { name: '학생' }).click();
     await expect(page).toHaveURL(/\/students/, { timeout: 15_000 });
     await expect(page.getByRole('heading', { name: '학생' })).toBeVisible();
+  });
+});
+
+test.describe('Owner teacher empty state fixture', () => {
+  test.beforeAll(() => {
+    seedOwnerOnlyAlphaFixture();
+  });
+
+  test.afterAll(() => {
+    seedOwnerAlphaFixture();
+  });
+
+  test('renders empty state when no teachers exist', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    const failedRequests: string[] = [];
+
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        consoleErrors.push(message.text());
+      }
+    });
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+    page.on('response', (response) => {
+      const url = response.url();
+      if (response.status() >= 400 && !url.includes('favicon')) {
+        failedRequests.push(`${response.status()} ${url}`);
+      }
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAsOwner(page);
+    await page.goto('/teachers');
+
+    await expect(page.getByRole('heading', { name: '강사', exact: true })).toBeVisible();
+    await expect(page.getByTestId('teachers-panel')).toBeVisible();
+    await expect(page.getByTestId('teachers-empty')).toContainText('등록된 강사가 없습니다');
+    await expect(page.locator('[data-testid^="teacher-item-"]')).toHaveCount(0);
+    await expect(page.getByTestId('teacher-create-section')).toBeVisible();
+    await expect(page.getByTestId('teacher-create-code')).toBeEnabled();
+    await expect(page.getByTestId('teacher-create-submit')).toBeEnabled();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    expect(overflow).toBe(false);
+
+    expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
+    expect(pageErrors, pageErrors.join('\n')).toEqual([]);
+    expect(failedRequests, failedRequests.join('\n')).toEqual([]);
   });
 });
