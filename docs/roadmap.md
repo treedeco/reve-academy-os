@@ -523,7 +523,7 @@ Extend the existing Owner student detail page (`/students/[studentId]`) with rea
 
 ---
 
-## Phase 2B-1 — Owner Teacher Master Data (implemented)
+## Phase 2B-1 — Owner Teacher Master Data (complete)
 
 ### Goal
 
@@ -539,7 +539,7 @@ Add an Owner-only `/teachers` application surface for teacher master data manage
 
 ### Status
 
-**Implemented** — automated verification pending Owner manual browser sign-off. Implementation tag: `phase-2b1-owner-teachers-master-data-implemented`.
+**Complete** — Owner manual browser verification passed on 2026-07-14. Evidence: `docs/manual-verification-owner-teachers.md`. Implementation tag: `phase-2b1-owner-teachers-master-data-implemented`. Runtime tag: `phase-2b1-owner-teachers-master-data-runtime-verified`.
 
 ---
 

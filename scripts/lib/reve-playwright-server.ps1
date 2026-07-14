@@ -27,9 +27,12 @@ function Stop-RevePlaywrightDevServerIfStale {
     }
 
     $commandLine = [string]$process.CommandLine
-    $normalized = $commandLine.ToLowerInvariant()
+    $normalized = $commandLine.Replace('\', '/').ToLowerInvariant()
     $ownedByRepo = $normalized -match $repoMarker
-    $isPlaywrightDevServer = $normalized -match 'next(\.cmd)?(\s+|")dev' -or $normalized -match 'npm(\.cmd)?\s+run\s+dev'
+    $isPlaywrightDevServer =
+      $normalized -match 'next(\.cmd)?(\s+|")dev' -or
+      $normalized -match 'npm(\.cmd)?\s+run\s+dev' -or
+      $normalized -match 'next/dist/server/lib/start-server\.js'
 
     if (-not ($ownedByRepo -and $isPlaywrightDevServer)) {
       throw "Port $Port is in use by PID $listener with unverified command line '$commandLine'. Refusing to terminate unrelated processes."
