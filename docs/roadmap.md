@@ -523,6 +523,26 @@ Extend the existing Owner student detail page (`/students/[studentId]`) with rea
 
 ---
 
+## Phase 2B-1 — Owner Teacher Master Data (implemented)
+
+### Goal
+
+Add an Owner-only `/teachers` application surface for teacher master data management using existing trusted RPCs.
+
+### Deliverables
+
+- Route `/teachers` with navigation **강사**
+- Server-side `fetchOwnerTeacherList` (1 DB query, zero per-row N+1)
+- Client RPC wrappers for create, update, and active-state changes (no `router.refresh()`)
+- Unit, integration, Playwright, and `scripts/verify_phase_2b1.ps1` verification
+- Manual checklist: `docs/manual-verification-owner-teachers.md`
+
+### Status
+
+**Implemented** — automated verification pending Owner manual browser sign-off. Implementation tag: `phase-2b1-owner-teachers-master-data-implemented`.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).

@@ -142,6 +142,26 @@ export interface StudentOperationalHistory {
   schedule_requests: StudentScheduleRequestHistoryRow[];
 }
 
+export interface OwnerTeacherRow {
+  id: string;
+  teacher_code: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface OwnerTeacherMutationResult {
+  id: string;
+  teacher_code: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  is_active: boolean;
+  updated_at: string;
+}
+
 export interface DashboardSummary {
   total_today: number;
   scheduled_count: number;

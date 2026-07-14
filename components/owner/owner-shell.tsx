@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/sms', label: 'SMS 발송 확인' },
   { href: '/refunds', label: '환불 처리' },
   { href: '/students', label: '학생' },
+  { href: '/teachers', label: '강사' },
 ];
 
 export function OwnerShell({
