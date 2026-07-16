@@ -11,7 +11,9 @@ DECLARE
   v_teacher_b_profile uuid := 'dddddddd-dddd-dddd-dddd-ddddddddd102';
   v_student uuid := '44444444-4444-4444-4444-444444444101';
   v_course uuid := 'eeeeeeee-eeee-eeee-eeee-eeeeeeeee101';
+  v_course_piano uuid := 'eeeeeeee-eeee-eeee-eeee-eeeeeeeee102';
   v_product uuid := 'ffffffff-ffff-ffff-ffff-fffffffff101';
+  v_product_piano8 uuid := 'ffffffff-ffff-ffff-ffff-fffffffff102';
   v_pass uuid := '66666666-6666-6666-6666-666666666101';
   v_slot uuid := '77777777-7777-7777-7777-777777777101';
   v_lesson uuid := '99999999-9999-9999-9999-999999999101';
@@ -63,15 +65,17 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.courses (id, course_code, name, is_active) VALUES
-    (v_course, 'VOC-A1', 'Alpha Vocal Course', true)
+    (v_course, 'VOC-A1', 'Alpha Vocal Course', true),
+    (v_course_piano, 'PIA-A1', 'Alpha Piano Course', true)
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.course_products (
     id, course_id, product_code, product_name,
     default_lesson_count, weekly_frequency, default_tuition_krw, is_active
-  ) VALUES (
-    v_product, v_course, 'VOC-4-A1', 'Alpha 4 Lessons', 4, 1, 200000, true
-  ) ON CONFLICT (id) DO NOTHING;
+  ) VALUES
+    (v_product, v_course, 'VOC-4-A1', 'Alpha 4 Lessons', 4, 1, 200000, true),
+    (v_product_piano8, v_course_piano, 'PIA-8-A1', 'Alpha 8 Lessons', 8, 2, 400000, true)
+  ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.passes (
     id, pass_code, student_id, course_id, course_product_id,

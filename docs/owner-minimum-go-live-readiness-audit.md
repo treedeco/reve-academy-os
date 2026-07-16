@@ -37,7 +37,7 @@ This document records a read-only operational readiness audit of REVE Academy OS
 | `/students/[studentId]` | (detail link) | Read-only profile, pass usage, schedule, lessons, operational history |
 | `/teachers` | 강사 | Create / update / activate / deactivate teachers |
 
-**Not present:** Teacher portal, Student portal, course/product management UI, initial enrollment UI, payment record UI, pass schedule edit UI, audit log viewer.
+**Implementation update (Phase 2B-2B1):** Owner UI now includes student create/edit/status and initial enrollment. See [manual-verification-owner-student-initial-enrollment.md](./manual-verification-owner-student-initial-enrollment.md). Payment record UI and pass renewal UI remain open (Phase 2B-2B2).
 
 ### Application RPC wiring (`lib/data`)
 

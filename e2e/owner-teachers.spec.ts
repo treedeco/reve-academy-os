@@ -148,7 +148,7 @@ test.describe('Owner teacher master data', () => {
 
     await page.getByRole('link', { name: '학생' }).click();
     await expect(page).toHaveURL(/\/students/, { timeout: 15_000 });
-    await expect(page.getByRole('heading', { name: '학생' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '학생', exact: true })).toBeVisible();
   });
 });
 

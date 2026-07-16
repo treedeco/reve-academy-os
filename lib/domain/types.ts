@@ -162,6 +162,78 @@ export interface OwnerTeacherMutationResult {
   updated_at: string;
 }
 
+export interface OwnerStudentRow {
+  id: string;
+  student_code: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  operational_status: string;
+  updated_at: string;
+}
+
+export interface OwnerStudentMutationResult {
+  id: string;
+  student_code: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  operational_status: string;
+  updated_at: string;
+}
+
+export interface OwnerEnrollmentTeacherOption {
+  id: string;
+  teacher_code: string;
+  name: string;
+}
+
+export interface OwnerEnrollmentCourseOption {
+  id: string;
+  course_code: string;
+  name: string;
+}
+
+export interface OwnerEnrollmentProductOption {
+  id: string;
+  course_id: string;
+  product_code: string;
+  product_name: string;
+  default_lesson_count: number;
+  weekly_frequency: number;
+  default_tuition_krw: number;
+}
+
+export interface EnrollmentScheduleSlotInput {
+  teacherId: string;
+  weekday: number;
+  localTime: string;
+  durationMinutes: number;
+  slotOrder: number;
+}
+
+export interface OwnerInitialEnrollmentResult {
+  payment_id: string;
+  payment_status: string;
+  pass_id: string;
+  pass_public_code: string;
+  pass_sequence_number: number;
+  pass_status: string;
+  registered_lesson_count: number;
+  schedule_slots_created: number;
+  lesson_rows_created: number;
+  first_lesson_at: string | null;
+  last_lesson_at: string | null;
+  sms_notification_status: string | null;
+  idempotent_replay: boolean;
+}
+
+export interface OwnerEnrollmentCatalog {
+  teachers: OwnerEnrollmentTeacherOption[];
+  courses: OwnerEnrollmentCourseOption[];
+  products: OwnerEnrollmentProductOption[];
+}
+
 export interface DashboardSummary {
   total_today: number;
   scheduled_count: number;

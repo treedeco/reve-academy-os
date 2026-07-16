@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StudentsCreatePanel } from '@/components/owner/students-create-panel';
 import { ErrorState } from '@/components/ui/state-blocks';
 import { formatDateTimeSeoul } from '@/lib/domain/format';
 import { fetchStudentList } from '@/lib/data/owner-queries';
@@ -21,6 +22,8 @@ export default async function StudentsPage({
           <h1 className="text-2xl font-semibold">학생</h1>
           <p className="mt-1 text-sm text-slate-600">현재 pass 기준 운영 정보</p>
         </div>
+
+        <StudentsCreatePanel />
 
         <form className="flex flex-col gap-3 sm:flex-row" action="/students" method="get">
           <input

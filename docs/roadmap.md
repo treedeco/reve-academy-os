@@ -6,13 +6,34 @@
 
 ## Current priority — Minimum Owner Go-Live
 
-**Active focus (2026-07-16):** Determine and close the smallest gap set required for a real academy to operate with Owner-only workflows—without Teacher/Student portals, automatic SMS, card payments, or nonessential UI redesign.
+**Active focus (2026-07-16):** Phase 2B-2B1 — Owner student master and initial enrollment (minimum new-student onboarding without payment renewal UI).
 
 **Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2A).
 
-**Verdict:** Database trusted operations are ready; **Owner UI lacks student create, initial enrollment, and payment record surfaces**. Production deployment, bootstrap, and backup runbooks are undocumented. **Not go-live ready** until Phase 2B-2B (recommended) and ops runbook work land.
+**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status and initial enrollment**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
 
-**Next recommended implementation (single phase):** **Phase 2B-2B — Owner Student Enrollment and Payment Operations** — wire `reve_owner_create_student`, `reve_owner_create_initial_enrollment`, and `reve_complete_payment_and_renew_pass` to Owner UI with tests.
+**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — wire `reve_complete_payment_and_renew_pass` to Owner UI with tests.
+
+**Following phase:** **Phase 2B-2C — Production Go-Live Operations** — deployment, bootstrap, backup/restore runbooks.
+
+### Phase 2B-2B1 — Owner student master and initial enrollment
+
+- Owner student create / edit / active-inactive controls
+- Initial enrollment UI (4-lesson weekly, 8-lesson twice-weekly)
+- Read-only teacher / course / product pickers
+- Automated tests + `scripts/verify_phase_2b2b1.ps1`
+- Manual checklist: [docs/manual-verification-owner-student-initial-enrollment.md](./manual-verification-owner-student-initial-enrollment.md)
+
+### Phase 2B-2B2 — Payment and pass renewal (planned)
+
+- Owner payment record UI for pass renewal
+- `reve_complete_payment_and_renew_pass` wiring
+- Excludes production deployment
+
+### Phase 2B-2C — Production go-live operations (planned)
+
+- Deployment runbooks, owner bootstrap, backup/restore
+- Runtime verification on target environment
 
 ---
 
