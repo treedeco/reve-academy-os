@@ -159,13 +159,13 @@ BEGIN
   PERFORM set_config('test.collision_partial', (v_collision_anchor + interval '30 minutes')::text, false);
   PERFORM set_config('test.collision_adjacent', (v_collision_anchor + interval '1 hour')::text, false);
   PERFORM set_config('test.collision_contained', (v_collision_anchor + interval '15 minutes')::text, false);
-  PERFORM set_config('test.l2_new_time', timestamptz '2026-09-21 12:00:00+09'::text, false);
+  PERFORM set_config('test.l2_new_time', timestamptz '2026-09-21 14:00:00+09'::text, false);
   PERFORM set_config('test.l2_w2_new_time', timestamptz '2026-09-15 15:00:00+09'::text, false);
   PERFORM set_config('test.l3_cascade_expected', timestamptz '2026-09-28 11:00:00+09'::text, false);
   PERFORM set_config('test.l4_cascade_expected', timestamptz '2026-10-05 11:00:00+09'::text, false);
   PERFORM set_config('test.l3_w2_cascade_expected', timestamptz '2026-09-22 11:00:00+09'::text, false);
   PERFORM set_config('test.l4_w2_cascade_expected', timestamptz '2026-09-22 14:00:00+09'::text, false);
-  PERFORM set_config('test.sms_final_new_time', timestamptz '2026-10-16 11:00:00+09'::text, false);
+  PERFORM set_config('test.sms_final_new_time', timestamptz '2026-10-16 14:00:00+09'::text, false);
 END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.test_auth_as(p_user uuid)
@@ -1039,7 +1039,7 @@ BEGIN
   v_request := pg_temp.prepare_applied_request(
     'req_pre_two_direct', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l4')::uuid,
-    timestamptz '2026-11-02 11:00:00+09', 'Two direct events probe');
+    timestamptz '2026-11-02 14:00:00+09', 'Two direct events probe');
   RESET ROLE;
   INSERT INTO public.lesson_schedule_changes (
     lesson_id, schedule_change_request_id, change_origin,
@@ -1159,7 +1159,7 @@ BEGIN
   v_request := pg_temp.prepare_applied_request(
     'req_pre_anchor_changed', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l2')::uuid,
-    timestamptz '2026-10-05 11:00:00+09', 'Anchor changed probe');
+    timestamptz '2026-10-05 14:00:00+09', 'Anchor changed probe');
   RESET ROLE;
   UPDATE public.lessons
   SET scheduled_at = timestamptz '2026-10-06 11:00:00+09'
@@ -1184,7 +1184,7 @@ BEGIN
   v_request := pg_temp.prepare_applied_request(
     'req_pre_no_schedule', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l2')::uuid,
-    timestamptz '2026-10-05 11:00:00+09', 'No active schedule probe');
+    timestamptz '2026-10-05 14:00:00+09', 'No active schedule probe');
   RESET ROLE;
   UPDATE public.schedule_slots SET is_active = false
   WHERE pass_id = current_setting('test.pass_col')::uuid;
@@ -1250,7 +1250,7 @@ BEGIN
   PERFORM pg_temp.test_auth_as(current_setting('test.owner1')::uuid);
   v_request := pg_temp.prepare_applied_request(
     'req_pre_reserved', current_setting('test.student_col')::uuid,
-    v_lesson, timestamptz '2026-12-07 11:00:00+09', 'Reserved pass probe');
+    v_lesson, timestamptz '2026-12-07 14:00:00+09', 'Reserved pass probe');
   PERFORM set_config('test.pass_reserved', v_pass::text, false);
   PERFORM set_config('test.lesson_reserved', v_lesson::text, false);
 END $$;
@@ -1437,7 +1437,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_bar_block', current_setting('test.student_bar')::uuid,
     current_setting('test.bar_l2')::uuid,
-    timestamptz '2026-09-30 12:00:00+09',
+    timestamptz '2026-09-30 14:00:00+09',
     'Barrier block probe'
   );
   RESET ROLE;
@@ -1476,7 +1476,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_bar_main', current_setting('test.student_bar')::uuid,
     current_setting('test.bar_l3')::uuid,
-    timestamptz '2026-10-07 12:00:00+09',
+    timestamptz '2026-10-07 14:00:00+09',
     'Barrier anchor move'
   );
   PERFORM set_config('test.bar_l3_before',
@@ -1499,7 +1499,7 @@ SELECT ok(
 
 SELECT is(
   (SELECT scheduled_at FROM public.lessons WHERE id = current_setting('test.bar_l3')::uuid),
-  timestamptz '2026-10-07 12:00:00+09',
+  timestamptz '2026-10-07 14:00:00+09',
   'barrier pass scheduled anchor lesson keeps applied time after cascade segment'
 );
 
@@ -1578,7 +1578,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_col_exact', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l3')::uuid,
-    timestamptz '2026-10-05 11:00:00+09',
+    timestamptz '2026-10-05 14:00:00+09',
     'Collision exact probe'
   );
   PERFORM set_config('test.col_audit_before',
@@ -1646,7 +1646,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_col_partial', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l3')::uuid,
-    timestamptz '2026-10-05 10:30:00+09',
+    timestamptz '2026-10-05 14:30:00+09',
     'Collision partial probe'
   );
 END $$;
@@ -1667,7 +1667,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_col_contained', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l3')::uuid,
-    timestamptz '2026-10-05 11:15:00+09',
+    timestamptz '2026-10-05 14:15:00+09',
     'Collision contained probe'
   );
 END $$;
@@ -1693,7 +1693,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_col_adjacent', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l3')::uuid,
-    timestamptz '2026-10-05 11:00:00+09',
+    timestamptz '2026-10-05 14:00:00+09',
     'Collision adjacent ok'
   );
 END $$;
@@ -1718,7 +1718,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_col_teacher_b', current_setting('test.student_col_en')::uuid,
     current_setting('test.col_l3')::uuid,
-    timestamptz '2026-10-05 11:00:00+09',
+    timestamptz '2026-10-05 14:00:00+09',
     'Different teacher collision ok'
   );
 END $$;
@@ -1741,7 +1741,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_conc', current_setting('test.student_zero')::uuid,
     current_setting('test.zero_l2')::uuid,
-    timestamptz '2026-09-17 11:00:00+09',
+    timestamptz '2026-09-17 14:00:00+09',
     'Concurrency probe'
   );
   PERFORM set_config('test.conc_l2_before',
@@ -2026,7 +2026,7 @@ BEGIN
   PERFORM pg_temp.prepare_applied_request(
     'req_sms_cascade', current_setting('test.student_sms')::uuid,
     current_setting('test.sms_l4')::uuid,
-    timestamptz '2026-10-23 11:00:00+09',
+    timestamptz '2026-10-23 14:00:00+09',
     'SMS cascade sync probe'
   );
   RESET ROLE;

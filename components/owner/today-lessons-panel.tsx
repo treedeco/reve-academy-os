@@ -2,12 +2,21 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { LessonRescheduleDialog } from '@/components/owner/lesson-reschedule-dialog';
+import { LessonStatusCorrectionDialog } from '@/components/owner/lesson-status-correction-dialog';
 import { createClient } from '@/lib/supabase/client';
 import { mapDatabaseError, formatLessonStatus, formatTimeSeoul } from '@/lib/domain/format';
 import {
+  formatLessonProgress,
+  isDeductibleLessonStatus,
+  isScheduleChangeableLessonStatus,
+} from '@/lib/domain/lesson-correction';
+import {
   ORDINARY_TRANSITION_TARGETS,
   STATUS_REQUIRES_REASON,
+  type DirectRescheduleResult,
   type LessonStatus,
+  type LessonTransitionResult,
   type TodayLessonRow,
 } from '@/lib/domain/types';
 
@@ -16,8 +25,12 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
   const [pendingLessonId, setPendingLessonId] = useState<string | null>(null);
   const [errorByLesson, setErrorByLesson] = useState<Record<string, string>>({});
   const [reasonByLesson, setReasonByLesson] = useState<Record<string, string>>({});
+  const [correctionLessonId, setCorrectionLessonId] = useState<string | null>(null);
+  const [rescheduleLessonId, setRescheduleLessonId] = useState<string | null>(null);
 
   const lessonMap = useMemo(() => new Map(lessons.map((lesson) => [lesson.id, lesson])), [lessons]);
+  const correctionLesson = correctionLessonId ? lessonMap.get(correctionLessonId) : undefined;
+  const rescheduleLesson = rescheduleLessonId ? lessonMap.get(rescheduleLessonId) : undefined;
 
   async function handleStatusChange(lessonId: string, nextStatus: LessonStatus) {
     const current = lessonMap.get(lessonId);
@@ -87,6 +100,36 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
     }
   }
 
+  function handleCorrectionSuccess(result: LessonTransitionResult) {
+    setLessons((prev) =>
+      prev.map((lesson) =>
+        lesson.id === result.lesson_id
+          ? {
+              ...lesson,
+              status: result.new_status as LessonStatus,
+              updated_at: result.lesson_updated_at,
+            }
+          : lesson,
+      ),
+    );
+  }
+
+  function handleRescheduleSuccess(result: DirectRescheduleResult) {
+    setLessons((prev) =>
+      prev.map((lesson) =>
+        lesson.id === result.lesson_id
+          ? {
+              ...lesson,
+              status: result.new_lesson_status as LessonStatus,
+              scheduled_at: result.new_scheduled_at,
+              updated_at: result.lesson_updated_at,
+              pass_updated_at: result.pass_updated_at,
+            }
+          : lesson,
+      ),
+    );
+  }
+
   if (lessons.length === 0) {
     return null;
   }
@@ -96,6 +139,9 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
       {lessons.map((lesson) => {
         const options = ORDINARY_TRANSITION_TARGETS[lesson.status] ?? [];
         const isPending = pendingLessonId === lesson.id;
+        const showOrdinarySelect = options.length > 0;
+        const showCorrection = isDeductibleLessonStatus(lesson.status);
+        const showReschedule = isScheduleChangeableLessonStatus(lesson.status);
 
         return (
           <article
@@ -109,6 +155,9 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
                 <h2 className="text-lg font-semibold">{lesson.student_name}</h2>
                 <p className="text-sm text-slate-600">
                   {lesson.course_name} · {lesson.teacher_name}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  회차 {formatLessonProgress(lesson.registered_lesson_count, lesson.sequence_number)}
                 </p>
                 <p className="mt-2 text-sm">
                   현재 상태:{' '}
@@ -126,40 +175,71 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
               </div>
 
               <div className="w-full max-w-sm space-y-2">
-                <label className="block text-sm font-medium text-slate-700" htmlFor={`status-${lesson.id}`}>
-                  상태 변경
-                </label>
-                <select
-                  id={`status-${lesson.id}`}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  disabled={isPending || options.length === 0}
-                  value={lesson.status}
-                  onChange={(event) =>
-                    void handleStatusChange(lesson.id, event.target.value as LessonStatus)
-                  }
-                >
-                  <option value={lesson.status}>{formatLessonStatus(lesson.status)}</option>
-                  {options.map((status) => (
-                    <option key={status} value={status}>
-                      {formatLessonStatus(status)}
-                    </option>
-                  ))}
-                </select>
+                {showOrdinarySelect ? (
+                  <>
+                    <label
+                      className="block text-sm font-medium text-slate-700"
+                      htmlFor={`status-${lesson.id}`}
+                    >
+                      상태 변경
+                    </label>
+                    <select
+                      id={`status-${lesson.id}`}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      disabled={isPending || options.length === 0}
+                      value={lesson.status}
+                      onChange={(event) =>
+                        void handleStatusChange(lesson.id, event.target.value as LessonStatus)
+                      }
+                    >
+                      <option value={lesson.status}>{formatLessonStatus(lesson.status)}</option>
+                      {options.map((status) => (
+                        <option key={status} value={status}>
+                          {formatLessonStatus(status)}
+                        </option>
+                      ))}
+                    </select>
 
-                {options.some((status) => STATUS_REQUIRES_REASON.has(status)) ? (
-                  <input
-                    type="text"
-                    placeholder="변경 사유 (필요 시)"
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    value={reasonByLesson[lesson.id] ?? ''}
-                    onChange={(event) =>
-                      setReasonByLesson((prev) => ({
-                        ...prev,
-                        [lesson.id]: event.target.value,
-                      }))
-                    }
+                    {options.some((status) => STATUS_REQUIRES_REASON.has(status)) ? (
+                      <input
+                        type="text"
+                        placeholder="변경 사유 (필요 시)"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={reasonByLesson[lesson.id] ?? ''}
+                        onChange={(event) =>
+                          setReasonByLesson((prev) => ({
+                            ...prev,
+                            [lesson.id]: event.target.value,
+                          }))
+                        }
+                        disabled={isPending}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+
+                {showCorrection ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
                     disabled={isPending}
-                  />
+                    onClick={() => setCorrectionLessonId(lesson.id)}
+                    data-testid={`today-lesson-correction-${lesson.id}`}
+                  >
+                    상태 정정
+                  </button>
+                ) : null}
+
+                {showReschedule ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
+                    disabled={isPending}
+                    onClick={() => setRescheduleLessonId(lesson.id)}
+                    data-testid={`today-lesson-reschedule-${lesson.id}`}
+                  >
+                    일시 변경
+                  </button>
                 ) : null}
 
                 {isPending ? <p className="text-sm text-slate-500">저장 중…</p> : null}
@@ -173,6 +253,29 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
           </article>
         );
       })}
+
+      {correctionLesson ? (
+        <LessonStatusCorrectionDialog
+          open={correctionLessonId !== null}
+          onClose={() => setCorrectionLessonId(null)}
+          lesson={correctionLesson}
+          studentName={correctionLesson.student_name}
+          courseName={correctionLesson.course_name}
+          passUsage={null}
+          onSuccess={handleCorrectionSuccess}
+        />
+      ) : null}
+
+      {rescheduleLesson ? (
+        <LessonRescheduleDialog
+          open={rescheduleLessonId !== null}
+          onClose={() => setRescheduleLessonId(null)}
+          lesson={rescheduleLesson}
+          studentName={rescheduleLesson.student_name}
+          courseName={rescheduleLesson.course_name}
+          onSuccess={handleRescheduleSuccess}
+        />
+      ) : null}
     </div>
   );
 }

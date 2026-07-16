@@ -17,7 +17,7 @@ DECLARE
   v_pass uuid := '66666666-6666-6666-6666-666666666101';
   v_slot uuid := '77777777-7777-7777-7777-777777777101';
   v_lesson uuid := '99999999-9999-9999-9999-999999999101';
-  v_today timestamptz := date_trunc('day', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul' + interval '10 hours';
+  v_today timestamptz := date_trunc('day', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul' + interval '15 hours';
 BEGIN
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,

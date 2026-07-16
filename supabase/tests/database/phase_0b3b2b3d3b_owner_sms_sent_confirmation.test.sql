@@ -433,7 +433,7 @@ DO $$
 DECLARE
   v_req uuid;
   v_lesson uuid := current_setting('test.lesson_hist_4')::uuid;
-  v_new_time timestamptz := timestamptz '2026-10-19 11:00:00+09';
+  v_new_time timestamptz := timestamptz '2026-10-19 14:00:00+09';
 BEGIN
   RESET ROLE;
   INSERT INTO public.schedule_change_requests (
@@ -472,7 +472,7 @@ DECLARE
   v_req uuid;
   v_lesson uuid := current_setting('test.lesson_hist_4')::uuid;
   v_pass uuid := current_setting('test.pass_hist')::uuid;
-  v_new_time timestamptz := timestamptz '2026-10-26 11:00:00+09';
+  v_new_time timestamptz := timestamptz '2026-10-26 14:00:00+09';
 BEGIN
   RESET ROLE;
   INSERT INTO public.schedule_change_requests (

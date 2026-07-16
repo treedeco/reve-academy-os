@@ -25,6 +25,8 @@ export interface TodayLessonRow {
   status: LessonStatus;
   updated_at: string;
   sequence_number: number;
+  registered_lesson_count: number;
+  duration_minutes: number;
   student_id: string;
   student_name: string;
   course_id: string;
@@ -32,7 +34,23 @@ export interface TodayLessonRow {
   teacher_id: string;
   teacher_name: string;
   pass_id: string;
+  pass_updated_at: string;
   memo_summary: string | null;
+}
+
+export interface OwnerLessonOperationsRow {
+  id: string;
+  sequence_number: number;
+  scheduled_at: string;
+  status: LessonStatus;
+  updated_at: string;
+  registered_lesson_count: number;
+  duration_minutes: number;
+  pass_id: string;
+  pass_updated_at: string;
+  course_id: string;
+  course_name: string;
+  student_name: string;
 }
 
 export interface StudentListRow {
@@ -80,6 +98,12 @@ export interface StudentDetailData {
     scheduled_at: string;
     status: LessonStatus;
     updated_at: string;
+    registered_lesson_count: number;
+    duration_minutes: number;
+    pass_id: string;
+    pass_updated_at: string;
+    course_id: string;
+    course_name: string;
   }>;
   lesson_notes: Array<{
     id: string;
@@ -255,6 +279,21 @@ export interface LessonTransitionResult {
   next_lesson_at: string | null;
   sms_notification_status: string | null;
   reserved_pass_activation_pending: boolean;
+}
+
+export interface DirectRescheduleResult {
+  lesson_id: string;
+  previous_lesson_status: string;
+  new_lesson_status: string;
+  previous_scheduled_at: string;
+  new_scheduled_at: string;
+  lesson_updated_at: string;
+  pass_id: string;
+  pass_updated_at: string;
+  schedule_change_event_id: string;
+  cascaded_lesson_count: number;
+  sms_notification_status: string | null;
+  no_change: boolean;
 }
 
 export const ORDINARY_TRANSITION_TARGETS: Record<LessonStatus, LessonStatus[]> = {

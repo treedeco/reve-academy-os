@@ -15,6 +15,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_REQUEST_NOT_APPLICABLE: '적용할 수 없는 요청 상태입니다.',
   REVE_APPROVED_TIME_REQUIRED: '승인 일시를 입력해 주세요.',
   REVE_INVALID_DECISION: '허용되지 않는 검토 결정입니다.',
+  REVE_LESSON_NOT_CHANGEABLE: '일정을 변경할 수 없는 수업입니다.',
+  REVE_SCHEDULE_CHANGE_DENIED: '일정을 변경할 수 없는 수업입니다.',
+  REVE_ACADEMY_HOURS_BEFORE_OPEN: '수업 시작은 13:00 이후여야 합니다.',
+  REVE_ACADEMY_HOURS_AFTER_CLOSE: '수업 시작은 22:00 이전이어야 합니다.',
+  REVE_ACADEMY_HOURS_END_AFTER_CLOSE: '수업 종료는 22:00을 넘을 수 없습니다.',
 };
 
 export function mapDatabaseError(error: { message?: string; code?: string } | null): string {

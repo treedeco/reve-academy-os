@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedOwnerAlphaFixture } from './helpers/apply-sql-fixture';
 
 const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
 const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
@@ -16,6 +17,10 @@ async function loginAsOwner(page: import('@playwright/test').Page) {
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Owner SMS sent confirmation', () => {
+  test.beforeAll(() => {
+    seedOwnerAlphaFixture();
+  });
+
   test('redirects unauthenticated users to login', async ({ page }) => {
     await page.goto('/sms');
     await expect(page).toHaveURL(/\/login/);

@@ -69,20 +69,20 @@ test.describe('Owner Alpha', () => {
 
     await page.goto('/lessons/today');
     await expect(page.getByRole('heading', { name: '오늘의 수업' })).toBeVisible();
-    await expect(page.getByTestId(`today-lesson-${ALPHA_TODAY_LESSON_ID}`)).toBeVisible();
+    const row = page.getByTestId(`today-lesson-${ALPHA_TODAY_LESSON_ID}`);
+    await expect(row).toBeVisible();
 
     const statusSelect = alphaTodayLessonStatusSelect(page);
     await expect(statusSelect).toHaveValue('scheduled');
     await statusSelect.selectOption({ label: '완료' });
-    await expect(statusSelect).toHaveValue('completed', { timeout: 10_000 });
+    await expect(row.getByTestId(`today-lesson-correction-${ALPHA_TODAY_LESSON_ID}`)).toBeVisible({
+      timeout: 10_000,
+    });
 
     await page.reload();
-    await expect(alphaTodayLessonStatusSelect(page)).toHaveValue('completed');
+    await expect(row.getByTestId(`today-lesson-correction-${ALPHA_TODAY_LESSON_ID}`)).toBeVisible();
 
-    await page
-      .getByTestId(`today-lesson-${ALPHA_TODAY_LESSON_ID}`)
-      .getByRole('link', { name: '학생 상세 보기' })
-      .click();
+    await row.getByRole('link', { name: '학생 상세 보기' }).click();
     await expect(page).toHaveURL(new RegExp(`/students/${ALPHA_STUDENT_ID}`), { timeout: 15_000 });
     await expect(page.getByTestId('used-count')).toHaveText('1');
     await expect(page.getByTestId('remaining-count')).toHaveText('3');

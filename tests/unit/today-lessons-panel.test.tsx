@@ -17,6 +17,8 @@ function buildLesson(overrides: Partial<TodayLessonRow> & Pick<TodayLessonRow, '
     status: 'scheduled',
     updated_at: new Date().toISOString(),
     sequence_number: 1,
+    registered_lesson_count: 4,
+    duration_minutes: 60,
     student_id: '44444444-4444-4444-4444-44444444441a1',
     student_name: 'Alpha Student',
     course_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeee1a1',
@@ -24,6 +26,7 @@ function buildLesson(overrides: Partial<TodayLessonRow> & Pick<TodayLessonRow, '
     teacher_id: '22222222-2222-2222-2222-2222222221a1',
     teacher_name: 'Alpha Teacher',
     pass_id: '66666666-6666-6666-6666-6666666661a1',
+    pass_updated_at: new Date().toISOString(),
     memo_summary: null,
     ...overrides,
   };
@@ -119,7 +122,8 @@ describe('TodayLessonsPanel', () => {
     await userEvent.selectOptions(within(lessonACard).getByLabelText('상태 변경'), 'completed');
 
     await waitFor(() => {
-      expect(within(lessonACard).getByLabelText('상태 변경')).toHaveValue('completed');
+      expect(within(lessonACard).getByText('완료')).toBeInTheDocument();
+      expect(within(lessonACard).getByTestId(`today-lesson-correction-${lessonA.id}`)).toBeInTheDocument();
     });
 
     expect(within(lessonBCard).getByLabelText('상태 변경')).toHaveValue('scheduled');

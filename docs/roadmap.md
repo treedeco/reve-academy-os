@@ -6,15 +6,25 @@
 
 ## Current priority — Minimum Owner Go-Live
 
-**Active focus (2026-07-16):** Phase 2B-2B1 — Owner student master and initial enrollment (minimum new-student onboarding without payment renewal UI).
+**Active focus (2026-07-16):** Phase 2B-2B1-R1 — Owner lesson correction, direct rescheduling, and weekly timetable (before payment renewal UI).
 
-**Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2A).
+**Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2B1-R1).
 
-**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status and initial enrollment**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
+**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, and a time-aligned weekly timetable (13:00–22:00, final valid start 21:00)**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
 
-**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — wire `reve_complete_payment_and_renew_pass` to Owner UI with tests.
+**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — wire `reve_complete_payment_and_renew_pass` to Owner UI with tests — **only after Phase 2B-2B1-R1 operator manual verification and runtime-verified tag**.
 
 **Following phase:** **Phase 2B-2C — Production Go-Live Operations** — deployment, bootstrap, backup/restore runbooks.
+
+### Phase 2B-2B1-R1 — Owner lesson correction, rescheduling, and weekly timetable
+
+- Owner `상태 정정` workflow for completed/deducted lessons (`reve_correct_lesson_status`)
+- Owner direct lesson reschedule with optional cascade (`reve_owner_direct_reschedule_lesson`)
+- Academy operating hours validation (13:00–22:00; last valid start 21:00)
+- Desktop weekly timetable grid + mobile weekday list
+- Lesson progress notation `4-2` / `8-5` (registered count − sequence)
+- Automated tests + `scripts/verify_phase_2b2b1r1.ps1`
+- Manual checklist: [docs/manual-verification-owner-lesson-operations-timetable.md](./manual-verification-owner-lesson-operations-timetable.md)
 
 ### Phase 2B-2B1 — Owner student master and initial enrollment
 

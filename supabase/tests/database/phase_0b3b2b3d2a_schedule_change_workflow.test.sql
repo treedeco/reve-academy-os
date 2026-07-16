@@ -37,7 +37,7 @@ DECLARE
   v_lesson_makeup_source uuid := '99999999-9999-9999-9999-999999999016';
   v_lesson_collision_target uuid := '99999999-9999-9999-9999-999999999017';
   v_enroll_date date := '2026-07-13';
-  v_collision_anchor timestamptz := timestamptz '2026-08-10 11:00:00+09';
+  v_collision_anchor timestamptz := timestamptz '2026-08-10 14:00:00+09';
 BEGIN
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
@@ -139,9 +139,9 @@ BEGIN
   PERFORM set_config('test.collision_anchor', v_collision_anchor::text, false);
   PERFORM set_config('test.collision_partial', (v_collision_anchor + interval '30 minutes')::text, false);
   PERFORM set_config('test.collision_adjacent', (v_collision_anchor + interval '1 hour')::text, false);
-  PERFORM set_config('test.approved_new_time', timestamptz '2026-08-17 11:00:00+09'::text, false);
-  PERFORM set_config('test.approved_postponed_time', timestamptz '2026-08-24 11:00:00+09'::text, false);
-  PERFORM set_config('test.diff_teacher_time', timestamptz '2026-10-06 11:00:00+09'::text, false);
+  PERFORM set_config('test.approved_new_time', timestamptz '2026-08-17 14:00:00+09'::text, false);
+  PERFORM set_config('test.approved_postponed_time', timestamptz '2026-08-24 15:00:00+09'::text, false);
+  PERFORM set_config('test.diff_teacher_time', timestamptz '2026-10-06 14:00:00+09'::text, false);
 END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.test_auth_as(p_user uuid)
@@ -439,7 +439,7 @@ BEGIN
     current_setting('test.lesson_collision_target')::uuid,
     v_pass_a, current_setting('test.student_a')::uuid, current_setting('test.course_vocal')::uuid,
     current_setting('test.teacher_a')::uuid, v_slot_a, 9,
-    timestamptz '2026-10-05 11:00:00+09', 'scheduled'
+    timestamptz '2026-10-05 14:00:00+09', 'scheduled'
   );
 
   PERFORM set_config('test.lesson_count_a', pg_temp.lesson_count_for_pass(v_pass_a)::text, false);
@@ -1149,7 +1149,7 @@ BEGIN
     v_request, 'approve',
     pg_temp.request_updated_at(v_request),
     'Approved for stale apply',
-    timestamptz '2026-10-12 11:00:00+09'
+    timestamptz '2026-10-12 14:00:00+09'
   );
   PERFORM set_config('test.req_apply_stale_request', v_request::text, false);
   PERFORM set_config('test.collision_target_before_stale_apply',

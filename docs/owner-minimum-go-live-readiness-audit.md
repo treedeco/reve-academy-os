@@ -260,15 +260,35 @@ Explicitly out of minimum go-live scope per audit charter:
 - AI features
 - Nonessential UI redesign
 - Bulk import (unless manual entry proven impossible)
-- `reve_correct_lesson_status` correction UI
 - `correct_cancelled_pass`, re-enrollment, refund reversal workflows
 - Audit log viewer (recommended before production, but deferrable for alpha ops with SQL access)
+
+**Implemented (Phase 2B-2B1-R1):** Owner lesson status correction UI (`reve_correct_lesson_status`), direct lesson rescheduling (`reve_owner_direct_reschedule_lesson`), weekly timetable redesign (13:00–22:00; final valid start 21:00), lesson progress notation `registered-sequence`.
+
+**Still pending:** Payment renewal UI, production deployment, bootstrap, backup/restore.
 
 ---
 
 ## 17. Exact recommendation for the next implementation phase
 
-### Recommended single phase: **Phase 2B-2B — Owner Student Enrollment and Payment Operations**
+### Recommended single phase: **Phase 2B-2B2 — Payment and Pass Renewal**
+
+After Phase 2B-2B1-R1 operator manual verification and runtime-verified tag, implement payment record UI calling `reve_complete_payment_and_renew_pass` with idempotency and regression coverage.
+
+**Do not start Phase 2B-2B2 until:**
+
+- All Phase 2B-2B1-R1 automated verification passes
+- Operator completes [manual-verification-owner-lesson-operations-timetable.md](./manual-verification-owner-lesson-operations-timetable.md)
+- Runtime sign-off commit and `phase-2b2b1r1-owner-lesson-operations-runtime-verified` tag exist
+
+### Prior phase (completed implementation): **Phase 2B-2B1-R1 — Owner lesson operations and timetable**
+
+1. Lesson status correction UI with audit and pass-count sync
+2. Direct owner reschedule with optional cascade
+3. Weekly timetable desktop grid + mobile list
+4. `scripts/verify_phase_2b2b1r1.ps1`
+
+### Prior phase: **Phase 2B-2B — Owner Student Enrollment and Payment Operations** (partial)
 
 Implement the **smallest coherent Owner UI slice** that removes **all P0 application blockers (P0-1, P0-2, P0-3)** and the most serious **P1 data-risk gaps (P1-1, P1-2)** by wiring existing trusted RPCs only:
 

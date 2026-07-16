@@ -1,51 +1,43 @@
 import { test, expect } from '@playwright/test';
+import { loginAsOwner } from './helpers/login-as-owner';
+import { applySqlFixture } from './helpers/apply-sql-fixture';
 
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
+test.describe('Owner weekly timetable', () => {
+  test.beforeEach(() => {
+    applySqlFixture('fixture-reset-weekly-timetable.sql');
+  });
 
-async function loginAsOwner(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(ownerEmail);
-  await page.getByLabel('비밀번호').fill(ownerPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
-
-test.describe('Owner weekly schedule', () => {
   test('redirects unauthenticated users to login', async ({ page }) => {
     await page.goto('/schedule');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('renders desktop weekly schedule with ordered entries', async ({ page }) => {
+  test('renders desktop timetable grid with aligned hours and progress notation', async ({ page }) => {
     await loginAsOwner(page);
     await page.goto('/schedule');
 
     await expect(page.getByRole('heading', { name: '주간 시간표' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '주간 시간표' })).toBeVisible();
-    const desktop = page.getByTestId('weekly-schedule-desktop');
-    await expect(desktop).toBeVisible();
-    await expect(desktop.getByText('Alpha Student')).toBeVisible();
-    await expect(desktop.getByText('Beta Student')).toHaveCount(2);
-    await expect(desktop.getByText('Delta Student')).toBeVisible();
-    await expect(page.getByText('Gamma Student')).toHaveCount(0);
+    await expect(page.getByTestId('weekly-timetable-grid')).toBeVisible();
+    await expect(page.getByTestId('weekly-timetable-row-780')).toContainText('13:00');
+    await expect(page.getByTestId('weekly-timetable-range-label')).toContainText('13:00–22:00');
+    await expect(page.getByTestId('weekly-timetable-row-1320')).toHaveCount(0);
 
-    const mondayColumn = page.getByTestId('weekly-schedule-desktop-day-1');
-    await expect(mondayColumn.getByText('Alpha Student')).toBeVisible();
-    await expect(mondayColumn.locator('p.tabular-nums').first()).toContainText('10:00');
+    const monday = page.getByTestId('weekly-timetable-day-1');
+    await expect(monday.getByText('Alpha Student')).toBeVisible();
+    await expect(monday.getByTestId('lesson-progress-label').first()).toHaveText('4-1');
 
-    const wednesdayColumn = page.getByTestId('weekly-schedule-desktop-day-3');
-    await expect(wednesdayColumn.getByText('Beta Student')).toHaveCount(2);
+    const wednesday = page.getByTestId('weekly-timetable-day-3');
+    await expect(wednesday.getByText('Beta Student')).toHaveCount(2);
+    await expect(wednesday.getByText('주 2회')).toHaveCount(0);
   });
 
-  test('uses mobile list layout on narrow viewport', async ({ page }) => {
+  test('uses mobile weekday list on narrow viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAsOwner(page);
     await page.goto('/schedule');
 
-    const mobile = page.getByTestId('weekly-schedule-mobile');
-    await expect(mobile).toBeVisible();
-    await expect(page.getByTestId('weekly-schedule-day-3')).toBeVisible();
-    await expect(mobile.getByText('Beta Student')).toHaveCount(2);
+    await expect(page.getByTestId('weekly-timetable-mobile')).toBeVisible();
+    await expect(page.getByTestId('weekly-timetable-mobile-day-3')).toBeVisible();
+    await expect(page.getByTestId('weekly-timetable-mobile').getByText('Beta Student')).toHaveCount(2);
   });
 });

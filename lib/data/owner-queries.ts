@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   DashboardSummary,
+  DirectRescheduleResult,
   LessonTransitionResult,
   OwnerRefundablePaymentRow,
   OwnerScheduleChangeRequestRow,
@@ -36,6 +37,11 @@ import {
   shouldIncludePassSlot,
   type WeeklyScheduleEntry,
 } from '@/lib/domain/weekly-schedule';
+import {
+  getSeoulWeekBounds,
+  mapLessonToTimetableEntry,
+  type WeeklyTimetableLesson,
+} from '@/lib/domain/weekly-timetable';
 
 export async function fetchTodayLessons(supabase: SupabaseClient): Promise<TodayLessonRow[]> {
   const { startIso, endIso } = getSeoulDayBounds();
@@ -52,7 +58,14 @@ export async function fetchTodayLessons(supabase: SupabaseClient): Promise<Today
       student_id,
       pass_id,
       course_id,
-      assigned_teacher_id
+      assigned_teacher_id,
+      passes!lessons_pass_student_course_fkey (
+        registered_lesson_count_snapshot,
+        updated_at
+      ),
+      schedule_slots (
+        duration_minutes
+      )
     `,
     )
     .gte('scheduled_at', startIso)
@@ -105,21 +118,36 @@ export async function fetchTodayLessons(supabase: SupabaseClient): Promise<Today
     }
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    scheduled_at: row.scheduled_at,
-    status: row.status,
-    updated_at: row.updated_at,
-    sequence_number: row.sequence_number,
-    student_id: row.student_id,
-    student_name: studentsById.get(row.student_id) ?? '',
-    course_id: row.course_id,
-    course_name: coursesById.get(row.course_id) ?? '',
-    teacher_id: row.assigned_teacher_id,
-    teacher_name: teachersById.get(row.assigned_teacher_id) ?? '',
-    pass_id: row.pass_id,
-    memo_summary: notesByLesson.get(row.id) ?? null,
-  }));
+  return rows.map((row) => {
+    const pass = readJoinedRow(
+      row.passes as
+        | { registered_lesson_count_snapshot: number; updated_at: string }
+        | { registered_lesson_count_snapshot: number; updated_at: string }[]
+        | null,
+    );
+    const slot = readJoinedRow(
+      row.schedule_slots as { duration_minutes: number } | { duration_minutes: number }[] | null,
+    );
+
+    return {
+      id: row.id,
+      scheduled_at: row.scheduled_at,
+      status: row.status,
+      updated_at: row.updated_at,
+      sequence_number: row.sequence_number,
+      registered_lesson_count: pass?.registered_lesson_count_snapshot ?? 0,
+      duration_minutes: slot?.duration_minutes ?? 60,
+      student_id: row.student_id,
+      student_name: studentsById.get(row.student_id) ?? '',
+      course_id: row.course_id,
+      course_name: coursesById.get(row.course_id) ?? '',
+      teacher_id: row.assigned_teacher_id,
+      teacher_name: teachersById.get(row.assigned_teacher_id) ?? '',
+      pass_id: row.pass_id,
+      pass_updated_at: pass?.updated_at ?? '',
+      memo_summary: notesByLesson.get(row.id) ?? null,
+    };
+  });
 }
 
 export async function fetchDashboardSummary(supabase: SupabaseClient): Promise<DashboardSummary> {
@@ -272,16 +300,42 @@ export async function fetchStudentDetail(
     : { data: [] };
 
   const passIds = (passes ?? []).map((pass) => pass.id);
-  const { data: lessons } = passIds.length
+  const { data: lessons, error: lessonsError } = passIds.length
     ? await supabase
         .from('lessons')
-        .select('id, sequence_number, scheduled_at, status, updated_at, pass_id')
+        .select(
+          `
+          id,
+          sequence_number,
+          scheduled_at,
+          status,
+          updated_at,
+          pass_id,
+          course_id,
+          passes!lessons_pass_student_course_fkey (
+            registered_lesson_count_snapshot,
+            updated_at
+          ),
+          schedule_slots ( duration_minutes )
+        `,
+        )
         .in('pass_id', passIds)
         .order('scheduled_at', { ascending: false })
         .limit(30)
-    : { data: [] };
+    : { data: [], error: null };
 
-  const lessonIds = (lessons ?? []).map((lesson) => lesson.id);
+  if (lessonsError) {
+    throw new Error(lessonsError.message);
+  }
+
+  const lessonRows = lessons ?? [];
+  const courseIds = [...new Set(lessonRows.map((lesson) => lesson.course_id))];
+  const { data: courseRows } = courseIds.length
+    ? await supabase.from('courses').select('id, name').in('id', courseIds)
+    : { data: [] };
+  const coursesById = new Map((courseRows ?? []).map((course) => [course.id, course.name]));
+
+  const lessonIds = lessonRows.map((lesson) => lesson.id);
   const { data: lessonNotes } = lessonIds.length
     ? await supabase
         .from('lesson_notes')
@@ -316,13 +370,34 @@ export async function fetchStudentDetail(
       duration_minutes: slot.duration_minutes,
       teacher_name: readTeacherName(slot.teachers as TeacherJoin),
     })),
-    lessons: (lessons ?? []).map((lesson) => ({
-      id: lesson.id,
-      sequence_number: lesson.sequence_number,
-      scheduled_at: lesson.scheduled_at,
-      status: lesson.status,
-      updated_at: lesson.updated_at,
-    })),
+    lessons: lessonRows.map((lesson) => {
+      const pass = readJoinedRow(
+        lesson.passes as
+          | { registered_lesson_count_snapshot: number; updated_at: string }
+          | { registered_lesson_count_snapshot: number; updated_at: string }[]
+          | null,
+      );
+      const slot = readJoinedRow(
+        lesson.schedule_slots as
+          | { duration_minutes: number }
+          | { duration_minutes: number }[]
+          | null,
+      );
+
+      return {
+        id: lesson.id,
+        sequence_number: lesson.sequence_number,
+        scheduled_at: lesson.scheduled_at,
+        status: lesson.status,
+        updated_at: lesson.updated_at,
+        registered_lesson_count: pass?.registered_lesson_count_snapshot ?? 0,
+        duration_minutes: slot?.duration_minutes ?? 60,
+        pass_id: lesson.pass_id,
+        pass_updated_at: pass?.updated_at ?? '',
+        course_id: lesson.course_id,
+        course_name: coursesById.get(lesson.course_id) ?? '',
+      };
+    }),
     lesson_notes: lessonNotes ?? [],
     previous_passes: (passes ?? [])
       .filter((pass) => pass.id !== currentPassRow?.id)
@@ -363,6 +438,70 @@ export async function transitionLessonStatus(
   }
 
   return row as LessonTransitionResult;
+}
+
+export async function correctLessonStatus(
+  supabase: SupabaseClient,
+  input: {
+    lessonId: string;
+    newStatus: string;
+    expectedUpdatedAt: string;
+    reason: string;
+    actualStartedAt?: string | null;
+    actualEndedAt?: string | null;
+  },
+): Promise<LessonTransitionResult> {
+  const { data, error } = await supabase.rpc('reve_correct_lesson_status', {
+    p_lesson_id: input.lessonId,
+    p_new_status: input.newStatus,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    p_reason: input.reason,
+    p_actual_started_at: input.actualStartedAt ?? null,
+    p_actual_ended_at: input.actualEndedAt ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Lesson correction returned no data');
+  }
+
+  return row as LessonTransitionResult;
+}
+
+export async function directRescheduleLesson(
+  supabase: SupabaseClient,
+  input: {
+    lessonId: string;
+    newScheduledAt: string;
+    expectedLessonUpdatedAt: string;
+    reason: string;
+    cascade: boolean;
+    expectedPassUpdatedAt?: string | null;
+  },
+): Promise<DirectRescheduleResult> {
+  const { data, error } = await supabase.rpc('reve_owner_direct_reschedule_lesson', {
+    p_lesson_id: input.lessonId,
+    p_new_scheduled_at: input.newScheduledAt,
+    p_expected_lesson_updated_at: input.expectedLessonUpdatedAt,
+    p_reason: input.reason,
+    p_cascade: input.cascade,
+    p_expected_pass_updated_at: input.expectedPassUpdatedAt ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('Lesson reschedule returned no data');
+  }
+
+  return row as DirectRescheduleResult;
 }
 
 type ScheduleSlotPassJoin = {
@@ -717,6 +856,135 @@ export async function fetchWeeklySchedule(supabase: SupabaseClient): Promise<Wee
       next_lesson_scheduled_at: nextLesson?.scheduled_at ?? null,
       next_lesson_status: nextLesson?.status ?? null,
     };
+  });
+}
+
+type TimetableLessonRow = {
+  id: string;
+  pass_id: string;
+  student_id: string;
+  course_id: string;
+  assigned_teacher_id: string;
+  schedule_slot_id: string | null;
+  sequence_number: number;
+  scheduled_at: string;
+  status: LessonStatus;
+  passes: {
+    status: PassStatus;
+    registered_lesson_count_snapshot: number;
+  } | {
+    status: PassStatus;
+    registered_lesson_count_snapshot: number;
+  }[] | null;
+};
+
+/**
+ * Owner weekly timetable — actual lesson instances for the current Seoul week.
+ * Query count: 3 (lessons+pass filter, students/teachers/courses batch, slot durations batch).
+ */
+export async function fetchWeeklyTimetableLessons(
+  supabase: SupabaseClient,
+): Promise<WeeklyTimetableLesson[]> {
+  const { startIso, endIso } = getSeoulWeekBounds();
+
+  const { data: lessonRows, error } = await supabase
+    .from('lessons')
+    .select(
+      `
+      id,
+      pass_id,
+      student_id,
+      course_id,
+      assigned_teacher_id,
+      schedule_slot_id,
+      sequence_number,
+      scheduled_at,
+      status,
+      passes!inner (
+        status,
+        registered_lesson_count_snapshot
+      )
+    `,
+    )
+    .gte('scheduled_at', startIso)
+    .lte('scheduled_at', endIso)
+    .in('status', ['scheduled', 'postponed', 'completed'])
+    .order('scheduled_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (lessonRows ?? []) as TimetableLessonRow[];
+  const eligible = rows.filter((row) => {
+    const pass = readJoinedRow(row.passes);
+    return pass?.status === 'active' || pass?.status === 'reserved';
+  });
+
+  if (eligible.length === 0) {
+    return [];
+  }
+
+  const studentIds = [...new Set(eligible.map((row) => row.student_id))];
+  const teacherIds = [...new Set(eligible.map((row) => row.assigned_teacher_id))];
+  const courseIds = [...new Set(eligible.map((row) => row.course_id))];
+  const slotIds = [
+    ...new Set(
+      eligible
+        .map((row) => row.schedule_slot_id)
+        .filter((slotId): slotId is string => slotId !== null),
+    ),
+  ];
+
+  const [studentsResult, teachersResult, coursesResult, slotsResult] = await Promise.all([
+    supabase.from('students').select('id, name').in('id', studentIds),
+    supabase.from('teachers').select('id, name').in('id', teacherIds),
+    supabase.from('courses').select('id, name').in('id', courseIds),
+    slotIds.length > 0
+      ? supabase.from('schedule_slots').select('id, duration_minutes').in('id', slotIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (studentsResult.error) {
+    throw new Error(studentsResult.error.message);
+  }
+  if (teachersResult.error) {
+    throw new Error(teachersResult.error.message);
+  }
+  if (coursesResult.error) {
+    throw new Error(coursesResult.error.message);
+  }
+  if (slotsResult.error) {
+    throw new Error(slotsResult.error.message);
+  }
+
+  const studentsById = new Map((studentsResult.data ?? []).map((row) => [row.id, row.name]));
+  const teachersById = new Map((teachersResult.data ?? []).map((row) => [row.id, row.name]));
+  const coursesById = new Map((coursesResult.data ?? []).map((row) => [row.id, row.name]));
+  const durationBySlot = new Map(
+    (slotsResult.data ?? []).map((row) => [row.id, row.duration_minutes as number]),
+  );
+
+  return eligible.map((row) => {
+    const pass = readJoinedRow(row.passes);
+    const duration = row.schedule_slot_id
+      ? (durationBySlot.get(row.schedule_slot_id) ?? 60)
+      : 60;
+
+    return mapLessonToTimetableEntry({
+      lesson_id: row.id,
+      scheduled_at: row.scheduled_at,
+      duration_minutes: duration,
+      student_id: row.student_id,
+      student_name: studentsById.get(row.student_id) ?? '',
+      teacher_id: row.assigned_teacher_id,
+      teacher_name: teachersById.get(row.assigned_teacher_id) ?? '',
+      course_id: row.course_id,
+      course_name: coursesById.get(row.course_id) ?? '',
+      lesson_status: row.status,
+      sequence_number: row.sequence_number,
+      registered_lesson_count: pass?.registered_lesson_count_snapshot ?? 0,
+    });
   });
 }
 

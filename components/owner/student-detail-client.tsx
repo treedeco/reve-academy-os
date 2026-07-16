@@ -3,17 +3,21 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { InitialEnrollmentPanel } from '@/components/owner/initial-enrollment-panel';
+import { LessonOperationsPanel } from '@/components/owner/lesson-operations-panel';
 import { StudentMasterPanel } from '@/components/owner/student-master-panel';
 import { StudentOperationalHistoryPanel } from '@/components/owner/student-operational-history-panel';
 import { StudentPassSummary } from '@/components/owner/student-pass-summary';
 import { fetchStudentDetail } from '@/lib/data/owner-queries';
 import { fetchOwnerStudentMasterRow } from '@/lib/data/owner-students';
 import { formatDateTimeSeoul, formatLessonStatus } from '@/lib/domain/format';
+import { formatLessonProgress } from '@/lib/domain/lesson-correction';
 import type {
   LessonStatus,
   OwnerEnrollmentCatalog,
   OwnerInitialEnrollmentResult,
+  OwnerLessonOperationsRow,
   OwnerStudentRow,
+  PassUsageSummary,
   StudentDetailData,
   StudentOperationalHistory,
 } from '@/lib/domain/types';
@@ -34,6 +38,29 @@ export function StudentDetailClient({
   const [detail, setDetail] = useState(initialDetail);
   const [master, setMaster] = useState(initialMaster);
   const [history, setHistory] = useState(operationalHistory);
+
+  async function refreshAfterLessonOperation() {
+    const supabase = createClient();
+    const nextDetail = await fetchStudentDetail(supabase, master.id);
+    setDetail(nextDetail);
+  }
+
+  function handleLessonUpdated(lessonId: string, patch: Partial<OwnerLessonOperationsRow>) {
+    setDetail((prev) => ({
+      ...prev,
+      lessons: prev.lessons.map((lesson) =>
+        lesson.id === lessonId ? { ...lesson, ...patch } : lesson,
+      ),
+    }));
+    void refreshAfterLessonOperation();
+  }
+
+  function handlePassUsageUpdated(usage: PassUsageSummary) {
+    setDetail((prev) => ({
+      ...prev,
+      current_pass: prev.current_pass?.pass_id === usage.pass_id ? usage : prev.current_pass,
+    }));
+  }
 
   async function refreshAfterEnrollment(_result: OwnerInitialEnrollmentResult) {
     const supabase = createClient();
@@ -141,6 +168,7 @@ export function StudentDetailClient({
                   <th className="px-2 py-2">회차</th>
                   <th className="px-2 py-2">일시</th>
                   <th className="px-2 py-2">상태</th>
+                  <th className="px-2 py-2">작업</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,11 +177,25 @@ export function StudentDetailClient({
                     key={lesson.id}
                     className="border-b border-slate-100"
                     data-testid={`student-lesson-${lesson.sequence_number}`}
+                    data-lesson-id={lesson.id}
                   >
-                    <td className="px-2 py-2">{lesson.sequence_number}</td>
+                    <td className="px-2 py-2">
+                      {formatLessonProgress(lesson.registered_lesson_count, lesson.sequence_number)}
+                    </td>
                     <td className="px-2 py-2">{formatDateTimeSeoul(lesson.scheduled_at)}</td>
                     <td className="px-2 py-2">
                       {formatLessonStatus(lesson.status as LessonStatus)}
+                    </td>
+                    <td className="px-2 py-2">
+                      <LessonOperationsPanel
+                        lesson={{
+                          ...lesson,
+                          student_name: detail.student.name,
+                        }}
+                        passUsage={detail.current_pass}
+                        onLessonUpdated={handleLessonUpdated}
+                        onPassUsageUpdated={handlePassUsageUpdated}
+                      />
                     </td>
                   </tr>
                 ))}
