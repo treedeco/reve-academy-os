@@ -82,7 +82,6 @@ DECLARE
   v_proposal jsonb;
   v_elem jsonb;
   v_eligible integer := 0;
-  v_move_idx integer;
   v_previous_lesson_status text;
   v_new_lesson_status text;
   v_previous_scheduled_at timestamptz;
