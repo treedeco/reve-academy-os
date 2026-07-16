@@ -4,6 +4,18 @@
 
 ---
 
+## Current priority — Minimum Owner Go-Live
+
+**Active focus (2026-07-16):** Determine and close the smallest gap set required for a real academy to operate with Owner-only workflows—without Teacher/Student portals, automatic SMS, card payments, or nonessential UI redesign.
+
+**Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2A).
+
+**Verdict:** Database trusted operations are ready; **Owner UI lacks student create, initial enrollment, and payment record surfaces**. Production deployment, bootstrap, and backup runbooks are undocumented. **Not go-live ready** until Phase 2B-2B (recommended) and ops runbook work land.
+
+**Next recommended implementation (single phase):** **Phase 2B-2B — Owner Student Enrollment and Payment Operations** — wire `reve_owner_create_student`, `reve_owner_create_initial_enrollment`, and `reve_complete_payment_and_renew_pass` to Owner UI with tests.
+
+---
+
 ## Phase 0 — Requirements & Architecture
 
 ### Goal
@@ -543,6 +555,24 @@ Add an Owner-only `/teachers` application surface for teacher master data manage
 
 ---
 
+## Phase 2B-2A — Minimum Owner Go-Live Readiness Audit (complete)
+
+### Goal
+
+Audit whether the current application can support real academy operations with the minimum Owner feature set; classify gaps; recommend the smallest next implementation phase.
+
+### Deliverables
+
+- [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md)
+- Roadmap priority update (this section)
+- Baseline verification re-run (`scripts/verify_phase_2b1.ps1`)
+
+### Status
+
+**Complete** — audit documented 2026-07-16 at HEAD `0ee3cad6b8f57586e922ee95c66e9f5616f56747`. **Not go-live ready.** Recommended next phase: **2B-2B Owner Student Enrollment and Payment Operations**.
+
+---
+
 ## Phase 0B-3B — Database trusted operations (implementation track)
 
 Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint**: Phase 0B-3B-2B-3E (tag `phase-0b3b2b3e-owner-payment-refund`).
@@ -571,13 +601,34 @@ Executable PostgreSQL migrations and pgTAP tests. **Baseline database checkpoint
 
 ---
 
-## Deferred after Owner Alpha (post-Alpha)
+## Deferred — nonessential for Minimum Owner Go-Live
 
-These database exception / correction workflows remain specified but **not scheduled** until Owner Alpha is operational in daily use:
+These items are **explicitly out of scope** until Minimum Owner Go-Live is achieved. Long-term roadmap phases below may still reference them.
+
+| Area | Notes |
+|------|-------|
+| Teacher login and Teacher-facing pages | No routes |
+| Student login and Student-facing pages | No routes |
+| Schedule change request **submission** UI | Owner **review/apply/cascade** implemented (Phase 1B-4/5); Teacher/Student submit deferred |
+| Automatic SMS API / external send integration | Manual copy + confirm only (Phase 1B-2) |
+| Card payment integration | Cash/manual record only when payment UI exists |
+| Accounting integration | — |
+| Advanced analytics / revenue KPIs | Basic today counts only |
+| Multi-branch support | — |
+| App-store distribution | PWA only |
+| AI features | — |
+| Nonessential UI redesign | — |
+| Bulk import | Manual entry unless proven impossible |
+| **`correct_cancelled_pass`**, re-enrollment, refund reversal UI | Spec/database deferred |
+| **`reve_correct_lesson_status`** correction UI | Post-completion correction RPC only |
+| Audit log viewer | RPC audit exists; UI deferred |
+| Course/product **management** UI | RPC exists; defer catalog CRUD until enrollment UI needs pickers |
+| PWA service worker / full installability | Manifest only |
+
+### Legacy deferred list (pre-Alpha wording — partially stale)
+
+The following database exception / correction workflows were listed before Owner Alpha vertical slices shipped. **SMS confirm, refund, and schedule-change Owner UI are now implemented**; items above supersede this list where they conflict.
 
 - **`correct_cancelled_pass`** (formerly planned Phase 0B-3B-2B-3F)
 - General **re-enrollment** workflows
 - **Refund reversal** and related payment correction UI
-- Owner UI for SMS copy/confirm workflow; external SMS API; sent-confirmation reversal
-- Payment UI, schedule-change request UI, Teacher/Student portals
-- Advanced dashboard statistics, accounting integration, multi-branch support
