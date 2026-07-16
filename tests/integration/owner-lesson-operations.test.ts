@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { execSync } from 'node:child_process';
+import path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   correctLessonStatus,
   directRescheduleLesson,
@@ -42,6 +44,14 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
     if (error) {
       throw new Error(`Owner login failed (${error.message}). Run npm run db:seed:alpha after db reset.`);
     }
+  });
+
+  afterAll(() => {
+    const repoRoot = path.resolve(__dirname, '../..');
+    execSync('powershell -ExecutionPolicy Bypass -File scripts/seed-owner-alpha.ps1', {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
   });
 
   it('corrects a completed lesson back to scheduled and restores pass counts', async () => {
