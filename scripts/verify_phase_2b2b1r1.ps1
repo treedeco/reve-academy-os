@@ -96,9 +96,17 @@ try {
   Invoke-Step 'Step 3: eslint' { npm run lint }
 
   Write-Host '=== Step 4: vitest ==='
-  $vitestOutput = npm run test 2>&1 | Tee-Object -Variable vitestCaptured
-  $vitestOutput | Write-Host
-  if ($LASTEXITCODE -ne 0) { throw "Vitest failed with exit code $LASTEXITCODE" }
+  $previousErrorAction = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $vitestOutput = npm run test 2>&1 | Tee-Object -Variable vitestCaptured
+    $vitestOutput | Write-Host
+    $vitestExit = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+  if ($vitestExit -ne 0) { throw "Vitest failed with exit code $vitestExit" }
   $vitestMatch = [regex]::Match(($vitestCaptured -join "`n"), 'Tests\s+(\d+)\s+passed')
   if (-not $vitestMatch.Success) {
     throw 'Could not parse Vitest pass count'
