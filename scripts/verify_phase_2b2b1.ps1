@@ -18,6 +18,41 @@ function Invoke-Step {
   }
 }
 
+function Invoke-PlaywrightCommand {
+  param(
+    [Parameter(Mandatory = $true)][string]$Label,
+    [Parameter(Mandatory = $true)][string[]]$CommandArgs
+  )
+
+  Write-Host "=== $Label ==="
+  $previousErrorAction = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $output = & npx @CommandArgs 2>&1 | Tee-Object -Variable captured
+    $output | Write-Host
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+
+  if ($exitCode -ne 0) {
+    throw "$Label failed with exit code $exitCode"
+  }
+
+  $joined = ($captured | Out-String)
+  if ($joined -match '\bflaky\b') {
+    throw "$Label reported flaky tests"
+  }
+
+  $matches = [regex]::Matches($joined, '(\d+)\s+passed')
+  if ($matches.Count -eq 0) {
+    throw "$Label could not parse Playwright pass count"
+  }
+
+  return [int]$matches[$matches.Count - 1].Groups[1].Value
+}
+
 Push-Location $repoRoot
 try {
   Write-Host '=== Step 0: starting checkpoint validation ==='
@@ -26,16 +61,21 @@ try {
     throw "Expected branch main, found $branch"
   }
 
-  $phase2b1Tag = git rev-parse 'phase-2b1-owner-teachers-master-data-runtime-verified^{commit}'
+  $phase2b1Tag = git rev-parse 'phase-2b1-owner-teachers-master-data-runtime-verified'
   if ($phase2b1Tag -ne '0ee3cad6b8f57586e922ee95c66e9f5616f56747') {
     throw "Phase 2B-1 runtime tag must resolve to 0ee3cad6b8f57586e922ee95c66e9f5616f56747"
   }
   Write-Host "Phase 2B-1 runtime tag OK at $phase2b1Tag"
 
+  $phase2b2b1Tag = git rev-parse 'phase-2b2b1-owner-student-initial-enrollment-implemented'
+  if ($phase2b2b1Tag -ne '87b6665b57d92423c26b780218c703e61590138e') {
+    throw "Phase 2B-2B1 implementation tag must resolve to 87b6665b57d92423c26b780218c703e61590138e"
+  }
+  Write-Host "Phase 2B-2B1 implementation tag OK at $phase2b2b1Tag"
+
   $implementationTag = git tag -l 'phase-2b2b1-owner-student-initial-enrollment-implemented'
-  if ($implementationTag) {
-    $implCommit = git rev-parse 'phase-2b2b1-owner-student-initial-enrollment-implemented^{commit}'
-    Write-Host "Implementation tag present at $implCommit"
+  if (-not $implementationTag) {
+    throw 'Phase 2B-2B1 implementation tag is missing'
   }
 
   $initialStatus = git status --porcelain
@@ -68,6 +108,7 @@ try {
   Invoke-Step 'Step 5: production build' { npm run build }
 
   Invoke-Step 'Step 6: supabase db reset' { npx supabase db reset }
+  Wait-ReveSupabaseAuthService
 
   $standardPgtap = Invoke-PgtapSuite -Label 'Step 7: standard pgTAP suite'
 
@@ -86,39 +127,33 @@ try {
   Write-Host '=== Step 11: Owner Alpha demo seed (local) ==='
   & "$PSScriptRoot/seed-owner-alpha.ps1"
   if ($LASTEXITCODE -ne 0) { throw "Owner Alpha demo seed failed with exit code $LASTEXITCODE" }
+  Wait-ReveSupabaseAuthReady
 
   Write-Host '=== Pre-Playwright: ensure fresh dev server after db reset ==='
   $env:CI = '1'
   Stop-RevePlaywrightDevServerIfStale -RepoRoot $repoRoot -Port 3000
 
-  Write-Host '=== Step 12: playwright (full e2e suite) ==='
-  $playwrightAllOutput = npx playwright test 2>&1 | Tee-Object -Variable playwrightAllCaptured
-  $playwrightAllOutput | Write-Host
-  if ($LASTEXITCODE -ne 0) { throw "Full Playwright suite failed with exit code $LASTEXITCODE" }
-  $playwrightAllMatch = [regex]::Match(($playwrightAllCaptured -join "`n"), '(\d+)\s+passed')
-  if (-not $playwrightAllMatch.Success) {
-    throw 'Could not parse full Playwright pass count'
-  }
-  $playwrightAllPassed = [int]$playwrightAllMatch.Groups[1].Value
+  $playwrightAllPassed = Invoke-PlaywrightCommand -Label 'Step 12: playwright (full e2e suite)' -CommandArgs @('playwright', 'test', '--retries=0')
 
-  Write-Host '=== Step 13: Phase 2B-2B1 focused Playwright ==='
-  $playwrightFocusedOutput = npx playwright test e2e/owner-student-enrollment.spec.ts 2>&1 | Tee-Object -Variable playwrightFocusedCaptured
-  $playwrightFocusedOutput | Write-Host
-  if ($LASTEXITCODE -ne 0) { throw "Focused Playwright suite failed with exit code $LASTEXITCODE" }
-  $playwrightFocusedMatch = [regex]::Match(($playwrightFocusedCaptured -join "`n"), '(\d+)\s+passed')
-  if (-not $playwrightFocusedMatch.Success) {
-    throw 'Could not parse focused Playwright pass count'
-  }
-  $playwrightFocusedPassed = [int]$playwrightFocusedMatch.Groups[1].Value
+  & "$PSScriptRoot/seed-owner-alpha.ps1"
+  if ($LASTEXITCODE -ne 0) { throw "Owner Alpha re-seed before focused Playwright failed with exit code $LASTEXITCODE" }
+  Wait-ReveSupabaseAuthReady
+  Stop-RevePlaywrightDevServerIfStale -RepoRoot $repoRoot -Port 3000
+  $playwrightFocusedPassed = Invoke-PlaywrightCommand -Label 'Step 13: Phase 2B-2B1 focused Playwright' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-student-enrollment.spec.ts')
 
-  Invoke-Step 'Step 14: Phase 1A regression (Playwright)' { npx playwright test e2e/owner-alpha.spec.ts }
-  Invoke-Step 'Step 15: Phase 1B-1 regression (Playwright)' { npx playwright test e2e/owner-weekly-schedule.spec.ts }
-  Invoke-Step 'Step 16: Phase 1B-2 regression (Playwright)' { npx playwright test e2e/owner-sms.spec.ts }
-  Invoke-Step 'Step 17: Phase 1B-3 regression (Playwright)' { npx playwright test e2e/owner-refunds.spec.ts }
-  Invoke-Step 'Step 18: Phase 1B-4 regression (Playwright)' { npx playwright test e2e/owner-schedule-requests.spec.ts }
-  Invoke-Step 'Step 19: Phase 1B-5 regression (Playwright)' { npx playwright test e2e/owner-schedule-requests.spec.ts }
-  Invoke-Step 'Step 20: Phase 1B-6 regression (Playwright)' { npx playwright test e2e/owner-student-detail.spec.ts }
-  Invoke-Step 'Step 21: Phase 2B-1 regression (Playwright)' { npx playwright test e2e/owner-teachers.spec.ts }
+  & "$PSScriptRoot/seed-owner-alpha.ps1"
+  if ($LASTEXITCODE -ne 0) { throw "Owner Alpha re-seed before regression Playwright failed with exit code $LASTEXITCODE" }
+  Wait-ReveSupabaseAuthReady
+  Stop-RevePlaywrightDevServerIfStale -RepoRoot $repoRoot -Port 3000
+
+  Invoke-PlaywrightCommand -Label 'Step 14: Phase 1A regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-alpha.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 15: Phase 1B-1 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-weekly-schedule.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 16: Phase 1B-2 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-sms.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 17: Phase 1B-3 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-refunds.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 18: Phase 1B-4 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-schedule-requests.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 19: Phase 1B-5 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-schedule-requests.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 20: Phase 1B-6 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-student-detail.spec.ts') | Out-Null
+  Invoke-PlaywrightCommand -Label 'Step 21: Phase 2B-1 regression (Playwright)' -CommandArgs @('playwright', 'test', '--retries=0', 'e2e/owner-teachers.spec.ts') | Out-Null
 
   Write-Host '=== Step 22: leftover harness check ==='
   Assert-ReveNoHarnessObjects -Container $container

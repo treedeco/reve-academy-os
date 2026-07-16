@@ -4,6 +4,10 @@ Phase **2B-2B1** manual checklist. Run against **local** Supabase after `npx sup
 
 Login: `owner-alpha@test.local` / `OwnerAlphaTest123!`
 
+**Automated prerequisite:** `scripts/verify_phase_2b2b1.ps1` must exit 0 before operator manual verification begins.
+
+**Automated coverage (H1 stabilization):** 54 Playwright tests with `--retries=0`; Owner Alpha today-lesson rows reset via `scripts/fixture-reset-owner-alpha-today-lesson.sql`; Owner Teachers empty-state uses `scripts/fixture-owner-teachers-empty.sql` (no mid-run `supabase db reset` during Playwright).
+
 **Status legend:** `[ ]` not yet verified by operator · `[x]` verified · `[!]` failed
 
 Do **not** mark items passed unless an operator actually performs them in a browser.

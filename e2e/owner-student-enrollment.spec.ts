@@ -1,16 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
-
-async function loginAsOwner(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(ownerEmail);
-  await page.getByLabel('비밀번호').fill(ownerPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
-
+import { loginAsOwner } from './helpers/login-as-owner';
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Owner student master and initial enrollment', () => {
@@ -176,10 +165,10 @@ test.describe('Owner student master and initial enrollment', () => {
     await page.getByTestId('enrollment-course').selectOption({ label: 'Alpha Vocal Course (VOC-A1)' });
     await page.getByTestId('enrollment-product').selectOption({ label: 'Alpha 4 Lessons · 4회 · 주 1회 · 200,000원' });
     await page.getByTestId('enrollment-start-date').fill(scheduleStartDate);
-    await page.getByTestId('enrollment-slot-teacher-1').selectOption({ label: 'Alpha Teacher (T-A1)' });
+    await page.getByTestId('enrollment-slot-teacher-1').selectOption('');
     await page.getByTestId('enrollment-submit').click();
 
-    await expect(page.getByTestId('enrollment-error')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('enrollment-error')).toContainText('강사', { timeout: 10_000 });
     await expect(page.getByTestId('student-no-current-pass')).toBeVisible();
     await expect(page.getByTestId('student-no-lessons')).toBeVisible();
   });

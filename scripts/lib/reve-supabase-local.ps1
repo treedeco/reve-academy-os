@@ -92,3 +92,60 @@ SELECT EXISTS (
     throw 'Test harness objects remain after verification'
   }
 }
+
+function Wait-ReveSupabaseAuthService {
+  param(
+    [string]$ApiUrl = 'http://127.0.0.1:54321',
+    [int]$MaxAttempts = 30,
+    [int]$DelaySeconds = 2
+  )
+
+  for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+    try {
+      $response = Invoke-WebRequest -Uri "$ApiUrl/auth/v1/health" -Method GET -UseBasicParsing -ErrorAction Stop
+      if ($response.StatusCode -eq 200) {
+        Write-Host "Supabase Auth service ready after $attempt attempt(s)."
+        return
+      }
+    }
+    catch {
+      Write-Host "Supabase Auth service not ready (attempt $attempt/$MaxAttempts): $($_.Exception.Message)"
+    }
+    Start-Sleep -Seconds $DelaySeconds
+  }
+
+  throw "Supabase Auth service did not become ready after $MaxAttempts attempts."
+}
+
+function Wait-ReveSupabaseAuthReady {
+  param(
+    [string]$ApiUrl = 'http://127.0.0.1:54321',
+    [string]$AnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
+    [string]$OwnerEmail = 'owner-alpha@test.local',
+    [string]$OwnerPassword = 'OwnerAlphaTest123!',
+    [int]$MaxAttempts = 30,
+    [int]$DelaySeconds = 2
+  )
+
+  $body = (@{ email = $OwnerEmail; password = $OwnerPassword } | ConvertTo-Json -Compress)
+  $headers = @{
+    apikey       = $AnonKey
+    'Content-Type' = 'application/json'
+  }
+
+  for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+    try {
+      $response = Invoke-RestMethod -Uri "$ApiUrl/auth/v1/token?grant_type=password" -Method POST -Headers $headers -Body $body -ErrorAction Stop
+      if ($response.access_token) {
+        Write-Host "Supabase Auth ready after $attempt attempt(s)."
+        return
+      }
+    }
+    catch {
+      Write-Host "Supabase Auth not ready (attempt $attempt/$MaxAttempts): $($_.Exception.Message)"
+    }
+    Start-Sleep -Seconds $DelaySeconds
+  }
+
+  throw "Supabase Auth did not become ready after $MaxAttempts attempts."
+}

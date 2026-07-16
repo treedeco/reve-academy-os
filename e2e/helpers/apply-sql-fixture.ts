@@ -45,6 +45,10 @@ export function resetLocalDatabase(): void {
   execSync('npx supabase db reset', { cwd: repoRoot, stdio: 'inherit' });
 }
 
+export function seedOwnerTeachersEmptyFixture(): void {
+  applySqlFixture('fixture-owner-teachers-empty.sql');
+}
+
 export function seedOwnerOnlyAlphaFixture(): void {
   resetLocalDatabase();
   applySqlFixture('seed-owner-only-alpha.sql');
