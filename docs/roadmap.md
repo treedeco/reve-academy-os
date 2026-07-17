@@ -12,6 +12,8 @@
 
 **Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, and a time-aligned weekly timetable (13:00–22:00, final valid start 21:00)**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
 
+**Owner login credential change (reve username):** Implementation **`783c8015f0546422d9795cee06558495b0e4d381`**. Runtime verification passed on **2026-07-17** (evidence: [docs/manual-verification-owner-alpha.md](./manual-verification-owner-alpha.md) — Owner login credential change section). Checkpoint tag: **`owner-login-reve-runtime-verified`**.
+
 **Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — wire `reve_complete_payment_and_renew_pass` to Owner UI with tests — **only after Phase 2B-2B1-R1 operator manual verification and runtime-verified tag**.
 
 **Following phase:** **Phase 2B-2C — Production Go-Live Operations** — deployment, bootstrap, backup/restore runbooks.
@@ -438,6 +440,26 @@ Owner performs all 15 manual browser checklist steps; record explicit sign-off.
 ### Status
 
 **Complete** — Owner confirmed all steps PASS on 2026-07-03. Evidence: `docs/manual-verification-owner-alpha.md`. Final tag: `phase-1a-owner-alpha-runtime-verified`.
+
+---
+
+## Owner login credential change — reve username (runtime verified)
+
+### Goal
+
+Replace legacy demo Owner login (`owner-alpha@test.local`) with username **`reve`** mapped to Supabase Auth email `reve@owner.local`. Keep the password local-only via gitignored `.env.local`.
+
+### Status
+
+**Complete** — runtime verification passed on **2026-07-17**. Implementation commit: **`783c8015f0546422d9795cee06558495b0e4d381`**. Evidence: `docs/manual-verification-owner-alpha.md` (Owner login credential change section). Checkpoint tag: **`owner-login-reve-runtime-verified`**.
+
+### Validation Requirements
+
+- Username field accepts only `reve` (trim + case-insensitive); legacy identifiers rejected
+- Invalid username rejected before Supabase Auth call
+- Seed stores bcrypt hash only; legacy auth user removed
+- E2E/integration tests read password from `OWNER_PASSWORD` / `E2E_OWNER_PASSWORD` with no hardcoded fallback
+- Automated: typecheck, lint, vitest **142/142**, Playwright owner-alpha **7/7**
 
 ---
 
