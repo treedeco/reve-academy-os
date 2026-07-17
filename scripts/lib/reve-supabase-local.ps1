@@ -1,3 +1,5 @@
+. "$PSScriptRoot/reve-owner-credentials.ps1"
+
 function Get-ReveProjectId {
   param(
     [Parameter(Mandatory = $true)][string]$RepoRoot
@@ -121,11 +123,19 @@ function Wait-ReveSupabaseAuthReady {
   param(
     [string]$ApiUrl = 'http://127.0.0.1:54321',
     [string]$AnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
-    [string]$OwnerEmail = 'owner-alpha@test.local',
-    [string]$OwnerPassword = 'OwnerAlphaTest123!',
+    [string]$OwnerEmail,
+    [string]$OwnerPassword,
     [int]$MaxAttempts = 30,
     [int]$DelaySeconds = 2
   )
+
+  if (-not $OwnerEmail) {
+    $OwnerEmail = Get-ReveOwnerAuthEmail
+  }
+  if (-not $OwnerPassword) {
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $OwnerPassword = Get-ReveOwnerSeedPassword -RepoRoot $repoRoot
+  }
 
   $body = (@{ email = $OwnerEmail; password = $OwnerPassword } | ConvertTo-Json -Compress)
   $headers = @{

@@ -1,19 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { seedOwnerAlphaFixture, applySqlFixture } from './helpers/apply-sql-fixture';
-
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
+import { loginAsOwner } from './helpers/login-as-owner';
+import { OWNER_LOGIN_USERNAME } from '@/lib/auth/owner-login';
+import { getOwnerPasswordFromEnv } from '@/lib/auth/owner-credentials';
 
 const ALPHA_STUDENT_ID = '44444444-4444-4444-4444-444444444101';
 const ALPHA_TODAY_LESSON_ID = '99999999-9999-9999-9999-999999999101';
-
-async function loginAsOwner(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(ownerEmail);
-  await page.getByLabel('비밀번호').fill(ownerPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
 
 function alphaTodayLessonStatusSelect(page: import('@playwright/test').Page) {
   return page
@@ -94,5 +86,29 @@ test.describe('Owner Alpha', () => {
     await page.goto('/students');
     await expect(page.getByRole('heading', { name: '학생', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /Alpha Student/ }).first()).toBeVisible();
+  });
+
+  test('rejects legacy owner credentials', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('사용자 이름').fill('owner-alpha@test.local');
+    await page.getByLabel('비밀번호').fill(getOwnerPasswordFromEnv());
+    await page.getByRole('button', { name: '로그인' }).click();
+    await expect(page.locator('p[role="alert"]')).toContainText('사용자 이름 또는 비밀번호');
+  });
+
+  test('rejects incorrect username', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('사용자 이름').fill('not-reve');
+    await page.getByLabel('비밀번호').fill(getOwnerPasswordFromEnv());
+    await page.getByRole('button', { name: '로그인' }).click();
+    await expect(page.locator('p[role="alert"]')).toContainText('사용자 이름 또는 비밀번호');
+  });
+
+  test('rejects incorrect password', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('사용자 이름').fill(OWNER_LOGIN_USERNAME);
+    await page.getByLabel('비밀번호').fill('wrong-password');
+    await page.getByRole('button', { name: '로그인' }).click();
+    await expect(page.locator('p[role="alert"]')).toContainText('사용자 이름 또는 비밀번호');
   });
 });

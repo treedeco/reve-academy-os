@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Local app URL | `http://127.0.0.1:3000` |
 | Students route | `http://127.0.0.1:3000/students` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -33,7 +33,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | 2 | Reset DB | Clean schema | `npx supabase db reset` | ☑ |
 | 3 | Seed alpha data | Seed script completes | `npm run db:seed:alpha` | ☑ |
 | 4 | Start app | Login page loads | `npm run dev` | ☑ |
-| 5 | Login as `owner-alpha@test.local` | Redirect to dashboard | Owner session active | ☑ |
+| 5 | Login as Owner username `reve` (password from `.env.local`) | Redirect to dashboard | Owner session active | ☑ |
 | 6 | Open `/students` | Student list loads without errors | Owner-only route | ☑ |
 | 7 | Open student detail with operational history | Delta detail page loads | `/students/[studentId]` | ☑ |
 | 8 | Verify payment history section | **결제 이력** visible; status, amount, pass, course; no payment buttons | `fetchStudentOperationalHistory.payments` | ☑ |
@@ -63,7 +63,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 - Date: **2026-07-09**
 - Browser / device: **Desktop browser; mobile/responsive layout**
 - Result: **passed**
-- Notes: Owner confirmed PASS for student operational history using local Supabase, alpha seed (`npm run db:seed:alpha`), and `owner-alpha@test.local`. Verified student list navigation, student detail rendering, payment history, refund history, schedule change request history, empty states, existing student detail sections, no write actions in history sections, responsive layout, and no blocking console/network/server errors.
+- Notes: Owner confirmed PASS for student operational history using local Supabase, alpha seed (`npm run db:seed:alpha`), with username `reve`. Verified student list navigation, student detail rendering, payment history, refund history, schedule change request history, empty states, existing student detail sections, no write actions in history sections, responsive layout, and no blocking console/network/server errors.
 
 ## Non-blocking observations
 

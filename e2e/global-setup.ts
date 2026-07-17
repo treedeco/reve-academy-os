@@ -1,17 +1,81 @@
-import { execSync } from 'node:child_process';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 
-const DEFAULT_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+function loadEnvLocal(): void {
+  const envLocalPath = path.resolve(__dirname, '../.env.local');
+  if (!existsSync(envLocalPath)) {
+    return;
+  }
+
+  for (const line of readFileSync(envLocalPath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+    const separator = trimmed.indexOf('=');
+    if (separator <= 0) {
+      continue;
+    }
+    const name = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1).trim().replace(/^["']|["']$/g, '');
+    if (name && process.env[name] === undefined) {
+      process.env[name] = value;
+    }
+  }
+}
+
+export default async function globalSetup() {
+  const repoRoot = path.resolve(__dirname, '..');
+  loadEnvLocal();
+
+  const seedPath = path.join(repoRoot, 'scripts', 'seed-owner-alpha.sql');
+
+  let container: string;
+  try {
+    container = execSync('node scripts/resolve-supabase-db-container.mjs', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim();
+  } catch (error) {
+    throw new Error(
+      `Local Supabase DB container not available. Run 'npx supabase start' before Playwright tests. ${error}`,
+    );
+  }
+
+  const apiUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  if (apiUrl) {
+    const lower = apiUrl.toLowerCase();
+    if (/supabase\.co|supabase\.in|\.amazonaws\.com/.test(lower)) {
+      throw new Error(`Refusing Playwright setup against hosted Supabase URL: ${apiUrl}`);
+    }
+    if (!/127\.0\.0\.1|localhost/.test(lower)) {
+      throw new Error(`Refusing Playwright setup against non-local Supabase URL: ${apiUrl}`);
+    }
+  }
+
+  execSync(
+    'powershell -ExecutionPolicy Bypass -File scripts/seed-owner-alpha.ps1',
+    { cwd: repoRoot, stdio: 'inherit' },
+  );
+
+  const authApiUrl = apiUrl || 'http://127.0.0.1:54321';
+  await waitForLocalSupabaseAuth(authApiUrl);
+}
 
 async function waitForLocalSupabaseAuth(
   apiUrl: string,
   maxAttempts = 30,
   delayMs = 2000,
 ): Promise<void> {
-  const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-  const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_ANON_KEY;
+  const ownerEmail = 'reve@owner.local';
+  const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? process.env.OWNER_PASSWORD;
+  if (!ownerPassword) {
+    throw new Error('OWNER_PASSWORD must be set in .env.local for Playwright auth readiness checks.');
+  }
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -38,44 +102,4 @@ async function waitForLocalSupabaseAuth(
   }
 
   throw new Error(`Supabase Auth did not become ready after ${maxAttempts} attempts.`);
-}
-
-export default async function globalSetup() {
-  const repoRoot = path.resolve(__dirname, '..');
-  const seedPath = path.join(repoRoot, 'scripts', 'seed-owner-alpha.sql');
-
-  let container: string;
-  try {
-    container = execSync('node scripts/resolve-supabase-db-container.mjs', {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    }).trim();
-  } catch (error) {
-    throw new Error(
-      `Local Supabase DB container not available. Run 'npx supabase start' before Playwright tests. ${error}`,
-    );
-  }
-
-  const apiUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  if (apiUrl) {
-    const lower = apiUrl.toLowerCase();
-    if (/supabase\.co|supabase\.in|\.amazonaws\.com/.test(lower)) {
-      throw new Error(`Refusing Playwright setup against hosted Supabase URL: ${apiUrl}`);
-    }
-    if (!/127\.0\.0\.1|localhost/.test(lower)) {
-      throw new Error(`Refusing Playwright setup against non-local Supabase URL: ${apiUrl}`);
-    }
-  }
-
-  execSync(`docker cp "${seedPath}" ${container}:/tmp/seed-owner-alpha.sql`, {
-    cwd: repoRoot,
-    stdio: 'inherit',
-  });
-  execSync(
-    `docker exec -i ${container} psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /tmp/seed-owner-alpha.sql`,
-    { cwd: repoRoot, stdio: 'inherit' },
-  );
-
-  const authApiUrl = apiUrl || 'http://127.0.0.1:54321';
-  await waitForLocalSupabaseAuth(authApiUrl);
 }

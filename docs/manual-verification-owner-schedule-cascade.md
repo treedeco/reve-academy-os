@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Local app URL | `http://127.0.0.1:3000` |
 | Schedule requests route | `http://127.0.0.1:3000/schedule-requests` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -33,7 +33,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | 2 | Reset DB | Clean schema | `npx supabase db reset` | ☑ |
 | 3 | Seed alpha data | Seed script completes | `npm run db:seed:alpha` | ☑ |
 | 4 | Start app | Login page loads | `npm run dev` | ☑ |
-| 5 | Login as `owner-alpha@test.local` | Redirect to dashboard | Owner session active | ☑ |
+| 5 | Login as Owner username `reve` (password from `.env.local`) | Redirect to dashboard | Owner session active | ☑ |
 | 6 | Open **일정 변경 요청** | Review + cascade sections visible | Owner-only route | ☑ |
 | 7 | Verify review queue | Beta (submitted) and Delta (approved) in review section | `fetchOwnerScheduleChangeQueue.reviewRequests` | ☑ |
 | 8 | Verify cascade queue | Delta cascade-pending fixture visible; completed cascade excluded | `cascade_completed_at IS NULL` filter | ☑ |
@@ -52,7 +52,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 - Date: **2026-07-09**
 - Browser / device: **Desktop browser; mobile/responsive layout**
 - Result: **passed**
-- Notes: Owner confirmed PASS for `/schedule-requests` cascade section using local Supabase, alpha seed (`npm run db:seed:alpha`), and `owner-alpha@test.local`. Verified review/apply queues unchanged, cascade-pending section, cascade-completed exclusion, apply to cascade handoff, cascade reason plus confirm plus scoped row removal, reload persistence, and no blocking console/network/server errors on read/review/apply/cascade.
+- Notes: Owner confirmed PASS for `/schedule-requests` cascade section using local Supabase, alpha seed (`npm run db:seed:alpha`), with username `reve`. Verified review/apply queues unchanged, cascade-pending section, cascade-completed exclusion, apply to cascade handoff, cascade reason plus confirm plus scoped row removal, reload persistence, and no blocking console/network/server errors on read/review/apply/cascade.
 
 ## Non-blocking observations
 

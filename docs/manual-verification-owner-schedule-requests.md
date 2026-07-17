@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Local app URL | `http://127.0.0.1:3000` |
 | Schedule requests route | `http://127.0.0.1:3000/schedule-requests` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -33,7 +33,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | 2 | Reset DB | Clean schema | `npx supabase db reset` | ☑ |
 | 3 | Seed alpha data | Seed script completes | `npm run db:seed:alpha` | ☑ |
 | 4 | Start app | Login page loads | `npm run dev` | ☑ |
-| 5 | Login as `owner-alpha@test.local` | Redirect to dashboard | Owner session active | ☑ |
+| 5 | Login as Owner username `reve` (password from `.env.local`) | Redirect to dashboard | Owner session active | ☑ |
 | 6 | Open **일정 변경 요청** (`/schedule-requests`) | Page title and nav item visible | Owner-only route | ☑ |
 | 7 | Verify actionable requests | Beta (submitted) and Delta (approved) visible | `fetchOwnerScheduleChangeRequests` filter | ☑ |
 | 8 | Verify excluded requests | Rejected and applied not listed | No client-side request update | ☑ |
@@ -52,7 +52,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 - Date: **2026-07-08**
 - Browser / device: **Desktop browser; mobile/responsive layout**
 - Result: **passed**
-- Notes: Owner confirmed PASS for `/schedule-requests` using local Supabase, alpha seed data, and `owner-alpha@test.local`. Verified submitted and approved actionable queues, rejected/applied exclusion, student/course/pass/lesson context display, approve flow with approved time and reason, reject flow with required reason, apply flow with confirmation, scoped UI updates after approve/reject/apply, reload persistence, `/schedule` still loads after apply, and no blocking browser console or server runtime errors.
+- Notes: Owner confirmed PASS for `/schedule-requests` using local Supabase, alpha seed data, with username `reve`. Verified submitted and approved actionable queues, rejected/applied exclusion, student/course/pass/lesson context display, approve flow with approved time and reason, reject flow with required reason, apply flow with confirmation, scoped UI updates after approve/reject/apply, reload persistence, `/schedule` still loads after apply, and no blocking browser console or server runtime errors.
 
 ## Non-blocking observations
 

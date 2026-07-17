@@ -1,18 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { seedOwnerAlphaFixture } from './helpers/apply-sql-fixture';
+import { loginAsOwner } from './helpers/login-as-owner';
 
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 const betaSmsId = '88888888-8888-8888-8888-888888888102';
 const betaMessage = '[Beta] Alpha 4 Lessons 수강권 갱신 안내 SMS';
-
-async function loginAsOwner(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(ownerEmail);
-  await page.getByLabel('비밀번호').fill(ownerPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
 
 test.describe.configure({ mode: 'serial' });
 

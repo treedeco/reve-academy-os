@@ -1,9 +1,13 @@
--- REVE ACADEMY OS Phase 1A — Owner Alpha local dev and Playwright E2E seed data
+-- REVE ACADEMY OS — Owner Alpha local dev and Playwright E2E seed data
 -- Run after `npx supabase db reset` (not during pgTAP verification).
+-- Owner password is supplied at seed time via PostgreSQL setting `reve.owner_seed_password`
+-- (set by scripts/seed-owner-alpha.ps1 from gitignored .env.local).
 
 DO $$
 DECLARE
   v_owner uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa101';
+  v_owner_email text := 'reve@owner.local';
+  v_owner_password text := current_setting('reve.owner_seed_password', true);
   v_teacher_profile uuid := 'dddddddd-dddd-dddd-dddd-ddddddddd101';
   v_student_profile uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb101';
   v_teacher uuid := '22222222-2222-2222-2222-222222222101';
@@ -19,6 +23,14 @@ DECLARE
   v_lesson uuid := '99999999-9999-9999-9999-999999999101';
   v_today timestamptz := date_trunc('day', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul' + interval '15 hours';
 BEGIN
+  IF v_owner_password IS NULL OR btrim(v_owner_password) = '' THEN
+    RAISE EXCEPTION 'reve.owner_seed_password must be set before applying seed-owner-alpha.sql';
+  END IF;
+
+  DELETE FROM auth.users
+  WHERE email = 'owner-alpha@test.local'
+    AND id <> v_owner;
+
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
@@ -27,7 +39,7 @@ BEGIN
     created_at, updated_at
   ) VALUES
     (v_owner, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'owner-alpha@test.local', crypt('OwnerAlphaTest123!', gen_salt('bf')), now(),
+     v_owner_email, crypt(v_owner_password, gen_salt('bf')), now(),
      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
      '', '', '', '', '', '', now(), now()),
     (v_teacher_profile, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
@@ -39,6 +51,7 @@ BEGIN
      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
      '', '', '', '', '', '', now(), now())
   ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
     encrypted_password = EXCLUDED.encrypted_password,
     email_confirmed_at = EXCLUDED.email_confirmed_at,
     raw_app_meta_data = EXCLUDED.raw_app_meta_data,

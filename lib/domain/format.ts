@@ -34,7 +34,7 @@ export function mapDatabaseError(error: { message?: string; code?: string } | nu
   }
 
   if (error.message.toLowerCase().includes('invalid login credentials')) {
-    return '이메일 또는 비밀번호가 올바르지 않습니다.';
+    return '사용자 이름 또는 비밀번호가 올바르지 않습니다.';
   }
 
   return error.message;

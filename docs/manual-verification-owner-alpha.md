@@ -12,8 +12,8 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Login URL | `http://127.0.0.1:3000/login` |
 | Demo seed command | `npm run db:seed:alpha` (**local only**) |
 | Checklist file | `docs/manual-verification-owner-alpha.md` |
-| Demo email | `owner-alpha@test.local` |
-| Demo password | `OwnerAlphaTest123!` |
+| Demo username | `reve` |
+| Demo password | Set locally in `.env.local` as `OWNER_PASSWORD` (never commit plaintext) |
 
 Never reuse demo credentials or run the demo seed against hosted/production Supabase.
 
@@ -26,7 +26,7 @@ Never reuse demo credentials or run the demo seed against hosted/production Supa
 | 1 | Start local Supabase: `npx supabase start` | CLI reports API and DB running; `npx supabase status` shows local URLs | Local Docker containers healthy; no hosted project touched | CLI error output, `docker ps` showing missing `supabase_db_*` | ☑ |
 | 2 | Reset and apply demo seed locally: `npx supabase db reset` then `npm run db:seed:alpha` | Seed script prints local container name and completes without “Refusing to continue” | Demo Owner user and today’s lessons exist in **local** DB only | Seed refusal message, SQL error, hosted URL in env vars | ☑ |
 | 3 | Copy `.env.local.example` → `.env.local`, set local anon key from `npx supabase status`, then `npm run dev` | Next.js dev server starts; browser can reach `http://127.0.0.1:3000` | N/A (app config only) | Build/start error, wrong Supabase URL in `.env.local` | ☑ |
-| 4 | Open `/login` and sign in with `owner-alpha@test.local` / `OwnerAlphaTest123!` | Login succeeds; redirect to `/dashboard` | Session established for demo Owner profile | Login error banner, stay on `/login`, network 401/403 | ☑ |
+| 4 | Open `/login` and sign in with username `reve` and the password from `.env.local` (`OWNER_PASSWORD`) | Login succeeds; redirect to `/dashboard` | Session established for demo Owner profile | Login error banner, stay on `/login`, network 401/403 | ☑ |
 | 5 | Open `/lessons/today` | Today’s lesson list renders with student name, course, teacher, and current status for seeded lessons | `lessons` rows for today unchanged since seed | Empty list when seed expected rows, missing columns, layout broken | ☑ |
 | 6 | Change **one** lesson status (e.g. **완료** / `completed`) via the status control | Selected lesson shows new status in the card after save | `lessons.status` updated for that `lesson_id`; `lessons.updated_at` advanced | Wrong lesson changed, status reverts without error, duplicate RPC in network tab | ☑ |
 | 7 | Repeat a status change and observe the in-flight state | Submit control disabled; “저장 중…” (or equivalent pending text) visible during request | N/A during request | Control stays enabled, no pending indicator, double-submit possible | ☑ |

@@ -9,7 +9,7 @@ Phase **2B-2B1-R1**. Run after automated verification passes on a local stack se
 - Local Supabase running (`npx supabase start`)
 - Owner Alpha demo seed applied
 - App at `http://localhost:3000`
-- Logged in as Owner (`owner-alpha@test.local`)
+- Logged in as Owner (username `reve`)
 
 ---
 

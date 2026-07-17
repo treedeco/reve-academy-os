@@ -1,18 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAsOwner } from './helpers/login-as-owner';
 
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 const deltaStudentId = '44444444-4444-4444-4444-444444444104';
 const gammaStudentId = '44444444-4444-4444-4444-444444444103';
 const zetaStudentId = '44444444-4444-4444-4444-444444444106';
-
-async function loginAsOwner(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(ownerEmail);
-  await page.getByLabel('비밀번호').fill(ownerPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
 
 test.describe.configure({ mode: 'serial' });
 

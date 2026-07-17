@@ -11,7 +11,9 @@ describe('mapDatabaseError', () => {
   });
 
   it('maps invalid login credentials', () => {
-    expect(mapDatabaseError({ message: 'Invalid login credentials' })).toContain('이메일 또는 비밀번호');
+    expect(mapDatabaseError({ message: 'Invalid login credentials' })).toContain(
+      '사용자 이름 또는 비밀번호',
+    );
   });
 });
 

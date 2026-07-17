@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Local app URL | `http://127.0.0.1:3000` |
 | SMS confirmation route | `http://127.0.0.1:3000/sms` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -33,7 +33,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | 2 | Reset DB | Clean schema | `npx supabase db reset` | ☑ |
 | 3 | Seed alpha data | Seed script completes | `npm run db:seed:alpha` | ☑ |
 | 4 | Start app | Login page loads | `npm run dev` | ☑ |
-| 5 | Login as `owner-alpha@test.local` | Redirect to dashboard | Owner session active | ☑ |
+| 5 | Login as Owner username `reve` (password from `.env.local`) | Redirect to dashboard | Owner session active | ☑ |
 | 6 | Open **SMS 발송 확인** (`/sms`) | Page title and nav item visible | Owner-only route | ☑ |
 | 7 | Verify eligible entries | Beta (scheduled), Delta (target), Gamma (exhausted_unsent) visible; Alpha (normal) excluded | `fetchOwnerSmsNotifications` eligible filter | ☑ |
 | 8 | Copy message | **메시지 복사** shows **복사됨**; clipboard has `message_body_snapshot` | No DB write | ☑ |
@@ -52,7 +52,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 - Date: **2026-07-08**
 - Browser / device: **Desktop browser**
 - Result: **passed**
-- Notes: Owner confirmed PASS for `/sms` using local Supabase, alpha seed data, and `owner-alpha@test.local`. Verified eligible SMS list (`scheduled`, `target`, `exhausted_unsent`), exclusion of non-eligible rows (`normal`), message copy behavior, sent confirmation via trusted RPC, scoped row removal after confirm, reload persistence, and no blocking browser console or server runtime errors.
+- Notes: Owner confirmed PASS for `/sms` using local Supabase, alpha seed data, with username `reve`. Verified eligible SMS list (`scheduled`, `target`, `exhausted_unsent`), exclusion of non-eligible rows (`normal`), message copy behavior, sent confirmation via trusted RPC, scoped row removal after confirm, reload persistence, and no blocking browser console or server runtime errors.
 
 ## Non-blocking observations
 

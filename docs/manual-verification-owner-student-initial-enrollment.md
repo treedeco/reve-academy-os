@@ -2,7 +2,7 @@
 
 Phase **2B-2B1** manual checklist. Run against **local** Supabase after `npx supabase db reset` and `npm run db:seed:alpha`, with `npm run dev` (or Playwright’s dev server) on port 3000.
 
-Login: `owner-alpha@test.local` / `OwnerAlphaTest123!`
+Login: username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only)
 
 **Automated prerequisite:** `scripts/verify_phase_2b2b1.ps1` must exit 0 before operator manual verification begins.
 

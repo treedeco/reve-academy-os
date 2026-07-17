@@ -6,11 +6,11 @@ import {
   setOwnerTeacherActive,
   updateOwnerTeacher,
 } from '@/lib/data/owner-teachers';
+import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
+import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 const teacherEmail = 'teacher-alpha@test.local';
 const teacherPassword = 'TeacherAlpha123!';
 const assignedTeacherId = '22222222-2222-2222-2222-222222222101';
@@ -33,8 +33,8 @@ describe.skipIf(!integrationEnabled)('Owner teacher master data integration', ()
   beforeAll(async () => {
     ownerClient = createAuthClient('reve-test-owner-teachers');
     const { error } = await ownerClient.auth.signInWithPassword({
-      email: ownerEmail,
-      password: ownerPassword,
+      email: OWNER_AUTH_EMAIL,
+      password: getOwnerTestPassword(),
     });
     if (error) {
       throw new Error(

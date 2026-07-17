@@ -1,4 +1,4 @@
-# REVE ACADEMY OS — Owner Alpha demo seed (local only)
+# REVE ACADEMY OS — Owner-only alpha seed (local Playwright fixture)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -8,7 +8,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $container = Get-ReveSupabaseDbContainer -RepoRoot $repoRoot
 Assert-ReveLocalDatabaseTarget -Container $container
 
-$seedPath = Join-Path $repoRoot 'scripts/seed-owner-alpha.sql'
+$seedPath = Join-Path $repoRoot 'scripts/seed-owner-only-alpha.sql'
 if (-not (Test-Path $seedPath)) {
   throw "Seed file not found: $seedPath"
 }
@@ -16,10 +16,7 @@ if (-not (Test-Path $seedPath)) {
 $ownerPassword = Get-ReveOwnerSeedPassword -RepoRoot $repoRoot
 $escapedPassword = $ownerPassword.Replace("'", "''")
 
-Write-Host "Applying Owner Alpha demo seed to local container: $container"
-Write-Host 'WARNING: Demo credentials only. Never run against hosted/production databases.'
-
-docker cp "$seedPath" "${container}:/tmp/seed-owner-alpha.sql"
+docker cp "$seedPath" "${container}:/tmp/seed-owner-only-alpha.sql"
 if ($LASTEXITCODE -ne 0) { throw "docker cp failed with exit code $LASTEXITCODE" }
 
 $seedSql = @"
@@ -27,12 +24,10 @@ BEGIN;
 DO `$`$ BEGIN
   PERFORM set_config('reve.owner_seed_password', '$escapedPassword', true);
 END `$`$;
-\i /tmp/seed-owner-alpha.sql
+\i /tmp/seed-owner-only-alpha.sql
 SELECT set_config('reve.owner_seed_password', '', true);
 COMMIT;
 "@
 
 $seedSql | docker exec -i $container psql -U postgres -d postgres -v ON_ERROR_STOP=1
 if ($LASTEXITCODE -ne 0) { throw "seed SQL failed with exit code $LASTEXITCODE" }
-
-Write-Host 'Owner Alpha demo seed applied.'

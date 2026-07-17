@@ -20,11 +20,11 @@ import {
 import { mapDatabaseError } from '@/lib/domain/format';
 import { mapRefundError } from '@/lib/domain/refund';
 import { mapScheduleChangeError } from '@/lib/domain/schedule-change';
+import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
+import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 const teacherEmail = 'teacher-alpha@test.local';
 const teacherPassword = 'TeacherAlpha123!';
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
@@ -61,8 +61,8 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
   beforeAll(async () => {
     ownerClient = createAuthClient('reve-test-owner');
     const { error } = await ownerClient.auth.signInWithPassword({
-      email: ownerEmail,
-      password: ownerPassword,
+      email: OWNER_AUTH_EMAIL,
+      password: getOwnerTestPassword(),
     });
     if (error) {
       throw new Error(

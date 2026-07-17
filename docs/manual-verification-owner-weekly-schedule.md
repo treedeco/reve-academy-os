@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 | Local app URL | `http://127.0.0.1:3000` |
 | Weekly schedule route | `http://127.0.0.1:3000/schedule` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -47,7 +47,7 @@ Automated Playwright tests do **not** substitute for this checklist. This record
 - Date: **2026-07-07**
 - Browser / device: **Desktop weekly grid; mobile list layout**
 - Result: **passed**
-- Notes: Owner confirmed PASS for `/schedule` using local Supabase, seeded alpha data, and `owner-alpha@test.local`. Verified fixed schedule slot position, postponed lesson occurrence display, active/reserved/completed pass inclusion rules, and no blocking runtime errors.
+- Notes: Owner confirmed PASS for `/schedule` using local Supabase, seeded alpha data, with username `reve`. Verified fixed schedule slot position, postponed lesson occurrence display, active/reserved/completed pass inclusion rules, and no blocking runtime errors.
 
 ## Remaining risks
 

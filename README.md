@@ -69,10 +69,10 @@ npm install
 npm run dev
 ```
 
-Owner Alpha seed credentials (`scripts/seed-owner-alpha.sql`):
+Owner local login (`/login`):
 
-- Email: `owner-alpha@test.local`
-- Password: `OwnerAlphaTest123!`
+- Username: `reve`
+- Password: set in gitignored `.env.local` as `OWNER_PASSWORD` (used by `npm run db:seed:alpha` to store a bcrypt hash in Supabase Auth — never commit plaintext passwords)
 
 Manual browser checklist: [docs/manual-verification-owner-alpha.md](./docs/manual-verification-owner-alpha.md)
 

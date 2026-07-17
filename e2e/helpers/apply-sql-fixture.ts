@@ -50,10 +50,18 @@ export function seedOwnerTeachersEmptyFixture(): void {
 }
 
 export function seedOwnerOnlyAlphaFixture(): void {
+  const repoRoot = resolveRepoRoot();
   resetLocalDatabase();
-  applySqlFixture('seed-owner-only-alpha.sql');
+  execSync('powershell -ExecutionPolicy Bypass -File scripts/seed-owner-only-alpha.ps1', {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
 }
 
 export function seedOwnerAlphaFixture(): void {
-  applySqlFixture('seed-owner-alpha.sql');
+  const repoRoot = resolveRepoRoot();
+  execSync('powershell -ExecutionPolicy Bypass -File scripts/seed-owner-alpha.ps1', {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
 }

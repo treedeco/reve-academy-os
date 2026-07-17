@@ -11,7 +11,7 @@ Automated Playwright tests do **not** substitute for this checklist. Browser-lev
 | Local app URL | `http://127.0.0.1:3000` |
 | Teachers route | `http://127.0.0.1:3000/teachers` |
 | Demo seed | `npm run db:seed:alpha` (**local only**) |
-| Demo login | `owner-alpha@test.local` / `OwnerAlphaTest123!` |
+| Demo login | Username `reve`; password from `OWNER_PASSWORD` in `.env.local` (local only) |
 
 ## Verification environment
 
@@ -90,4 +90,4 @@ No physical teacher deletion occurred. No remaining manual browser issue reporte
 - Date: **2026-07-14**
 - Browser / device: **Desktop browser; mobile/responsive layout (~390px)**
 - Result: **passed**
-- Notes: Owner confirmed PASS for teacher master data using local Supabase, alpha seed (`npm run db:seed:alpha`), and `owner-alpha@test.local`. Verified `/teachers` page load, teacher list, create/update persistence after reload, unassigned deactivation, reactivation, `T-A1` deactivation blocking, no delete button, responsive layout, existing Owner page regression, and no blocking console or network errors.
+- Notes: Owner confirmed PASS for teacher master data using local Supabase, alpha seed (`npm run db:seed:alpha`), with username `reve`. Verified `/teachers` page load, teacher list, create/update persistence after reload, unassigned deactivation, reactivation, `T-A1` deactivation blocking, no delete button, responsive layout, existing Owner page regression, and no blocking console or network errors.

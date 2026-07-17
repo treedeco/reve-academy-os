@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { resolveOwnerLoginEmail } from '@/lib/auth/owner-login';
 import { mapDatabaseError } from '@/lib/domain/format';
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(searchParams.get('error'));
   const [pending, setPending] = useState(false);
@@ -18,8 +19,15 @@ export default function LoginForm() {
     setPending(true);
     setError(null);
 
-    if (!email.trim() || !password) {
-      setError('이메일과 비밀번호를 입력해 주세요.');
+    if (!username.trim() || !password) {
+      setError('사용자 이름과 비밀번호를 입력해 주세요.');
+      setPending(false);
+      return;
+    }
+
+    const authEmail = resolveOwnerLoginEmail(username);
+    if (!authEmail) {
+      setError('사용자 이름 또는 비밀번호가 올바르지 않습니다.');
       setPending(false);
       return;
     }
@@ -27,7 +35,7 @@ export default function LoginForm() {
     try {
       const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: authEmail,
         password,
       });
 
@@ -69,20 +77,20 @@ export default function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">REVE ACADEMY OS</h1>
-        <p className="mt-2 text-sm text-slate-600">Owner Alpha 로그인</p>
+        <p className="mt-2 text-sm text-slate-600">Owner 로그인</p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="email">
-              이메일
+            <label className="block text-sm font-medium text-slate-700" htmlFor="username">
+              사용자 이름
             </label>
             <input
-              id="email"
-              type="email"
+              id="username"
+              type="text"
               autoComplete="username"
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
               disabled={pending}
             />
           </div>

@@ -10,11 +10,11 @@ import {
   transitionLessonStatus,
 } from '@/lib/data/owner-queries';
 import { mapDatabaseError } from '@/lib/domain/format';
+import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
+import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const ownerEmail = process.env.E2E_OWNER_EMAIL ?? 'owner-alpha@test.local';
-const ownerPassword = process.env.E2E_OWNER_PASSWORD ?? 'OwnerAlphaTest123!';
 
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaTodayLessonId = '99999999-9999-9999-9999-999999999101';
@@ -38,8 +38,8 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
   beforeAll(async () => {
     ownerClient = createAuthClient('reve-test-lesson-ops');
     const { error } = await ownerClient.auth.signInWithPassword({
-      email: ownerEmail,
-      password: ownerPassword,
+      email: OWNER_AUTH_EMAIL,
+      password: getOwnerTestPassword(),
     });
     if (error) {
       throw new Error(`Owner login failed (${error.message}). Run npm run db:seed:alpha after db reset.`);
