@@ -23,45 +23,32 @@ const vocalProduct4Id = 'ffffffff-ffff-ffff-ffff-fffffffff101';
 const pianoProduct8Id = 'ffffffff-ffff-ffff-ffff-fffffffff102';
 const scheduleStartDate = '2026-09-01';
 
-function studentSeedBucket(seed: string): number {
-  return Number(seed.replace(/\D/g, '').slice(-6)) || 1;
-}
-
-function studentStartDate(studentId: string): string {
-  const day = (studentSeedBucket(studentId) % 20) + 1;
-  return `2026-09-${String(day).padStart(2, '0')}`;
-}
-
-function studentWeeklySlot(teacherId: string, studentId: string) {
-  const bucket = studentSeedBucket(studentId);
-  const weekday = bucket % 7;
-  const hour = 8 + (bucket % 9);
-  const minute = 10 + (bucket % 49);
-  return vocalWeeklySlot(
-    teacherId,
-    weekday,
-    `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-  );
-}
-
-function studentTwiceWeeklySlots(teacherA: string, teacherB: string, studentId: string) {
-  const bucket = studentSeedBucket(studentId);
-  return buildScheduleSlotsPayload([
+/** Fixed slots reserved for integration enrollments; avoid alpha seed teacher/weekday/time pairs. */
+const enrollmentScheduleFixtures = {
+  voc4Weekly: vocalWeeklySlot(alphaTeacherId, 2, '13:00'),
+  pia8TwiceWeekly: buildScheduleSlotsPayload([
     {
-      teacherId: teacherA,
-      weekday: bucket % 7,
-      localTime: `${String(8 + (bucket % 8)).padStart(2, '0')}:20`,
+      teacherId: alphaTeacherId,
+      weekday: 2,
+      localTime: '14:00',
       durationMinutes: 60,
       slotOrder: 1,
     },
     {
-      teacherId: teacherB,
-      weekday: (bucket + 3) % 7,
-      localTime: `${String(13 + (bucket % 5)).padStart(2, '0')}:40`,
+      teacherId: alphaTeacherBId,
+      weekday: 4,
+      localTime: '15:00',
       durationMinutes: 60,
       slotOrder: 2,
     },
-  ]);
+  ]),
+  dupcourseWeekly: vocalWeeklySlot(alphaTeacherBId, 1, '16:00'),
+  idemWeekly: vocalWeeklySlot(alphaTeacherBId, 3, '17:00'),
+};
+
+function studentStartDate(studentId: string): string {
+  const day = (Number(studentId.replace(/\D/g, '').slice(-6)) || 1) % 20 + 1;
+  return `2026-09-${String(day).padStart(2, '0')}`;
 }
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
@@ -144,7 +131,7 @@ describe.skipIf(!integrationEnabled)('Owner initial enrollment integration', () 
     const student = await createEnrollmentStudent(ownerClient, 'VOC4');
     const idempotencyKey = `int-voc4-${student.id}`;
     const startDate = studentStartDate(student.id);
-    const scheduleSlots = studentWeeklySlot(alphaTeacherId, student.id);
+    const scheduleSlots = enrollmentScheduleFixtures.voc4Weekly;
 
     const result = await createOwnerInitialEnrollment(ownerClient, {
       studentId: student.id,
@@ -185,7 +172,7 @@ describe.skipIf(!integrationEnabled)('Owner initial enrollment integration', () 
     const student = await createEnrollmentStudent(ownerClient, 'PIA8');
     const idempotencyKey = `int-pia8-${student.id}`;
     const startDate = studentStartDate(student.id);
-    const scheduleSlots = studentTwiceWeeklySlots(alphaTeacherId, alphaTeacherBId, student.id);
+    const scheduleSlots = enrollmentScheduleFixtures.pia8TwiceWeekly;
 
     const result = await createOwnerInitialEnrollment(ownerClient, {
       studentId: student.id,
@@ -262,7 +249,7 @@ describe.skipIf(!integrationEnabled)('Owner initial enrollment integration', () 
     const student = await createEnrollmentStudent(ownerClient, 'DUPCOURSE');
     const firstKey = `int-dupcourse-1-${student.id}`;
     const dupStartDate = studentStartDate(student.id);
-    const scheduleSlots = studentWeeklySlot(alphaTeacherBId, student.id);
+    const scheduleSlots = enrollmentScheduleFixtures.dupcourseWeekly;
 
     await createOwnerInitialEnrollment(ownerClient, {
       studentId: student.id,
@@ -293,7 +280,7 @@ describe.skipIf(!integrationEnabled)('Owner initial enrollment integration', () 
     const student = await createEnrollmentStudent(ownerClient, 'IDEM');
     const idempotencyKey = `int-idem-${student.id}`;
     const idemStartDate = studentStartDate(student.id);
-    const scheduleSlots = studentWeeklySlot(alphaTeacherBId, student.id);
+    const scheduleSlots = enrollmentScheduleFixtures.idemWeekly;
 
     const first = await createOwnerInitialEnrollment(ownerClient, {
       studentId: student.id,

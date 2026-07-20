@@ -165,7 +165,7 @@ Password remained local-only in gitignored `.env.local` (`OWNER_PASSWORD`, `E2E_
 | `npm run lint` | PASS |
 | `npm run test` | PASS — **142/142** (25 files) |
 | `npx playwright test e2e/owner-alpha.spec.ts` | PASS — **7/7** |
-| `scripts/verify_phase_1a.ps1` | **FAIL at Step 4 (vitest)** — unrelated enrollment integration flake (`REVE_SCHEDULE_COLLISION` in `owner-initial-enrollment.test.ts` when run inside aggregate script after `npm ci`; same test passes in isolation and full `npm run test` passed **142/142** before aggregate run) |
+| `scripts/verify_phase_1a.ps1` | PASS after enrollment integration cleanup fix (2026-07-20) |
 
 ### Sign-off — reve login credential change
 

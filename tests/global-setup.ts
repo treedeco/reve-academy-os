@@ -16,6 +16,10 @@ export default async function globalSetup() {
   }
 
   try {
+    execSync('node scripts/apply-integration-test-cleanup.mjs', {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
     execSync('powershell -ExecutionPolicy Bypass -File scripts/seed-owner-alpha.ps1', {
       cwd: repoRoot,
       stdio: 'inherit',
