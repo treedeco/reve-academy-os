@@ -87,7 +87,7 @@ Manual browser checklist: [docs/manual-verification-owner-alpha.md](./docs/manua
 
 - 환경 변수 템플릿: [`.env.production.example`](./.env.production.example)
 - 운영 절차: [docs/production-deployment-runbook.md](./docs/production-deployment-runbook.md)
-- Owner 일회성 부트스트랩: `npm run bootstrap:production-owner` (호스팅 Supabase + `SUPABASE_SERVICE_ROLE_KEY` + `OWNER_BOOTSTRAP_PASSWORD`; 비밀번호는 로그에 출력되지 않음)
+- Owner 일회성 부트스트랩: `npm run bootstrap:production-owner` (호스팅 Supabase + `SUPABASE_SECRET_KEY` 또는 legacy `SUPABASE_SERVICE_ROLE_KEY` + `OWNER_BOOTSTRAP_PASSWORD`; 비밀번호·API key는 로그에 출력되지 않음)
 
 ## 로컬 데이터베이스 (Phase 0B-3A ~ 0B-3B-2B-3E + 1A read)
 

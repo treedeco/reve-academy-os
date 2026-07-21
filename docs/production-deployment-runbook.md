@@ -26,7 +26,7 @@ Reference: `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/mid
 | Class | Variables | Notes |
 |-------|-----------|-------|
 | **Browser-safe public** | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Set in Vercel **Production** (and Preview if desired). |
-| **Server-only secrets** | `SUPABASE_SERVICE_ROLE_KEY` | Operator workstation only for bootstrap. **Never** use `NEXT_PUBLIC_` prefix. **Do not** add to Vercel unless you introduce server-side jobs that require it. |
+| **Server-only secrets** | `SUPABASE_SECRET_KEY` (preferred) or `SUPABASE_SERVICE_ROLE_KEY` (legacy JWT fallback) | Operator workstation only for bootstrap. **Never** use `NEXT_PUBLIC_` prefix. **Do not** add to Vercel. |
 | **One-time bootstrap** | `OWNER_BOOTSTRAP_PASSWORD` | Operator shell only when running `npm run bootstrap:production-owner`. Remove after bootstrap. |
 | **Local / CI only** | `OWNER_PASSWORD`, `E2E_OWNER_PASSWORD`, `SUPABASE_DB_CONTAINER`, `PLAYWRIGHT_BASE_URL`, `CI` | Never set in production hosting. |
 
@@ -80,7 +80,7 @@ Apply every file under `supabase/migrations/` in lexicographic order:
 
 - **Application runtime**: none.
 - **Database**: `service_role` grants on RPCs such as `reve_bootstrap_first_owner` (migration `20260630120000_phase_0b3b2b3a_profile_people_master_data.sql`).
-- **Operator bootstrap**: `scripts/bootstrap-production-owner.mjs` uses `SUPABASE_SERVICE_ROLE_KEY` from the operator environment only.
+- **Operator bootstrap**: `scripts/bootstrap-production-owner.mjs` uses `SUPABASE_SECRET_KEY` (preferred) or legacy `SUPABASE_SERVICE_ROLE_KEY` from the operator environment only, via `@supabase/supabase-js` Auth Admin APIs. Opaque `sb_secret_...` keys must not be sent as `Authorization: Bearer` tokens.
 
 ---
 
@@ -90,7 +90,8 @@ Apply every file under `supabase/migrations/` in lexicographic order:
 2. Record (do not commit):
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - Anon (public) key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - Service role key → `SUPABASE_SERVICE_ROLE_KEY` (bootstrap workstation only)
+   - Secret API key (`sb_secret_...`) → `SUPABASE_SECRET_KEY` (bootstrap workstation only)
+   - Legacy JWT service_role key → `SUPABASE_SERVICE_ROLE_KEY` (fallback only if secret key unavailable)
 3. In **Authentication → URL configuration**, add:
    - **Site URL**: your Vercel production URL (set after first deploy, then update)
    - **Redirect URLs**: production origin and `https://<project>.vercel.app/**` if using Vercel default domain
@@ -133,10 +134,11 @@ npm: `npm run bootstrap:production-owner`
 ### 4.1 Guards
 
 - Targets **hosted** Supabase only (`*.supabase.co` / `*.supabase.in`); rejects localhost.
-- Requires explicit `SUPABASE_SERVICE_ROLE_KEY` (rejects `NEXT_PUBLIC_` service role).
+- Requires `SUPABASE_SECRET_KEY` (preferred) or legacy `SUPABASE_SERVICE_ROLE_KEY` (rejects `NEXT_PUBLIC_` admin keys).
+- Uses `@supabase/supabase-js` Auth Admin APIs (`listUsers`, `createUser`) — not raw `fetch()` with `Authorization: Bearer` for opaque secret keys.
 - Does **not** run integration cleanup or local seeds.
-- Does **not** print passwords.
-- Idempotent: reuses existing Auth user by email; `reve_bootstrap_first_owner` returns `idempotent_replay` when appropriate.
+- Does **not** print passwords or API keys.
+- Idempotent: lists Auth users by exact normalized email before create; reuses a single existing user; fails if duplicates exist; `reve_bootstrap_first_owner` returns `idempotent_replay` when appropriate.
 
 ### 4.2 Operator steps
 
@@ -144,10 +146,14 @@ npm: `npm run bootstrap:production-owner`
 
 ```powershell
 $env:SUPABASE_URL = "https://<PROJECT_REF>.supabase.co"
-$env:SUPABASE_SERVICE_ROLE_KEY = "<from Supabase dashboard — server only>"
+$env:SUPABASE_SECRET_KEY = "<from Supabase dashboard — secret key, server only>"
+# Legacy fallback only:
+# $env:SUPABASE_SERVICE_ROLE_KEY = "<legacy JWT service_role key>"
 $env:OWNER_BOOTSTRAP_PASSWORD = "<strong one-time password>"
 # Optional: $env:OWNER_BOOTSTRAP_EMAIL = "reve@owner.local"
 ```
+
+Prefer a secure local prompt instead of placing secrets directly in shell history. See §4.4.
 
 2. Run bootstrap:
 
@@ -156,8 +162,49 @@ npm run bootstrap:production-owner
 ```
 
 3. Confirm output includes `profile_id`, `role: owner`, `account_state: active`.
-4. **Remove** `OWNER_BOOTSTRAP_PASSWORD` from the shell (`Remove-Item Env:OWNER_BOOTSTRAP_PASSWORD`) and from any temporary secret notes.
+4. **Remove** `OWNER_BOOTSTRAP_PASSWORD` and `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY` from the shell and from any temporary secret notes.
 5. Store the Owner password in your team password manager; operators sign in at `/login` with username **`reve`**.
+
+### 4.4 Secure local PowerShell bootstrap (recommended)
+
+```powershell
+Set-Location C:\Dev\reve-academy-os
+$ErrorActionPreference = 'Stop'
+
+function Read-SecurePlainText {
+  param([string]$Prompt)
+  $secure = Read-Host $Prompt -AsSecureString
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    return [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    $secure.Dispose()
+  }
+}
+
+$secretKey = Read-SecurePlainText 'SUPABASE_SECRET_KEY (input hidden)'
+$bootstrapPassword = Read-SecurePlainText 'OWNER_BOOTSTRAP_PASSWORD (input hidden)'
+
+$env:SUPABASE_URL = 'https://<PROJECT_REF>.supabase.co'
+$env:SUPABASE_SECRET_KEY = $secretKey
+$env:OWNER_BOOTSTRAP_PASSWORD = $bootstrapPassword
+
+$secretKey = $null
+$bootstrapPassword = $null
+[GC]::Collect()
+
+try {
+  npm run bootstrap:production-owner
+} finally {
+  Remove-Item Env:SUPABASE_SECRET_KEY -ErrorAction SilentlyContinue
+  Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
+  Remove-Item Env:OWNER_BOOTSTRAP_PASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:SUPABASE_URL -ErrorAction SilentlyContinue
+}
+```
+
+Never commit, log, or paste `SUPABASE_SECRET_KEY`, legacy `SUPABASE_SERVICE_ROLE_KEY`, or `OWNER_BOOTSTRAP_PASSWORD` into chat or git.
 
 ### 4.3 Failure modes
 
@@ -166,7 +213,7 @@ npm run bootstrap:production-owner
 | Local URL rejected | Confirm `SUPABASE_URL` is the hosted project URL |
 | `REVE_BOOTSTRAP_ALREADY_COMPLETED` | Owner already exists; verify login |
 | Auth user exists but wrong email | Use `reve@owner.local` or update app in a controlled release |
-| Missing service role | Set `SUPABASE_SERVICE_ROLE_KEY` on workstation, not Vercel |
+| Missing admin key | Set `SUPABASE_SECRET_KEY` (preferred) or legacy `SUPABASE_SERVICE_ROLE_KEY` on workstation, not Vercel |
 
 ---
 
@@ -189,7 +236,7 @@ No hard-coded URLs or secrets belong in the repository. Vercel assigns the produ
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon public |
 
-Do **not** set `OWNER_PASSWORD`, `E2E_OWNER_PASSWORD`, or `SUPABASE_SERVICE_ROLE_KEY` in Vercel for normal operation.
+Do **not** set `OWNER_PASSWORD`, `E2E_OWNER_PASSWORD`, `SUPABASE_SECRET_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` in Vercel for normal operation.
 
 Apply to **Production**; optionally duplicate for **Preview** with a separate Supabase project if you use preview deployments.
 
@@ -264,9 +311,9 @@ npm run build
 ## 9. Security checklist
 
 - [ ] No secrets committed to git (verify with `git grep -i password` on tracked files)
-- [ ] Service role key never prefixed with `NEXT_PUBLIC_`
+- [ ] Service role / secret keys never prefixed with `NEXT_PUBLIC_`
 - [ ] Vercel production env has only public Supabase vars for app runtime
-- [ ] Bootstrap password removed from operator shell after use
+- [ ] Bootstrap secrets (`SUPABASE_SECRET_KEY`, legacy service role key, bootstrap password) removed from operator shell after use
 - [ ] Local alpha seeds and integration cleanup never run against hosted URL
 - [ ] Supabase RLS enabled (migrations apply policies)
 

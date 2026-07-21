@@ -3,7 +3,7 @@
  *
  * Requires:
  *   SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL  (hosted *.supabase.co / *.supabase.in)
- *   SUPABASE_SERVICE_ROLE_KEY                 (server-only, never NEXT_PUBLIC_)
+ *   SUPABASE_SECRET_KEY (preferred) or SUPABASE_SERVICE_ROLE_KEY (legacy JWT fallback)
  *   OWNER_BOOTSTRAP_PASSWORD                  (one-time; remove from shell after use)
  *
  * Optional:
@@ -14,11 +14,17 @@
  */
 
 import {
-  getServiceRoleKeyFromEnv,
+  AUTH_ADMIN_PATH,
+  OWNER_AUTH_EMAIL_DEFAULT,
+  bootstrapOwnerProfile,
+  createSupabaseAdminClient,
+  reportBootstrapError,
+  resolveOrCreateAuthUser,
+} from './lib/bootstrap-production-owner-core.mjs';
+import {
+  getSupabaseAdminKeyFromEnv,
   resolveHostedSupabaseUrl,
 } from './lib/reve-hosted-supabase-guard.mjs';
-
-const OWNER_AUTH_EMAIL_DEFAULT = 'reve@owner.local';
 
 function requiredBootstrapPassword() {
   const password = process.env.OWNER_BOOTSTRAP_PASSWORD;
@@ -30,88 +36,13 @@ function requiredBootstrapPassword() {
   return password;
 }
 
-async function findAuthUserByEmail(apiUrl, serviceRoleKey, email) {
-  const response = await fetch(
-    `${apiUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
-    {
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    },
-  );
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Auth user lookup failed (${response.status}): ${body}`);
-  }
-
-  const payload = await response.json();
-  const users = payload.users ?? payload;
-  if (!Array.isArray(users) || users.length === 0) {
-    return null;
-  }
-  return users[0];
-}
-
-async function createAuthUser(apiUrl, serviceRoleKey, email, password) {
-  const response = await fetch(`${apiUrl}/auth/v1/admin/users`, {
-    method: 'POST',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email,
-      password,
-      email_confirm: true,
-    }),
-  });
-
-  if (response.ok) {
-    return response.json();
-  }
-
-  const body = await response.text();
-  if (response.status === 422 && /already|exists|registered/i.test(body)) {
-    const existing = await findAuthUserByEmail(apiUrl, serviceRoleKey, email);
-    if (existing?.id) {
-      return existing;
-    }
-  }
-
-  throw new Error(`Auth user creation failed (${response.status}): ${body}`);
-}
-
-async function bootstrapOwnerProfile(apiUrl, serviceRoleKey, authUserId, displayName) {
-  const response = await fetch(`${apiUrl}/rest/v1/rpc/reve_bootstrap_first_owner`, {
-    method: 'POST',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      p_auth_user_id: authUserId,
-      p_display_name: displayName,
-    }),
-  });
-
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`reve_bootstrap_first_owner failed (${response.status}): ${body}`);
-  }
-
-  return JSON.parse(body);
-}
-
 async function main() {
   const apiUrl = resolveHostedSupabaseUrl();
-  const serviceRoleKey = getServiceRoleKeyFromEnv();
+  const secretKey = getSupabaseAdminKeyFromEnv();
   const email = process.env.OWNER_BOOTSTRAP_EMAIL ?? OWNER_AUTH_EMAIL_DEFAULT;
   const displayName = process.env.OWNER_BOOTSTRAP_DISPLAY_NAME ?? 'REVE Owner';
   const password = requiredBootstrapPassword();
+  const hostname = new URL(apiUrl).hostname;
 
   if (email !== OWNER_AUTH_EMAIL_DEFAULT) {
     console.warn(
@@ -123,7 +54,9 @@ async function main() {
   console.log(`Bootstrap email: ${email}`);
   console.log('Creating or reusing Auth user (password not logged)...');
 
-  const authUser = await createAuthUser(apiUrl, serviceRoleKey, email, password);
+  const adminClient = createSupabaseAdminClient(apiUrl, secretKey);
+
+  const authUser = await resolveOrCreateAuthUser(adminClient, email, password);
   if (!authUser?.id) {
     throw new Error('Auth user id missing after create/lookup.');
   }
@@ -131,12 +64,7 @@ async function main() {
   console.log(`Auth user id: ${authUser.id}`);
   console.log('Calling reve_bootstrap_first_owner...');
 
-  const profileRows = await bootstrapOwnerProfile(
-    apiUrl,
-    serviceRoleKey,
-    authUser.id,
-    displayName,
-  );
+  const profileRows = await bootstrapOwnerProfile(adminClient, authUser.id, displayName);
 
   const profile = Array.isArray(profileRows) ? profileRows[0] : profileRows;
   console.log(
@@ -158,6 +86,18 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  const hostname = (() => {
+    try {
+      return new URL(resolveHostedSupabaseUrl()).hostname;
+    } catch {
+      return null;
+    }
+  })();
+
+  reportBootstrapError(error, {
+    operation: error?.operation ?? 'bootstrap-production-owner',
+    hostname,
+    path: AUTH_ADMIN_PATH,
+  });
   process.exit(1);
 });

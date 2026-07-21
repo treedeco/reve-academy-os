@@ -49,7 +49,7 @@ function isHostedSupabaseHostname(hostname) {
 }
 
 export function resolveHostedSupabaseUrl(apiUrl) {
-  const url = apiUrl ?? process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const url = (apiUrl ?? process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   if (!url) {
     throw new Error(
       'Hosted Supabase URL is required. Set SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL.',
@@ -68,19 +68,32 @@ export function resolveHostedSupabaseUrl(apiUrl) {
   return url.replace(/\/$/, '');
 }
 
-export function getServiceRoleKeyFromEnv() {
-  if (process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY must not use the NEXT_PUBLIC_ prefix.',
-    );
+function assertAdminKeyNotPublic() {
+  if (
+    process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    throw new Error('Supabase admin API keys must not use the NEXT_PUBLIC_ prefix.');
   }
+}
 
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function getSupabaseAdminKeyFromEnv() {
+  assertAdminKeyNotPublic();
+
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  const legacyServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const key = secretKey || legacyServiceRoleKey;
+
   if (!key) {
     throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY is required for hosted operator scripts.',
+      'SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is required for hosted operator scripts.',
     );
   }
 
   return key;
+}
+
+/** @deprecated Prefer getSupabaseAdminKeyFromEnv(). Legacy alias for tests and callers. */
+export function getServiceRoleKeyFromEnv() {
+  return getSupabaseAdminKeyFromEnv();
 }

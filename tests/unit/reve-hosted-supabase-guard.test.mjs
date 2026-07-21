@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   getServiceRoleKeyFromEnv,
+  getSupabaseAdminKeyFromEnv,
   resolveHostedSupabaseUrl,
 } from '../../scripts/lib/reve-hosted-supabase-guard.mjs';
 
@@ -49,14 +50,18 @@ describe('reve-hosted-supabase-guard', () => {
     expect(resolveHostedSupabaseUrl()).toBe('https://prod.supabase.co');
   });
 
-  it('requires service role key without NEXT_PUBLIC_ prefix', () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
-    expect(getServiceRoleKeyFromEnv()).toBe('test-service-role-key');
+  it('requires admin key without NEXT_PUBLIC_ prefix', () => {
+    process.env.SUPABASE_SECRET_KEY = 'test-secret-key';
+    expect(getSupabaseAdminKeyFromEnv()).toBe('test-secret-key');
+    expect(getServiceRoleKeyFromEnv()).toBe('test-secret-key');
 
+    delete process.env.SUPABASE_SECRET_KEY;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    expect(() => getServiceRoleKeyFromEnv()).toThrow(/SUPABASE_SERVICE_ROLE_KEY is required/);
+    expect(() => getSupabaseAdminKeyFromEnv()).toThrow(
+      /SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is required/,
+    );
 
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY = 'leaked';
-    expect(() => getServiceRoleKeyFromEnv()).toThrow(/must not use the NEXT_PUBLIC_ prefix/);
+    process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY = 'leaked';
+    expect(() => getSupabaseAdminKeyFromEnv()).toThrow(/must not use the NEXT_PUBLIC_ prefix/);
   });
 });
