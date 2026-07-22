@@ -97,7 +97,7 @@ main().catch((error) => {
   reportBootstrapError(error, {
     operation: error?.operation ?? 'bootstrap-production-owner',
     hostname,
-    path: AUTH_ADMIN_PATH,
+    path: error?.path ?? null,
   });
   process.exit(1);
 });

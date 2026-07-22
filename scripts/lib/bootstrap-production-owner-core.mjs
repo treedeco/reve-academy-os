@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export const OWNER_AUTH_EMAIL_DEFAULT = 'reve@owner.local';
 export const AUTH_ADMIN_PATH = '/auth/v1/admin/users';
+export const BOOTSTRAP_RPC_PATH = '/rest/v1/rpc/reve_bootstrap_first_owner';
 
 const SECRET_PATTERNS = [
   /sb_[a-z_]+_[A-Za-z0-9_-]+/gi,
@@ -36,7 +37,7 @@ export function sanitizeBootstrapMessage(message) {
 
 export function formatBootstrapError(error, context) {
   const hostname = context.hostname ?? null;
-  const path = context.path ?? null;
+  const path = error?.path ?? context.path ?? null;
 
   if (error && typeof error === 'object' && error.name === 'BootstrapOperationError') {
     return {
@@ -76,16 +77,18 @@ export class BootstrapOperationError extends Error {
     this.code = details.code ?? null;
     this.causeCode = details.causeCode ?? null;
     this.causeErrno = details.causeErrno ?? null;
+    this.path = details.path ?? null;
   }
 }
 
-function wrapAuthAdminError(operation, error) {
-  throw new BootstrapOperationError(operation, error.message ?? 'Auth admin operation failed.', {
+function wrapBootstrapOperationError(operation, error, path) {
+  throw new BootstrapOperationError(operation, error.message ?? 'Bootstrap operation failed.', {
     errorClass: error?.constructor?.name ?? 'AuthApiError',
     status: error.status ?? null,
     code: error.code ?? null,
     causeCode: error?.cause?.code ?? null,
     causeErrno: error?.cause?.errno ?? null,
+    path,
   });
 }
 
@@ -98,7 +101,7 @@ export async function listAuthUsersByEmail(adminClient, normalizedEmail, listUse
   while (true) {
     const { data, error } = await listUsers({ page, perPage });
     if (error) {
-      wrapAuthAdminError('auth.admin.listUsers', error);
+      wrapBootstrapOperationError('auth.admin.listUsers', error, AUTH_ADMIN_PATH);
     }
 
     const users = data?.users ?? [];
@@ -175,7 +178,7 @@ export async function resolveOrCreateAuthUser(adminClient, email, password, deps
     }
   }
 
-  wrapAuthAdminError('auth.admin.createUser', error);
+  wrapBootstrapOperationError('auth.admin.createUser', error, AUTH_ADMIN_PATH);
 }
 
 export async function bootstrapOwnerProfile(adminClient, authUserId, displayName, rpcImpl) {
@@ -186,7 +189,7 @@ export async function bootstrapOwnerProfile(adminClient, authUserId, displayName
   });
 
   if (error) {
-    wrapAuthAdminError('reve_bootstrap_first_owner', error);
+    wrapBootstrapOperationError('reve_bootstrap_first_owner', error, BOOTSTRAP_RPC_PATH);
   }
 
   return data;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   AUTH_ADMIN_PATH,
+  BOOTSTRAP_RPC_PATH,
   BootstrapOperationError,
   bootstrapOwnerProfile,
   createSupabaseAdminClient,
@@ -220,6 +221,59 @@ describe('bootstrap-production-owner-core', () => {
       p_display_name: 'REVE Owner',
     });
     expect(result).toEqual([{ profile_id: 'profile-1', role: 'owner', account_state: 'active' }]);
+  });
+
+  it('reports RPC failures with the bootstrap RPC path', async () => {
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: {
+        message: 'permission denied for function validate_profile_role_links',
+        code: '42501',
+      },
+    }));
+
+    await expect(
+      bootstrapOwnerProfile({ rpc }, 'user-1', 'REVE Owner', rpc),
+    ).rejects.toMatchObject({
+      operation: 'reve_bootstrap_first_owner',
+      path: BOOTSTRAP_RPC_PATH,
+      code: '42501',
+    });
+  });
+
+  it('does not leak Auth Admin path into RPC error diagnostics', () => {
+    const formatted = formatBootstrapError(
+      new BootstrapOperationError(
+        'reve_bootstrap_first_owner',
+        'permission denied for function validate_profile_role_links',
+        { code: '42501', path: BOOTSTRAP_RPC_PATH },
+      ),
+      {
+        operation: 'auth.admin.createUser',
+        hostname: 'bfhptqhgxignyggyxxkx.supabase.co',
+        path: AUTH_ADMIN_PATH,
+      },
+    );
+
+    expect(formatted.operation).toBe('reve_bootstrap_first_owner');
+    expect(formatted.path).toBe(BOOTSTRAP_RPC_PATH);
+    expect(formatted.path).not.toBe(AUTH_ADMIN_PATH);
+  });
+
+  it('retains Auth Admin path for Auth Admin operation failures', () => {
+    const formatted = formatBootstrapError(
+      new BootstrapOperationError('auth.admin.createUser', 'fetch failed', {
+        path: AUTH_ADMIN_PATH,
+      }),
+      {
+        operation: 'reve_bootstrap_first_owner',
+        hostname: 'bfhptqhgxignyggyxxkx.supabase.co',
+        path: BOOTSTRAP_RPC_PATH,
+      },
+    );
+
+    expect(formatted.operation).toBe('auth.admin.createUser');
+    expect(formatted.path).toBe(AUTH_ADMIN_PATH);
   });
 });
 
