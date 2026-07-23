@@ -52,16 +52,14 @@ describe.skipIf(!integrationEnabled)('Owner student master data integration', ()
 
   it('creates, updates, deactivates, and reactivates a student through RPC wrappers', async () => {
     const suffix = Date.now().toString().slice(-6);
-    const studentCode = `S-INT${suffix}`;
 
     const created = await createOwnerStudent(ownerClient, {
-      studentCode,
       name: `Integration Student ${suffix}`,
       phone: '010-5555-6666',
       email: `student-${suffix}@test.local`,
     });
 
-    expect(created.student_code).toBe(studentCode);
+    expect(created.student_code).toMatch(/^S[0-9]{4,}$/);
     expect(created.operational_status).toBe('active');
 
     const row = await fetchOwnerStudentMasterRow(ownerClient, created.id);
@@ -111,10 +109,9 @@ describe.skipIf(!integrationEnabled)('Owner student master data integration', ()
   it('rejects required-field violations on create', async () => {
     await expect(
       createOwnerStudent(ownerClient, {
-        studentCode: '',
-        name: 'Missing Code',
+        name: '',
       }),
-    ).rejects.toThrow(/REVE_INVALID_CODE|REVE_INVALID_NAME/);
+    ).rejects.toThrow(/REVE_INVALID_NAME/);
   });
 
   it('blocks deactivation when a linked active profile exists', async () => {
@@ -141,7 +138,6 @@ describe.skipIf(!integrationEnabled)('Owner student master data integration', ()
 
     await expect(
       createOwnerStudent(teacherClient, {
-        studentCode: 'S-TEACH',
         name: 'Teacher Client Student',
       }),
     ).rejects.toThrow(/REVE_UNAUTHORIZED|42501/);
@@ -156,22 +152,20 @@ describe.skipIf(!integrationEnabled)('Owner student master data integration', ()
     expect(error).toBeTruthy();
   });
 
-  it('does not create duplicate students when create RPC is retried with a new code each time', async () => {
+  it('assigns a unique generated student code on each create', async () => {
     const suffix = Date.now().toString().slice(-6);
-    const studentCode = `S-DUP${suffix}`;
 
     const created = await createOwnerStudent(ownerClient, {
-      studentCode,
       name: `Duplicate Guard ${suffix}`,
     });
 
     const { count, error } = await ownerClient
       .from('students')
       .select('id', { count: 'exact', head: true })
-      .eq('student_code', studentCode);
+      .eq('student_code', created.student_code);
 
     expect(error).toBeNull();
     expect(count).toBe(1);
-    expect(created.id).toBeTruthy();
+    expect(created.student_code).toMatch(/^S[0-9]{4,}$/);
   });
 });

@@ -1,11 +1,65 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type {
-  OwnerEnrollmentCatalog,
-  OwnerEnrollmentCourseOption,
-  OwnerEnrollmentProductOption,
-  OwnerEnrollmentTeacherOption,
-  OwnerInitialEnrollmentResult,
-} from '@/lib/domain/types';
+import type { OwnerEnrollmentCatalog, OwnerInitialEnrollmentResult } from '@/lib/domain/types';
+
+export type EnrollmentCatalogLoadState =
+  | { status: 'loading' }
+  | { status: 'ready'; catalog: OwnerEnrollmentCatalog }
+  | { status: 'empty' }
+  | { status: 'error' };
+
+export async function loadOwnerEnrollmentCatalog(
+  supabase: SupabaseClient,
+): Promise<Exclude<EnrollmentCatalogLoadState, { status: 'loading' }>> {
+  const [teachersResult, coursesResult, productsResult] = await Promise.all([
+    supabase
+      .from('teachers')
+      .select('id, teacher_code, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+    supabase
+      .from('courses')
+      .select('id, course_code, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+    supabase
+      .from('course_products')
+      .select(
+        'id, course_id, product_code, product_name, default_lesson_count, weekly_frequency, default_tuition_krw',
+      )
+      .eq('is_active', true)
+      .order('product_name', { ascending: true }),
+  ]);
+
+  if (teachersResult.error || coursesResult.error || productsResult.error) {
+    return { status: 'error' };
+  }
+
+  const catalog: OwnerEnrollmentCatalog = {
+    teachers: teachersResult.data ?? [],
+    courses: coursesResult.data ?? [],
+    products: productsResult.data ?? [],
+  };
+
+  if (catalog.courses.length === 0) {
+    return { status: 'empty' };
+  }
+
+  return { status: 'ready', catalog };
+}
+
+/** @deprecated Use loadOwnerEnrollmentCatalog for UI state handling. */
+export async function fetchOwnerEnrollmentCatalog(
+  supabase: SupabaseClient,
+): Promise<OwnerEnrollmentCatalog> {
+  const result = await loadOwnerEnrollmentCatalog(supabase);
+  if (result.status === 'error') {
+    throw new Error('Failed to load enrollment catalog');
+  }
+  if (result.status === 'empty') {
+    return { teachers: [], courses: [], products: [] };
+  }
+  return result.catalog;
+}
 
 type EnrollmentRpcRow = {
   payment_id: string;
@@ -30,50 +84,6 @@ function readEnrollmentRpcRow(data: unknown): EnrollmentRpcRow {
     throw new Error('Initial enrollment RPC returned no data');
   }
   return row as EnrollmentRpcRow;
-}
-
-/**
- * Read-only enrollment catalog for Owner pickers.
- * Query count: 3 (teachers, courses, products). Zero per-row requests.
- */
-export async function fetchOwnerEnrollmentCatalog(
-  supabase: SupabaseClient,
-): Promise<OwnerEnrollmentCatalog> {
-  const [teachersResult, coursesResult, productsResult] = await Promise.all([
-    supabase
-      .from('teachers')
-      .select('id, teacher_code, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    supabase
-      .from('courses')
-      .select('id, course_code, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    supabase
-      .from('course_products')
-      .select(
-        'id, course_id, product_code, product_name, default_lesson_count, weekly_frequency, default_tuition_krw',
-      )
-      .eq('is_active', true)
-      .order('product_name', { ascending: true }),
-  ]);
-
-  if (teachersResult.error) {
-    throw new Error(teachersResult.error.message);
-  }
-  if (coursesResult.error) {
-    throw new Error(coursesResult.error.message);
-  }
-  if (productsResult.error) {
-    throw new Error(productsResult.error.message);
-  }
-
-  return {
-    teachers: (teachersResult.data ?? []) as OwnerEnrollmentTeacherOption[],
-    courses: (coursesResult.data ?? []) as OwnerEnrollmentCourseOption[],
-    products: (productsResult.data ?? []) as OwnerEnrollmentProductOption[],
-  };
 }
 
 export async function createOwnerInitialEnrollment(

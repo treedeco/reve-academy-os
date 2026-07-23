@@ -1,7 +1,17 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { createOwnerInitialEnrollment } from '@/lib/data/owner-enrollment';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createOwnerInitialEnrollment,
+  loadOwnerEnrollmentCatalog,
+  type EnrollmentCatalogLoadState,
+} from '@/lib/data/owner-enrollment';
+import {
+  ENROLLMENT_CATALOG_EMPTY_MESSAGE,
+  ENROLLMENT_CATALOG_ERROR_MESSAGE,
+  ENROLLMENT_CATALOG_LOADING_MESSAGE,
+  ENROLLMENT_PRODUCT_EMPTY_MESSAGE,
+} from '@/lib/domain/enrollment-catalog-messages';
 import {
   ENROLLMENT_PAYMENT_METHODS,
   buildDefaultScheduleSlots,
@@ -29,14 +39,13 @@ function formatTodayDateInput(): string {
 
 export function InitialEnrollmentPanel({
   student,
-  catalog,
   onEnrollmentComplete,
 }: {
   student: OwnerStudentRow;
-  catalog: OwnerEnrollmentCatalog;
   onEnrollmentComplete: (result: OwnerInitialEnrollmentResult) => Promise<void>;
 }) {
   const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const [catalogState, setCatalogState] = useState<EnrollmentCatalogLoadState>({ status: 'loading' });
   const [courseId, setCourseId] = useState('');
   const [productId, setProductId] = useState('');
   const [scheduleStartDate, setScheduleStartDate] = useState(formatTodayDateInput());
@@ -46,15 +55,35 @@ export function InitialEnrollmentPanel({
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  const loadCatalog = useCallback(async () => {
+    setCatalogState({ status: 'loading' });
+    const supabase = createClient();
+    const result = await loadOwnerEnrollmentCatalog(supabase);
+    setCatalogState(result);
+  }, []);
+
+  useEffect(() => {
+    void loadCatalog();
+  }, [loadCatalog]);
+
+  const catalog: OwnerEnrollmentCatalog | null =
+    catalogState.status === 'ready' ? catalogState.catalog : null;
+
   const selectedProduct = useMemo(
-    () => catalog.products.find((product) => product.id === productId) ?? null,
-    [catalog.products, productId],
+    () => catalog?.products.find((product) => product.id === productId) ?? null,
+    [catalog?.products, productId],
   );
 
   const productsForCourse = useMemo(
-    () => catalog.products.filter((product) => product.course_id === courseId),
-    [catalog.products, courseId],
+    () => catalog?.products.filter((product) => product.course_id === courseId) ?? [],
+    [catalog?.products, courseId],
   );
+
+  const canSubmit =
+    catalogState.status === 'ready' &&
+    Boolean(selectedProduct) &&
+    slots.length > 0 &&
+    !pending;
 
   function handleCourseChange(nextCourseId: string) {
     setCourseId(nextCourseId);
@@ -65,7 +94,7 @@ export function InitialEnrollmentPanel({
   }
 
   function handleProductChange(nextProductId: string) {
-    const product = catalog.products.find((row) => row.id === nextProductId) ?? null;
+    const product = catalog?.products.find((row) => row.id === nextProductId) ?? null;
     setProductId(nextProductId);
     setError('');
     setSuccessMessage('');
@@ -75,7 +104,7 @@ export function InitialEnrollmentPanel({
       return;
     }
 
-    const defaultTeacherId = catalog.teachers[0]?.id ?? '';
+    const defaultTeacherId = catalog?.teachers[0]?.id ?? '';
     setSlots(buildDefaultScheduleSlots(product, defaultTeacherId));
   }
 
@@ -84,7 +113,7 @@ export function InitialEnrollmentPanel({
   }
 
   async function handleSubmit() {
-    if (pending) {
+    if (!canSubmit || pending) {
       return;
     }
 
@@ -151,15 +180,40 @@ export function InitialEnrollmentPanel({
             onChange={(event) => handleCourseChange(event.target.value)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             data-testid="enrollment-course"
-            disabled={pending}
+            disabled={pending || catalogState.status !== 'ready'}
           >
             <option value="">과목 선택</option>
-            {catalog.courses.map((course) => (
+            {catalog?.courses.map((course) => (
               <option key={course.id} value={course.id}>
                 {course.name} ({course.course_code})
               </option>
             ))}
           </select>
+          {catalogState.status === 'loading' ? (
+            <p className="mt-1 text-xs text-slate-500" role="status" data-testid="enrollment-course-loading">
+              {ENROLLMENT_CATALOG_LOADING_MESSAGE}
+            </p>
+          ) : null}
+          {catalogState.status === 'empty' ? (
+            <p className="mt-1 text-xs text-amber-700" role="status" data-testid="enrollment-course-empty">
+              {ENROLLMENT_CATALOG_EMPTY_MESSAGE}
+            </p>
+          ) : null}
+          {catalogState.status === 'error' ? (
+            <div className="mt-1 space-y-2">
+              <p className="text-xs text-red-600" role="alert" data-testid="enrollment-course-error">
+                {ENROLLMENT_CATALOG_ERROR_MESSAGE}
+              </p>
+              <button
+                type="button"
+                onClick={() => void loadCatalog()}
+                className="text-xs font-medium text-brand-700 underline"
+                data-testid="enrollment-course-retry"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : null}
         </label>
 
         <label className="block text-sm">
@@ -169,7 +223,7 @@ export function InitialEnrollmentPanel({
             onChange={(event) => handleProductChange(event.target.value)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             data-testid="enrollment-product"
-            disabled={pending || !courseId}
+            disabled={pending || !courseId || catalogState.status !== 'ready'}
           >
             <option value="">상품 선택</option>
             {productsForCourse.map((product) => (
@@ -179,6 +233,11 @@ export function InitialEnrollmentPanel({
               </option>
             ))}
           </select>
+          {courseId && catalogState.status === 'ready' && productsForCourse.length === 0 ? (
+            <p className="mt-1 text-xs text-amber-700" role="status" data-testid="enrollment-product-empty">
+              {ENROLLMENT_PRODUCT_EMPTY_MESSAGE}
+            </p>
+          ) : null}
         </label>
 
         <label className="block text-sm">
@@ -189,7 +248,7 @@ export function InitialEnrollmentPanel({
             onChange={(event) => setScheduleStartDate(event.target.value)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             data-testid="enrollment-start-date"
-            disabled={pending}
+            disabled={pending || catalogState.status !== 'ready'}
           />
         </label>
 
@@ -200,7 +259,7 @@ export function InitialEnrollmentPanel({
             onChange={(event) => setPaymentMethod(event.target.value as EnrollmentPaymentMethod)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             data-testid="enrollment-payment-method"
-            disabled={pending}
+            disabled={pending || catalogState.status !== 'ready'}
           >
             {ENROLLMENT_PAYMENT_METHODS.map((method) => (
               <option key={method.value} value={method.value}>
@@ -232,7 +291,7 @@ export function InitialEnrollmentPanel({
                   disabled={pending}
                 >
                   <option value="">강사 선택</option>
-                  {catalog.teachers.map((teacher) => (
+                  {catalog?.teachers.map((teacher) => (
                     <option key={teacher.id} value={teacher.id}>
                       {teacher.name} ({teacher.teacher_code})
                     </option>
@@ -306,7 +365,7 @@ export function InitialEnrollmentPanel({
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={pending || !selectedProduct}
+        disabled={!canSubmit}
         className="mt-4 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         data-testid="enrollment-submit"
       >

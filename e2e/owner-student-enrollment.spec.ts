@@ -4,9 +4,7 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('Owner student master and initial enrollment', () => {
   const suffix = Date.now().toString().slice(-6);
-  const studentCode4 = `S-E4${suffix}`;
   const studentName4 = `E2E Vocal Student ${suffix}`;
-  const studentCode8 = `S-E8${suffix}`;
   const studentName8 = `E2E Piano Student ${suffix}`;
   const scheduleStartDate = '2026-08-10';
   const enrollTeacherCode = `T-ENR${suffix}`;
@@ -32,7 +30,6 @@ test.describe('Owner student master and initial enrollment', () => {
     await page.goto('/students');
 
     await expect(page.getByTestId('student-create-section')).toBeVisible();
-    await page.getByTestId('student-create-code').fill(studentCode4);
     await page.getByTestId('student-create-name').fill(studentName4);
     await page.getByTestId('student-create-phone').fill('010-2000-3000');
     await page.getByTestId('student-create-submit').click();
@@ -75,6 +72,7 @@ test.describe('Owner student master and initial enrollment', () => {
     await page.getByRole('link', { name: `${studentName4} Updated` }).click();
 
     await expect(page.getByTestId('initial-enrollment-panel')).toBeVisible();
+    await expect(page.getByTestId('enrollment-course-loading')).toHaveCount(0, { timeout: 15_000 });
     await page.getByTestId('enrollment-course').selectOption({ label: 'Alpha Vocal Course (VOC-A1)' });
     await page.getByTestId('enrollment-product').selectOption({ label: 'Alpha 4 Lessons · 4회 · 주 1회 · 200,000원' });
     await page.getByTestId('enrollment-start-date').fill(scheduleStartDate);
@@ -126,7 +124,6 @@ test.describe('Owner student master and initial enrollment', () => {
     await createEnrollmentTeacher(page, enrollTeacherBCode, enrollTeacherBName);
     await page.goto('/students');
 
-    await page.getByTestId('student-create-code').fill(studentCode8);
     await page.getByTestId('student-create-name').fill(studentName8);
     await page.getByTestId('student-create-submit').click();
     await expect(page).toHaveURL(new RegExp(`/students/[0-9a-f-]+$`), { timeout: 15_000 });
@@ -156,9 +153,8 @@ test.describe('Owner student master and initial enrollment', () => {
     await loginAsOwner(page);
     await page.goto('/students');
 
-    const invalidCode = `S-VAL${Date.now().toString().slice(-6)}`;
-    await page.getByTestId('student-create-code').fill(invalidCode);
-    await page.getByTestId('student-create-name').fill(`Validation Student ${invalidCode}`);
+    const validationName = `Validation Student ${Date.now().toString().slice(-6)}`;
+    await page.getByTestId('student-create-name').fill(validationName);
     await page.getByTestId('student-create-submit').click();
     await expect(page).toHaveURL(new RegExp(`/students/[0-9a-f-]+$`), { timeout: 15_000 });
 

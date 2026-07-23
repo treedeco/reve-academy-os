@@ -97,7 +97,6 @@ function pianoTwiceWeeklySlots(teacherA: string, teacherB: string) {
 async function createEnrollmentStudent(ownerClient: SupabaseClient, label: string) {
   const suffix = Date.now().toString().slice(-6);
   return createOwnerStudent(ownerClient, {
-    studentCode: `S-${label}${suffix}`,
     name: `${label} Student ${suffix}`,
     phone: '010-1000-2000',
   });

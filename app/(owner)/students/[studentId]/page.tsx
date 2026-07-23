@@ -1,6 +1,5 @@
 import { StudentDetailClient } from '@/components/owner/student-detail-client';
 import { ErrorState } from '@/components/ui/state-blocks';
-import { fetchOwnerEnrollmentCatalog } from '@/lib/data/owner-enrollment';
 import { fetchStudentDetail, fetchStudentOperationalHistory } from '@/lib/data/owner-queries';
 import { fetchOwnerStudentMasterRow } from '@/lib/data/owner-students';
 import { createClient } from '@/lib/supabase/server';
@@ -14,10 +13,9 @@ export default async function StudentDetailPage({
 
   try {
     const supabaseClient = await createClient();
-    const [detail, master, catalog, operationalHistory] = await Promise.all([
+    const [detail, master, operationalHistory] = await Promise.all([
       fetchStudentDetail(supabaseClient, studentId),
       fetchOwnerStudentMasterRow(supabaseClient, studentId),
-      fetchOwnerEnrollmentCatalog(supabaseClient),
       fetchStudentOperationalHistory(supabaseClient, studentId),
     ]);
 
@@ -25,7 +23,6 @@ export default async function StudentDetailPage({
       <StudentDetailClient
         initialDetail={detail}
         initialMaster={master}
-        catalog={catalog}
         operationalHistory={operationalHistory}
       />
     );

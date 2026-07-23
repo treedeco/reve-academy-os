@@ -95,14 +95,12 @@ export async function fetchOwnerStudentMasterRow(
 export async function createOwnerStudent(
   supabase: SupabaseClient,
   input: {
-    studentCode: string;
     name: string;
     phone?: string | null;
     email?: string | null;
   },
 ): Promise<OwnerStudentMutationResult> {
   const { data, error } = await supabase.rpc('reve_owner_create_student', {
-    p_student_code: input.studentCode,
     p_name: input.name,
     p_phone: input.phone ?? null,
     p_email: input.email ?? null,

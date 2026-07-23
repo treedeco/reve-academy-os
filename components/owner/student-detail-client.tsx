@@ -13,7 +13,6 @@ import { formatDateTimeSeoul, formatLessonStatus } from '@/lib/domain/format';
 import { formatLessonProgress } from '@/lib/domain/lesson-correction';
 import type {
   LessonStatus,
-  OwnerEnrollmentCatalog,
   OwnerInitialEnrollmentResult,
   OwnerLessonOperationsRow,
   OwnerStudentRow,
@@ -27,12 +26,10 @@ import { createClient } from '@/lib/supabase/client';
 export function StudentDetailClient({
   initialDetail,
   initialMaster,
-  catalog,
   operationalHistory,
 }: {
   initialDetail: StudentDetailData;
   initialMaster: OwnerStudentRow;
-  catalog: OwnerEnrollmentCatalog;
   operationalHistory: StudentOperationalHistory;
 }) {
   const [detail, setDetail] = useState(initialDetail);
@@ -120,7 +117,6 @@ export function StudentDetailClient({
       {master.operational_status === 'active' && !detail.current_pass ? (
         <InitialEnrollmentPanel
           student={master}
-          catalog={catalog}
           onEnrollmentComplete={refreshAfterEnrollment}
         />
       ) : null}

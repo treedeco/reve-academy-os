@@ -7,23 +7,18 @@ import { mapStudentMasterDataError } from '@/lib/domain/student-master-data';
 import { createClient } from '@/lib/supabase/client';
 
 type StudentFormState = {
-  studentCode: string;
   name: string;
   phone: string;
   email: string;
 };
 
 const EMPTY_FORM: StudentFormState = {
-  studentCode: '',
   name: '',
   phone: '',
   email: '',
 };
 
 function validateStudentForm(form: StudentFormState): string | null {
-  if (!form.studentCode.trim()) {
-    return '학생 코드를 입력해 주세요.';
-  }
   if (!form.name.trim()) {
     return '이름을 입력해 주세요.';
   }
@@ -53,7 +48,6 @@ export function StudentsCreatePanel() {
     try {
       const supabase = createClient();
       const created = await createOwnerStudent(supabase, {
-        studentCode: form.studentCode.trim(),
         name: form.name.trim(),
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
@@ -74,19 +68,11 @@ export function StudentsCreatePanel() {
       data-testid="student-create-section"
     >
       <h2 className="text-lg font-semibold">학생 등록</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        학생 코드는 등록 시 시스템에서 자동으로 부여됩니다.
+      </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-slate-600">학생 코드</span>
-          <input
-            type="text"
-            value={form.studentCode}
-            onChange={(event) => setForm((prev) => ({ ...prev, studentCode: event.target.value }))}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            data-testid="student-create-code"
-            disabled={pending}
-          />
-        </label>
-        <label className="block text-sm">
+        <label className="block text-sm sm:col-span-2">
           <span className="text-slate-600">이름</span>
           <input
             type="text"
