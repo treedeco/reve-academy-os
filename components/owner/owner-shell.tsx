@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import {
+  OwnerAccountNavLink,
+  OwnerPasswordChangePrompt,
+} from '@/components/owner/owner-password-change-prompt';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: '대시보드' },
@@ -18,9 +22,11 @@ const NAV_ITEMS = [
 export function OwnerShell({
   children,
   ownerName,
+  mustChangePassword = false,
 }: {
   children: React.ReactNode;
   ownerName: string;
+  mustChangePassword?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,9 +67,12 @@ export function OwnerShell({
             >
               {item.label}
             </Link>
-          ))}
-        </nav>
-      </header>
+            ))}
+          </nav>
+          <div className="px-4 pb-3">
+            <OwnerAccountNavLink pathname={pathname} />
+          </div>
+        </header>
 
       <div className="mx-auto flex max-w-7xl">
         <aside className="hidden min-h-screen w-64 border-r border-slate-200 bg-white p-6 lg:block">
@@ -85,6 +94,9 @@ export function OwnerShell({
               </Link>
             ))}
           </nav>
+          <div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+            <OwnerAccountNavLink pathname={pathname} />
+          </div>
           <button
             type="button"
             onClick={handleLogout}
@@ -94,7 +106,10 @@ export function OwnerShell({
           </button>
         </aside>
 
-        <main className="min-h-screen flex-1 p-4 lg:p-8">{children}</main>
+        <main className="min-h-screen flex-1 p-4 lg:p-8">
+          <OwnerPasswordChangePrompt mustChangePassword={mustChangePassword} />
+          {children}
+        </main>
       </div>
     </div>
   );

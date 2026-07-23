@@ -8,9 +8,11 @@ const signInWithPassword = vi.fn();
 const signOut = vi.fn();
 const maybeSingle = vi.fn();
 
+const searchParams = new URLSearchParams();
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParams,
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -33,6 +35,9 @@ describe('LoginForm', () => {
     signInWithPassword.mockReset();
     signOut.mockReset();
     maybeSingle.mockReset();
+    for (const key of [...searchParams.keys()]) {
+      searchParams.delete(key);
+    }
   });
 
   it('shows validation error when fields are empty', async () => {
@@ -76,6 +81,14 @@ describe('LoginForm', () => {
       password: 'wrong-password',
     });
     expect(await screen.findByRole('alert')).toHaveTextContent('사용자 이름 또는 비밀번호');
+  });
+
+  it('shows password-changed success message from query param', () => {
+    searchParams.set('passwordChanged', '1');
+    render(<LoginForm />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해 주세요.',
+    );
   });
 
   it('signs in with reve username mapped to owner auth email', async () => {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { resolveOwnerLoginEmail } from '@/lib/auth/owner-login';
 import { mapDatabaseError } from '@/lib/domain/format';
+import { OWNER_PASSWORD_CHANGED_LOGIN_MESSAGE } from '@/lib/domain/owner-password';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -12,12 +13,16 @@ export default function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(searchParams.get('error'));
+  const [success, setSuccess] = useState<string | null>(
+    searchParams.get('passwordChanged') === '1' ? OWNER_PASSWORD_CHANGED_LOGIN_MESSAGE : null,
+  );
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setSuccess(null);
 
     if (!username.trim() || !password) {
       setError('사용자 이름과 비밀번호를 입력해 주세요.');
@@ -108,6 +113,12 @@ export default function LoginForm() {
               disabled={pending}
             />
           </div>
+
+          {success ? (
+            <p className="text-sm text-green-700" role="status">
+              {success}
+            </p>
+          ) : null}
 
           {error ? (
             <p className="text-sm text-red-600" role="alert">
