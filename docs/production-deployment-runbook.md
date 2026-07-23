@@ -219,15 +219,73 @@ Never commit, log, or paste `SUPABASE_SECRET_KEY`, legacy `SUPABASE_SERVICE_ROLE
 
 ## 5. Vercel configuration
 
-### 5.1 Connect repository
+### 5.1 Connect the existing project to GitHub
 
-1. Vercel → **Add New Project** → import GitHub `tredeco/reve-academy-os` (or your fork).
-2. **Production branch**: `main`.
-3. Framework preset: **Next.js** (auto-detected).
-4. Build command: `npm run build` (default).
-5. Install command: `npm ci` (recommended).
+**Target (do not create a duplicate project):**
 
-No hard-coded URLs or secrets belong in the repository. Vercel assigns the production URL at deploy time.
+| Setting | Value |
+|---------|-------|
+| Team | `revevocal-9909s-projects` |
+| Project | `reve-academy-os` |
+| GitHub repository | `treedeco/reve-academy-os` |
+| Production branch | `main` |
+| Primary domain | `https://reve-academy-os.vercel.app` |
+
+Current deployments may have been created with `vercel deploy --prod` (CLI). Git integration is **separate** and must be connected before pushes to `main` trigger automatic production deploys.
+
+#### Step A — GitHub Login Connection (browser; operator only)
+
+Required before `vercel git connect` or dashboard import will succeed.
+
+1. Open [Vercel Account Settings → Login Methods and Connections](https://vercel.com/account/settings/authentication).
+2. Under **Git**, click **Connect** next to **GitHub**.
+3. Approve the Vercel GitHub App when GitHub prompts you.
+4. On **Repository access**, choose **Only select repositories** (recommended).
+5. Select **`treedeco/reve-academy-os`** only. Do not grant access to unrelated repositories.
+6. Complete authorization and return to Vercel.
+
+If CLI reports `You need to add a Login Connection to your GitHub account first`, Step A is incomplete.
+
+#### Step B — Link the existing Vercel project (after Step A)
+
+**Dashboard (recommended):**
+
+1. Vercel → team **`revevocal-9909s-projects`** → project **`reve-academy-os`**.
+2. **Settings** → **Git** → **Connect Git Repository**.
+3. Choose **GitHub** → **`treedeco/reve-academy-os`**.
+4. Set **Production Branch** to **`main`**.
+5. Save. Do **not** create a new project.
+
+**CLI (alternative, from repo root after Step A):**
+
+```powershell
+npx vercel link --yes --project reve-academy-os
+npx vercel git connect https://github.com/treedeco/reve-academy-os.git
+```
+
+#### Step C — Branch and deployment behavior
+
+| Event | Expected result |
+|-------|-----------------|
+| Push to `main` | **Production** deployment; updates `https://reve-academy-os.vercel.app` |
+| Pull request | **Preview** deployment only (unique preview URL) |
+| Push to other branches | **Preview** only; never production |
+| Fork PRs | Do not enable untrusted fork production deploys; use Vercel **Deployment Protection** defaults |
+
+Framework preset: **Next.js**. Build command: `npm run build`. Install command: `npm ci` (recommended).
+
+No hard-coded URLs or secrets belong in the repository.
+
+#### Step D — Verify Git-triggered production deploy
+
+After Step B succeeds:
+
+1. Push a safe, non-functional commit to `main` (empty commit or documentation-only).
+2. Vercel → **Deployments** → confirm a new deployment shows source **Git** / commit SHA matching the push.
+3. Confirm production alias still points to `https://reve-academy-os.vercel.app`.
+4. Smoke: `/login` loads; unauthenticated `/students` redirects to `/login`.
+
+Do **not** use the production Owner password for automation smoke checks.
 
 ### 5.2 Environment variables (Production)
 
@@ -236,14 +294,24 @@ No hard-coded URLs or secrets belong in the repository. Vercel assigns the produ
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon public |
 
-Do **not** set `OWNER_PASSWORD`, `E2E_OWNER_PASSWORD`, `SUPABASE_SECRET_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` in Vercel for normal operation.
+Do **not** set `OWNER_PASSWORD`, `E2E_OWNER_PASSWORD`, `OWNER_BOOTSTRAP_PASSWORD`, `SUPABASE_SECRET_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` in Vercel for normal operation.
 
-Apply to **Production**; optionally duplicate for **Preview** with a separate Supabase project if you use preview deployments.
+Apply to **Production** only unless a **separate isolated Supabase preview project** exists.
+
+#### Preview deployments and Supabase
+
+**Default policy (no isolated preview Supabase):**
+
+- Do **not** copy Production Supabase `NEXT_PUBLIC_*` variables into **Preview**.
+- Preview builds may compile but must **not** be used for authenticated operational testing against production data.
+- Pull-request previews are for UI/build verification only until a dedicated preview Supabase project is approved and configured.
+
+Do not create a new Supabase project without explicit operator approval.
 
 ### 5.3 Deploy
 
-- **Automatic**: push to `main` triggers production deploy after env vars are set.
-- **Manual**: Vercel dashboard → Deployments → Redeploy.
+- **Automatic (after Git connected)**: push to `main` triggers production deploy when Production env vars are set.
+- **Manual fallback**: `npx vercel deploy --prod --yes` or Vercel dashboard → **Redeploy**.
 
 After first deploy, update Supabase Auth **Site URL** and **Redirect URLs** to the live Vercel URL.
 
