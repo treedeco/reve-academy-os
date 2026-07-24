@@ -1,15 +1,34 @@
 import { test, expect } from '@playwright/test';
 import {
   seedOwnerAlphaFixture,
-  seedOwnerProductsEmptyFixture,
+  seedOwnerProductsEmptyE2eFixture,
 } from './helpers/apply-sql-fixture';
 import { loginAsOwner } from './helpers/login-as-owner';
+
+
+async function openStudentWithoutPass(page: import('@playwright/test').Page, label: string) {
+  await page.goto('/students');
+  await page.getByTestId('student-create-name').fill(label);
+  await page.getByTestId('student-create-phone').fill('010-2000-3000');
+  await page.getByTestId('student-create-submit').click();
+  await expect(page).toHaveURL(/\/students\/[0-9a-f-]+$/, { timeout: 15_000 });
+  await expect(page.getByTestId('initial-enrollment-panel')).toBeVisible({ timeout: 15_000 });
+}
+
+async function selectVocalCourse(page: import('@playwright/test').Page) {
+  await page.getByTestId('enrollment-course-loading').waitFor({ state: 'detached', timeout: 15_000 }).catch(() => {});
+  const courseSelect = page.getByTestId('enrollment-course');
+  const labels = await courseSelect.locator('option').allTextContents();
+  const vocalIndex = labels.findIndex((label) => /보컬|Vocal|\(V\)/.test(label));
+  expect(vocalIndex).toBeGreaterThan(0);
+  await courseSelect.selectOption({ index: vocalIndex });
+}
 
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Owner course products empty state fixture', () => {
   test.beforeAll(() => {
-    seedOwnerProductsEmptyFixture();
+    seedOwnerProductsEmptyE2eFixture();
   });
 
   test.afterAll(() => {
@@ -73,11 +92,9 @@ test.describe('Owner course product management', () => {
 
   test('shows created product in initial enrollment selector', async ({ page }) => {
     await loginAsOwner(page);
-    await page.goto('/students');
-    await page.getByRole('link', { name: /Alpha Student|S0001|하율/ }).first().click();
+    await openStudentWithoutPass(page, `E2E Product Select ${createdCode}`);
 
-    await expect(page.getByTestId('initial-enrollment-panel')).toBeVisible({ timeout: 10_000 });
-    await page.getByTestId('enrollment-course').selectOption({ index: 1 });
+    await selectVocalCourse(page);
     await expect(page.getByTestId('enrollment-product')).toBeVisible();
     await expect(page.locator('[data-testid="enrollment-product"] option').filter({ hasText: createdName })).toHaveCount(1);
   });
@@ -114,18 +131,15 @@ test.describe('Owner course product management', () => {
 
   test('hides inactive products from initial enrollment selector', async ({ page }) => {
     await loginAsOwner(page);
-    await page.goto('/students');
-    await page.getByRole('link', { name: /Alpha Student|S0001|하율/ }).first().click();
+    await openStudentWithoutPass(page, `E2E Product Hidden ${createdCode}`);
 
-    await expect(page.getByTestId('initial-enrollment-panel')).toBeVisible({ timeout: 10_000 });
-    await page.getByTestId('enrollment-course').selectOption({ index: 1 });
+    await selectVocalCourse(page);
     await expect(page.locator('[data-testid="enrollment-product"] option').filter({ hasText: createdCode })).toHaveCount(0);
   });
 
   test('shows product management link on enrollment empty state', async ({ page }) => {
     await loginAsOwner(page);
-    await page.goto('/students');
-    await page.getByRole('link', { name: /Alpha Student|S0001|하율/ }).first().click();
+    await openStudentWithoutPass(page, `E2E Product Empty Link ${createdCode}`);
 
     await expect(page.getByTestId('initial-enrollment-panel')).toBeVisible({ timeout: 10_000 });
 

@@ -10,13 +10,15 @@ import {
 import { mapDatabaseError } from '@/lib/domain/format';
 import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
 import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
+import { applyLocalSqlFixture } from '@/tests/helpers/apply-local-sql-fixture';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaTodayLessonId = '99999999-9999-9999-9999-999999999101';
-const betaLesson1Id = '99999999-9999-9999-9999-999999999201';
+const deltaLesson3Id = '99999999-9999-9999-9999-999999999213';
+const deltaLesson4Id = '99999999-9999-9999-9999-999999999214';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -34,6 +36,7 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
   let ownerClient: SupabaseClient;
 
   beforeAll(async () => {
+    applyLocalSqlFixture('fixture-reset-owner-lesson-operations.sql');
     ownerClient = createAuthClient('reve-test-lesson-ops');
     const { error } = await ownerClient.auth.signInWithPassword({
       email: OWNER_AUTH_EMAIL,
@@ -106,13 +109,13 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
     const { data: lesson } = await ownerClient
       .from('lessons')
       .select('updated_at, pass_id, passes(updated_at)')
-      .eq('id', betaLesson1Id)
+      .eq('id', deltaLesson3Id)
       .single();
 
     const passJoin = Array.isArray(lesson?.passes) ? lesson?.passes[0] : lesson?.passes;
 
     const result = await directRescheduleLesson(ownerClient, {
-      lessonId: betaLesson1Id,
+      lessonId: deltaLesson3Id,
       newScheduledAt: '2026-08-20T05:00:00.000Z',
       expectedLessonUpdatedAt: lesson!.updated_at,
       reason: 'Integration direct reschedule',
@@ -128,12 +131,12 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
     const { data: lesson } = await ownerClient
       .from('lessons')
       .select('updated_at')
-      .eq('id', betaLesson1Id)
+      .eq('id', deltaLesson4Id)
       .single();
 
     await expect(
       directRescheduleLesson(ownerClient, {
-        lessonId: betaLesson1Id,
+        lessonId: deltaLesson4Id,
         newScheduledAt: '2026-08-20T13:00:00.000Z',
         expectedLessonUpdatedAt: lesson!.updated_at,
         reason: 'Integration invalid hours',

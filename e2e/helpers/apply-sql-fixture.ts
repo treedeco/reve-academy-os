@@ -53,6 +53,10 @@ export function seedOwnerProductsEmptyFixture(): void {
   applySqlFixture('fixture-owner-products-empty.sql');
 }
 
+export function seedOwnerProductsEmptyE2eFixture(): void {
+  applySqlFixture('fixture-owner-products-empty-e2e.sql');
+}
+
 export function seedOwnerOnlyAlphaFixture(): void {
   const repoRoot = resolveRepoRoot();
   resetLocalDatabase();

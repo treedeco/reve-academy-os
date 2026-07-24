@@ -6,7 +6,16 @@ BEGIN;
 CREATE TEMP TABLE tmp_integration_students ON COMMIT DROP AS
 SELECT id
 FROM public.students
-WHERE student_code ~ '^S-';
+WHERE student_code ~ '^S-'
+   OR student_code ~ '^S[0-9]+$';
+
+CREATE TEMP TABLE tmp_integration_products ON COMMIT DROP AS
+SELECT id
+FROM public.course_products
+WHERE id NOT IN (
+  'ffffffff-ffff-ffff-ffff-fffffffff101'::uuid,
+  'ffffffff-ffff-ffff-ffff-fffffffff102'::uuid
+);
 
 CREATE TEMP TABLE tmp_integration_passes ON COMMIT DROP AS
 SELECT id
@@ -51,6 +60,12 @@ WHERE pass_id IN (SELECT id FROM tmp_integration_passes);
 
 DELETE FROM public.passes
 WHERE id IN (SELECT id FROM tmp_integration_passes);
+
+DELETE FROM public.payments
+WHERE course_product_id IN (SELECT id FROM tmp_integration_products);
+
+DELETE FROM public.course_products
+WHERE id IN (SELECT id FROM tmp_integration_products);
 
 DELETE FROM public.audit_logs
 WHERE resource_id IN (SELECT id FROM tmp_integration_passes)
