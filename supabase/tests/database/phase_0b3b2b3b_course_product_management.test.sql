@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(69);
+SELECT plan(70);
 
 -- ---------------------------------------------------------------------------
 -- Fixture: auth users and integration subset (courses/products via RPC in tests)
@@ -270,8 +270,14 @@ SELECT throws_ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Course create and update
+-- Course create and update (Phase 2B-2B2: single-letter course prefixes)
 -- ---------------------------------------------------------------------------
+SELECT throws_ok(
+  $$ SELECT count(*) FROM public.reve_owner_create_course('drums', 'Invalid Prefix Course') $$,
+  'P0001',
+  'REVE_INVALID_COURSE_PREFIX'
+);
+
 DO $$
 DECLARE
   v_course_id uuid;
@@ -282,7 +288,7 @@ BEGIN
 
   SELECT course_id
   INTO v_course_id
-  FROM public.reve_owner_create_course('drums', 'Drums Course', 'Four-piece kit')
+  FROM public.reve_owner_create_course('k', 'Drums Course', 'Four-piece kit')
   LIMIT 1;
 
   PERFORM set_config('test.course_main', v_course_id::text, false);
@@ -290,7 +296,7 @@ END $$;
 
 SELECT is(
   (SELECT course_code FROM public.courses WHERE id = current_setting('test.course_main')::uuid),
-  'DRUMS',
+  'K',
   'course_code normalized to upper case on create'
 );
 SELECT ok(
@@ -304,12 +310,12 @@ SELECT ok(
 );
 
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_course('DRUMS', 'Duplicate Drums') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_course('K', 'Duplicate Drums') $$,
   'P0001',
   'REVE_COURSE_CODE_EXISTS'
 );
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_course('BAD', '  ') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_course('X', '  ') $$,
   'P0001',
   'REVE_INVALID_NAME'
 );
@@ -337,7 +343,7 @@ SELECT ok(
 
 SELECT is(
   (SELECT course_code FROM public.courses WHERE id = current_setting('test.course_main')::uuid),
-  'DRUMS',
+  'K',
   'course_code remains immutable after update'
 );
 SELECT ok(
@@ -387,7 +393,7 @@ DECLARE
   v_product uuid;
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('CELLO', 'Cello Course')
+  FROM public.reve_owner_create_course('C', 'Cello Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -418,7 +424,7 @@ DECLARE
   v_pass uuid := '66666666-6666-6666-6666-666666666602';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('VIOLA', 'Viola Course')
+  FROM public.reve_owner_create_course('I', 'Viola Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -467,7 +473,7 @@ DECLARE
   v_pass_reserved uuid := '67676767-6767-6767-6767-676767676701';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('FLUTE', 'Flute Course')
+  FROM public.reve_owner_create_course('F', 'Flute Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -519,7 +525,7 @@ DECLARE
   v_teacher uuid := current_setting('test.teacher_row')::uuid;
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('OBOE', 'Oboe Course')
+  FROM public.reve_owner_create_course('O', 'Oboe Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -582,7 +588,7 @@ DECLARE
   v_payment uuid := '12121212-1212-1212-1212-121212121201';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('HARP', 'Harp Course')
+  FROM public.reve_owner_create_course('H', 'Harp Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -638,7 +644,7 @@ DECLARE
   v_pass uuid := '66666666-6666-6666-6666-666666666606';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('BASS', 'Bass Course')
+  FROM public.reve_owner_create_course('B', 'Bass Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -773,7 +779,7 @@ DECLARE
   v_inactive_course uuid;
 BEGIN
   SELECT course_id INTO v_inactive_course
-  FROM public.reve_owner_create_course('UKULELE', 'Ukulele Course')
+  FROM public.reve_owner_create_course('U', 'Ukulele Course')
   LIMIT 1;
 
   PERFORM public.reve_owner_set_course_active(
@@ -833,7 +839,7 @@ DECLARE
   v_payment uuid := '12121212-1212-1212-1212-121212121202';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('SAX', 'Sax Course')
+  FROM public.reve_owner_create_course('S', 'Sax Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -930,7 +936,7 @@ DECLARE
   v_student uuid := current_setting('test.student_int')::uuid;
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('TRUMPET', 'Trumpet Course')
+  FROM public.reve_owner_create_course('T', 'Trumpet Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -1096,7 +1102,7 @@ DECLARE
   v_owner uuid := current_setting('test.owner1')::uuid;
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('GUITAR', 'Guitar Course')
+  FROM public.reve_owner_create_course('G', 'Guitar Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -1245,7 +1251,7 @@ DECLARE
   v_slot uuid := '77777777-7777-7777-7777-777777777703';
 BEGIN
   SELECT course_id INTO v_course
-  FROM public.reve_owner_create_course('BANJO', 'Banjo Course')
+  FROM public.reve_owner_create_course('J', 'Banjo Course')
   LIMIT 1;
 
   SELECT course_product_id INTO v_product
@@ -1301,17 +1307,22 @@ SELECT throws_ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Lint regression — student create still works after migration lint fix
+-- Lint regression — Phase 2B-2B2 student create contract
 -- ---------------------------------------------------------------------------
-SELECT has_function('public', 'reve_owner_create_student', ARRAY['text', 'text', 'text', 'text']);
+SELECT has_function('public', 'reve_owner_create_student', ARRAY['text', 'text', 'text']);
 
 SELECT ok(
-  EXISTS (
-    SELECT 1
-    FROM public.reve_owner_create_student('S-LINT', 'Lint Regression Student', NULL, NULL)
-    WHERE student_code = 'S-LINT' AND student_name = 'Lint Regression Student'
+  (
+    SELECT student_name = 'Lint Regression Student'
+      AND student_code ~ '^S[0-9]{4,}$'
+    FROM public.reve_owner_create_student(
+      p_name := 'Lint Regression Student',
+      p_phone := NULL,
+      p_email := NULL
+    )
+    LIMIT 1
   ),
-  'reve_owner_create_student still creates student after lint fix'
+  'reve_owner_create_student allocates canonical code after lint fix'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_reset_role(); END $$;

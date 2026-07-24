@@ -1313,17 +1313,22 @@ SELECT ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Regression (~2)
+-- Regression (~2) — Phase 2B-2B2 three-argument student create contract
 -- ---------------------------------------------------------------------------
-SELECT has_function('public', 'reve_owner_create_student', ARRAY['text', 'text', 'text', 'text']);
+SELECT has_function('public', 'reve_owner_create_student', ARRAY['text', 'text', 'text']);
 
 SELECT ok(
-  EXISTS (
-    SELECT 1
-    FROM public.reve_owner_create_student('S-LINT-ENR', 'Lint Enrollment Student', NULL, NULL)
-    WHERE student_code = 'S-LINT-ENR' AND student_name = 'Lint Enrollment Student'
+  (
+    SELECT student_name = 'Lint Enrollment Student'
+      AND student_code ~ '^S[0-9]{4,}$'
+    FROM public.reve_owner_create_student(
+      p_name := 'Lint Enrollment Student',
+      p_phone := NULL,
+      p_email := NULL
+    )
+    LIMIT 1
   ),
-  'reve_owner_create_student still works after initial enrollment migration'
+  'reve_owner_create_student allocates canonical code after initial enrollment migration'
 );
 
 DO $$ BEGIN PERFORM pg_temp.test_reset_role(); END $$;

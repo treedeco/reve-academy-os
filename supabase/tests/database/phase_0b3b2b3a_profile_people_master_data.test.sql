@@ -236,7 +236,11 @@ DECLARE
 BEGIN
   SELECT student_id
   INTO v_student_id
-  FROM public.reve_owner_create_student('S-PROV', 'Provision Student', NULL, NULL)
+  FROM public.reve_owner_create_student(
+    p_name := 'Provision Student',
+    p_phone := NULL,
+    p_email := NULL
+  )
   LIMIT 1;
   PERFORM set_config('test.student_entity', v_student_id::text, false);
 END $$;
@@ -260,19 +264,19 @@ SELECT throws_ok(
 
 DO $$ BEGIN PERFORM pg_temp.test_auth_as(current_setting('test.spoof_auth')::uuid); END $$;
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_student('S-SPOOF', 'Spoof Student') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_student(p_name := 'Spoof Student') $$,
   '42501',
   'REVE_UNAUTHORIZED'
 );
 DO $$ BEGIN PERFORM pg_temp.test_auth_as(current_setting('test.teacher_provision')::uuid); END $$;
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_student('S-TEACH-DENY', 'Denied') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_student(p_name := 'Denied') $$,
   '42501',
   'REVE_UNAUTHORIZED'
 );
 DO $$ BEGIN PERFORM pg_temp.test_auth_as(current_setting('test.student_auth')::uuid); END $$;
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_student('S-STUD-DENY', 'Denied') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_student(p_name := 'Denied Student') $$,
   '42501',
   'REVE_UNAUTHORIZED'
 );
@@ -407,7 +411,7 @@ DECLARE
 BEGIN
   SELECT student_id
   INTO v_student_entity
-  FROM public.reve_owner_create_student('S-ROLE', 'Role Change Student')
+  FROM public.reve_owner_create_student(p_name := 'Role Change Student')
   LIMIT 1;
 
   SELECT teacher_id
@@ -442,23 +446,29 @@ SELECT is(
 DO $$
 DECLARE
   v_student_id uuid;
+  v_student_code text;
 BEGIN
-  SELECT student_id
-  INTO v_student_id
-  FROM public.reve_owner_create_student('S-CREATE', 'Created Student', '010-2222-2222', 's@test.local')
+  SELECT student_id, student_code
+  INTO v_student_id, v_student_code
+  FROM public.reve_owner_create_student(
+    p_name := 'Created Student',
+    p_phone := '010-2222-2222',
+    p_email := 's@test.local'
+  )
   LIMIT 1;
   PERFORM set_config('test.student_create', v_student_id::text, false);
+  PERFORM set_config('test.student_create_code', v_student_code, false);
 END $$;
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM public.students
     WHERE id = current_setting('test.student_create')::uuid
-      AND student_code = 'S-CREATE'
+      AND student_code ~ '^S[0-9]{4,}$'
       AND name = 'Created Student'
       AND operational_status = 'active'
   ),
-  'owner creates student master row'
+  'owner creates student master row with auto-generated code'
 );
 
 SELECT ok(
@@ -472,13 +482,22 @@ SELECT ok(
 
 SELECT is(
   (SELECT student_code FROM public.students WHERE id = current_setting('test.student_create')::uuid),
-  'S-CREATE',
+  current_setting('test.student_create_code'),
   'student_code remains immutable after update'
 );
 
-SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_student('S-CREATE', 'Duplicate Code') $$,
-  '23505'
+SELECT ok(
+  (
+    SELECT count(DISTINCT student_code) = 2
+    FROM (
+      SELECT student_code
+      FROM public.reve_owner_create_student(p_name := 'Duplicate Name Student')
+      UNION ALL
+      SELECT student_code
+      FROM public.reve_owner_create_student(p_name := 'Duplicate Name Student')
+    ) AS created
+  ),
+  'auto-generated student codes are unique per create'
 );
 
 DO $$
@@ -487,7 +506,7 @@ DECLARE
 BEGIN
   SELECT student_id
   INTO v_linked_student
-  FROM public.reve_owner_create_student('S-LINKED', 'Linked Student')
+  FROM public.reve_owner_create_student(p_name := 'Linked Student')
   LIMIT 1;
   PERFORM set_config('test.student_linked', v_linked_student::text, false);
 END $$;
@@ -527,7 +546,7 @@ SELECT throws_ok(
 );
 
 SELECT throws_ok(
-  $$ SELECT count(*) FROM public.reve_owner_create_student('S-BAD', '  ') $$,
+  $$ SELECT count(*) FROM public.reve_owner_create_student(p_name := '  ') $$,
   'P0001',
   'REVE_INVALID_NAME'
 );
@@ -566,26 +585,23 @@ BEGIN
 
   SELECT student_id
   INTO v_student_asgn
-  FROM public.reve_owner_create_student('S-ASGN', 'Assignment Student')
+  FROM public.reve_owner_create_student(p_name := 'Assignment Student')
   LIMIT 1;
 
   PERFORM set_config('test.teacher_free', v_teacher_free::text, false);
   PERFORM set_config('test.teacher_asgn', v_teacher_asgn::text, false);
+  PERFORM set_config('test.student_asgn', v_student_asgn::text, false);
 END $$;
 
 DO $$
 DECLARE
   v_teacher_asgn uuid := current_setting('test.teacher_asgn')::uuid;
-  v_student_asgn uuid;
+  v_student_asgn uuid := current_setting('test.student_asgn')::uuid;
   v_pass uuid := '66666666-6666-6666-6666-666666666601';
   v_slot uuid := '77777777-7777-7777-7777-777777777701';
   v_lesson uuid := '99999999-9999-9999-9999-999999999901';
 BEGIN
   PERFORM pg_temp.test_reset_role();
-
-  SELECT id INTO v_student_asgn
-  FROM public.students
-  WHERE student_code = 'S-ASGN';
 
   INSERT INTO public.passes (
     id, pass_code, student_id, course_id, course_product_id,
