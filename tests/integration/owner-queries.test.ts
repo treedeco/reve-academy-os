@@ -21,6 +21,7 @@ import { mapDatabaseError } from '@/lib/domain/format';
 import { mapRefundError } from '@/lib/domain/refund';
 import { mapScheduleChangeError } from '@/lib/domain/schedule-change';
 import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
+import { applyLocalSqlFixture } from '@/tests/helpers/apply-local-sql-fixture';
 import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -34,6 +35,8 @@ const gammaStudentId = '44444444-4444-4444-4444-444444444103';
 const deltaStudentId = '44444444-4444-4444-4444-444444444104';
 const zetaStudentId = '44444444-4444-4444-4444-444444444106';
 const deltaSmsId = '88888888-8888-8888-8888-888888888103';
+const betaSmsId = '88888888-8888-8888-8888-888888888102';
+const gammaSmsId = '88888888-8888-8888-8888-888888888104';
 const betaPaymentId = '12121212-1212-1212-1212-121212121102';
 const deltaPaymentId = '12121212-1212-1212-1212-121212121101';
 const alreadyRefundedPaymentId = '12121212-1212-1212-1212-121212121104';
@@ -129,13 +132,24 @@ describe.skipIf(!integrationEnabled)('Owner data integration', () => {
   });
 
   it('loads eligible owner SMS notifications in one query', async () => {
+    applyLocalSqlFixture('fixture-reset-owner-sms-eligible.sql');
+
     const notifications = await fetchOwnerSmsNotifications(ownerClient);
-    expect(notifications.length).toBeGreaterThanOrEqual(3);
-    expect(notifications.every((row) => ['scheduled', 'target', 'exhausted_unsent'].includes(row.status))).toBe(true);
-    expect(notifications.some((row) => row.student_name === 'Beta Student' && row.status === 'scheduled')).toBe(true);
-    expect(notifications.some((row) => row.student_name === 'Delta Student' && row.status === 'target')).toBe(true);
-    expect(notifications.some((row) => row.student_name === 'Gamma Student' && row.status === 'exhausted_unsent')).toBe(true);
-    expect(notifications.some((row) => row.student_name === 'Alpha Student')).toBe(false);
+    const fixtureIds = [betaSmsId, deltaSmsId, gammaSmsId];
+    const fixtureRows = notifications.filter((row) => fixtureIds.includes(row.id));
+
+    expect(fixtureRows).toHaveLength(3);
+    expect(fixtureRows.every((row) => ['scheduled', 'target', 'exhausted_unsent'].includes(row.status))).toBe(true);
+    expect(fixtureRows.some((row) => row.student_name === 'Beta Student' && row.status === 'scheduled')).toBe(true);
+    expect(fixtureRows.some((row) => row.student_name === 'Delta Student' && row.status === 'target')).toBe(true);
+    expect(fixtureRows.some((row) => row.student_name === 'Gamma Student' && row.status === 'exhausted_unsent')).toBe(true);
+    expect(fixtureRows.some((row) => row.student_name === 'Alpha Student')).toBe(false);
+    expect(
+      fixtureRows
+        .filter((row) => row.status !== 'exhausted_unsent')
+        .every((row) => row.pass_status === 'active'),
+    ).toBe(true);
+    expect(fixtureRows.find((row) => row.id === gammaSmsId)?.pass_status).toBe('completed');
   });
 
   it('confirms SMS sent via trusted RPC and handles idempotent retry', async () => {

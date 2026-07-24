@@ -49,6 +49,10 @@ export function seedOwnerTeachersEmptyFixture(): void {
   applySqlFixture('fixture-owner-teachers-empty.sql');
 }
 
+export function seedOwnerProductsEmptyFixture(): void {
+  applySqlFixture('fixture-owner-products-empty.sql');
+}
+
 export function seedOwnerOnlyAlphaFixture(): void {
   const repoRoot = resolveRepoRoot();
   resetLocalDatabase();

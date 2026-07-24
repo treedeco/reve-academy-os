@@ -258,6 +258,36 @@ export interface OwnerEnrollmentCatalog {
   products: OwnerEnrollmentProductOption[];
 }
 
+export interface OwnerCourseProductRow {
+  id: string;
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  product_code: string;
+  product_name: string;
+  default_lesson_count: number;
+  weekly_frequency: number;
+  default_tuition_krw: number;
+  expiration_policy: string | null;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface OwnerCourseProductMutationResult {
+  id: string;
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  product_code: string;
+  product_name: string;
+  default_lesson_count: number;
+  weekly_frequency: number;
+  default_tuition_krw: number;
+  expiration_policy: string | null;
+  is_active: boolean;
+  updated_at: string;
+}
+
 export interface DashboardSummary {
   total_today: number;
   scheduled_count: number;

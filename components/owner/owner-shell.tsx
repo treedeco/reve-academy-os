@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/sms', label: 'SMS 발송 확인' },
   { href: '/refunds', label: '환불 처리' },
   { href: '/students', label: '학생' },
+  { href: '/course-products', label: '수강 상품' },
   { href: '/teachers', label: '강사' },
 ];
 

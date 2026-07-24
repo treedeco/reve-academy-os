@@ -12,6 +12,7 @@ import {
   ENROLLMENT_CATALOG_LOADING_MESSAGE,
   ENROLLMENT_PRODUCT_EMPTY_MESSAGE,
 } from '@/lib/domain/enrollment-catalog-messages';
+import { CourseProductsManageLink } from '@/components/owner/course-products-panel';
 import {
   ENROLLMENT_PAYMENT_METHODS,
   buildDefaultScheduleSlots,
@@ -235,7 +236,9 @@ export function InitialEnrollmentPanel({
           </select>
           {courseId && catalogState.status === 'ready' && productsForCourse.length === 0 ? (
             <p className="mt-1 text-xs text-amber-700" role="status" data-testid="enrollment-product-empty">
-              {ENROLLMENT_PRODUCT_EMPTY_MESSAGE}
+              {ENROLLMENT_PRODUCT_EMPTY_MESSAGE}{' '}
+              <CourseProductsManageLink />
+              에서 상품을 등록해 주세요.
             </p>
           ) : null}
         </label>
