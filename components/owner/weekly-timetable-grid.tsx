@@ -1,3 +1,5 @@
+'use client';
+
 import type { WeeklyTimetableDayColumn, WeeklyTimetableLesson } from '@/lib/domain/weekly-timetable';
 import {
   buildTimetableRows,
@@ -47,7 +49,17 @@ function assignOverlapLanes(lessons: WeeklyTimetableLesson[]) {
   return lanes;
 }
 
-function DayColumn({ column }: { column: WeeklyTimetableDayColumn }) {
+function DayColumn({
+  column,
+  onLessonSelect,
+  onScheduleChange,
+  selectedLessonId,
+}: {
+  column: WeeklyTimetableDayColumn;
+  onLessonSelect?: (lesson: WeeklyTimetableLesson) => void;
+  onScheduleChange?: (lesson: WeeklyTimetableLesson) => void;
+  selectedLessonId?: string | null;
+}) {
   const rows = buildTimetableRows();
   const totalHeight = rows.length * ROW_HEIGHT_PX;
   const lanes = assignOverlapLanes(column.lessons);
@@ -91,7 +103,13 @@ function DayColumn({ column }: { column: WeeklyTimetableDayColumn }) {
               }}
               data-testid={`weekly-timetable-placement-${lesson.lesson_id}`}
             >
-              <WeeklyTimetableLessonCard lesson={lesson} compact />
+              <WeeklyTimetableLessonCard
+                lesson={lesson}
+                compact
+                selected={selectedLessonId === lesson.lesson_id}
+                onSelect={onLessonSelect}
+                onScheduleChange={onScheduleChange}
+              />
             </div>
           );
         })}
@@ -100,7 +118,17 @@ function DayColumn({ column }: { column: WeeklyTimetableDayColumn }) {
   );
 }
 
-export function WeeklyTimetableGrid({ columns }: { columns: WeeklyTimetableDayColumn[] }) {
+export function WeeklyTimetableGrid({
+  columns,
+  onLessonSelect,
+  onScheduleChange,
+  selectedLessonId,
+}: {
+  columns: WeeklyTimetableDayColumn[];
+  onLessonSelect?: (lesson: WeeklyTimetableLesson) => void;
+  onScheduleChange?: (lesson: WeeklyTimetableLesson) => void;
+  selectedLessonId?: string | null;
+}) {
   const rows = buildTimetableRows();
   const totalHeight = rows.length * ROW_HEIGHT_PX;
 
@@ -122,7 +150,13 @@ export function WeeklyTimetableGrid({ columns }: { columns: WeeklyTimetableDayCo
           </div>
 
           {columns.map((column) => (
-            <DayColumn key={column.weekday} column={column} />
+            <DayColumn
+              key={column.weekday}
+              column={column}
+              onLessonSelect={onLessonSelect}
+              onScheduleChange={onScheduleChange}
+              selectedLessonId={selectedLessonId}
+            />
           ))}
         </div>
       </div>

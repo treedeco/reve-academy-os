@@ -23,6 +23,7 @@ import type {
   TodayLessonRow,
   LessonStatus,
 } from '@/lib/domain/types';
+import { formatFixedWeeklySchedulesLabel } from '@/lib/domain/owner-schedule-edit';
 import { getSeoulDayBounds } from '@/lib/domain/format';
 import { ELIGIBLE_SMS_STATUSES } from '@/lib/domain/sms';
 import { isRefundablePassStatus } from '@/lib/domain/refund';
@@ -235,19 +236,25 @@ export async function fetchStudentList(
       : currentPass?.courses;
 
     let teacherName: string | null = null;
+    let fixedScheduleLabel: string | null = null;
     if (currentPass) {
       const { data: slots } = await supabase
         .from('schedule_slots')
-        .select('teachers(name)')
+        .select('weekday, local_start_time, teachers(name)')
         .eq('pass_id', currentPass.id)
         .eq('is_active', true)
-        .order('slot_order', { ascending: true })
-        .limit(1);
+        .order('slot_order', { ascending: true });
 
       const teacher = Array.isArray(slots?.[0]?.teachers)
         ? slots?.[0]?.teachers[0]
         : slots?.[0]?.teachers;
       teacherName = teacher?.name ?? null;
+      fixedScheduleLabel = formatFixedWeeklySchedulesLabel(
+        (slots ?? []).map((slot) => ({
+          weekday: slot.weekday,
+          local_start_time: slot.local_start_time,
+        })),
+      );
     }
 
     rows.push({
@@ -258,6 +265,7 @@ export async function fetchStudentList(
       course_id: currentPass?.course_id ?? null,
       course_name: course?.name ?? null,
       teacher_name: teacherName,
+      fixed_schedule_label: fixedScheduleLabel,
       next_lesson_at: usage?.next_lesson_at ?? null,
       remaining_lesson_count: usage?.remaining_lesson_count ?? null,
       pass_id: currentPass?.id ?? null,
@@ -293,7 +301,7 @@ export async function fetchStudentDetail(
   const { data: slots } = currentPassRow
     ? await supabase
         .from('schedule_slots')
-        .select('id, weekday, local_start_time, duration_minutes, teachers(name)')
+        .select('id, weekday, local_start_time, duration_minutes, teacher_id, teachers(name)')
         .eq('pass_id', currentPassRow.id)
         .eq('is_active', true)
         .order('slot_order', { ascending: true })
@@ -368,6 +376,7 @@ export async function fetchStudentDetail(
       weekday: slot.weekday,
       local_start_time: slot.local_start_time,
       duration_minutes: slot.duration_minutes,
+      teacher_id: slot.teacher_id,
       teacher_name: readTeacherName(slot.teachers as TeacherJoin),
     })),
     lessons: lessonRows.map((lesson) => {

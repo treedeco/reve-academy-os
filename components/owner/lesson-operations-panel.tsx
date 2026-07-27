@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LessonRescheduleDialog } from '@/components/owner/lesson-reschedule-dialog';
 import { LessonStatusCorrectionDialog } from '@/components/owner/lesson-status-correction-dialog';
+import { OwnerScheduleChangeDialog } from '@/components/owner/owner-schedule-change-dialog';
 import { transitionLessonStatus } from '@/lib/data/owner-queries';
 import { mapDatabaseError, formatLessonStatus } from '@/lib/domain/format';
 import {
@@ -24,11 +24,24 @@ import { createClient } from '@/lib/supabase/client';
 export function LessonOperationsPanel({
   lesson,
   passUsage,
+  scheduleSlots,
+  weeklyFrequency,
+  teacherName,
   onLessonUpdated,
   onPassUsageUpdated,
 }: {
   lesson: OwnerLessonOperationsRow;
   passUsage: PassUsageSummary | null;
+  scheduleSlots: Array<{
+    id: string;
+    weekday: number;
+    local_start_time: string;
+    duration_minutes: number;
+    teacher_id: string;
+    teacher_name: string;
+  }>;
+  weeklyFrequency: number;
+  teacherName: string;
   onLessonUpdated: (lessonId: string, patch: Partial<OwnerLessonOperationsRow>) => void;
   onPassUsageUpdated?: (usage: PassUsageSummary) => void;
 }) {
@@ -202,13 +215,32 @@ export function LessonOperationsPanel({
         onSuccess={handleCorrectionSuccess}
       />
 
-      <LessonRescheduleDialog
+      <OwnerScheduleChangeDialog
         open={rescheduleOpen}
         onClose={() => setRescheduleOpen(false)}
-        lesson={lesson}
         studentName={lesson.student_name}
         courseName={lesson.course_name}
-        onSuccess={handleRescheduleSuccess}
+        teacherName={teacherName}
+        remainingLessonCount={passUsage?.remaining_lesson_count ?? null}
+        lesson={{
+          id: lesson.id,
+          scheduled_at: lesson.scheduled_at,
+          updated_at: lesson.updated_at,
+          status: lesson.status,
+          duration_minutes: lesson.duration_minutes,
+          pass_id: lesson.pass_id,
+          pass_updated_at: lesson.pass_updated_at,
+          sequence_number: lesson.sequence_number,
+          registered_lesson_count: lesson.registered_lesson_count,
+        }}
+        scheduleSlots={scheduleSlots}
+        weeklyFrequency={weeklyFrequency}
+        initialMode="single"
+        onSuccess={(result) => {
+          if (result.single) {
+            handleRescheduleSuccess(result.single);
+          }
+        }}
       />
     </div>
   );

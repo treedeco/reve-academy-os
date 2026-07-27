@@ -1,16 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { InitialEnrollmentPanel } from '@/components/owner/initial-enrollment-panel';
 import { LessonOperationsPanel } from '@/components/owner/lesson-operations-panel';
+import { OwnerScheduleChangeDialog } from '@/components/owner/owner-schedule-change-dialog';
 import { StudentMasterPanel } from '@/components/owner/student-master-panel';
 import { StudentOperationalHistoryPanel } from '@/components/owner/student-operational-history-panel';
 import { StudentPassSummary } from '@/components/owner/student-pass-summary';
+import { fetchLessonScheduleEditContext } from '@/lib/data/owner-schedule-edit';
 import { fetchStudentDetail } from '@/lib/data/owner-queries';
 import { fetchOwnerStudentMasterRow } from '@/lib/data/owner-students';
 import { formatDateTimeSeoul, formatLessonStatus } from '@/lib/domain/format';
-import { formatLessonProgress } from '@/lib/domain/lesson-correction';
+import { formatLessonProgress, isScheduleChangeableLessonStatus } from '@/lib/domain/lesson-correction';
+import { formatFixedWeeklySchedulesLabel } from '@/lib/domain/owner-schedule-edit';
 import type {
   LessonStatus,
   OwnerInitialEnrollmentResult,
@@ -22,6 +25,18 @@ import type {
 } from '@/lib/domain/types';
 import { WEEKDAY_LABELS } from '@/lib/domain/types';
 import { createClient } from '@/lib/supabase/client';
+
+function findNextChangeableLesson(lessons: StudentDetailData['lessons']) {
+  const nowIso = new Date().toISOString();
+  const eligible = lessons.filter((lesson) => isScheduleChangeableLessonStatus(lesson.status));
+  const upcoming = [...eligible]
+    .filter((lesson) => lesson.scheduled_at >= nowIso)
+    .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  if (upcoming[0]) {
+    return upcoming[0];
+  }
+  return [...eligible].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))[0] ?? null;
+}
 
 export function StudentDetailClient({
   initialDetail,
@@ -35,6 +50,18 @@ export function StudentDetailClient({
   const [detail, setDetail] = useState(initialDetail);
   const [master, setMaster] = useState(initialMaster);
   const [history, setHistory] = useState(operationalHistory);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [weeklyFrequency, setWeeklyFrequency] = useState(1);
+
+  const fixedScheduleLabel = useMemo(
+    () => formatFixedWeeklySchedulesLabel(detail.schedule_slots),
+    [detail.schedule_slots],
+  );
+  const nextChangeableLesson = useMemo(
+    () => findNextChangeableLesson(detail.lessons),
+    [detail.lessons],
+  );
+  const courseName = detail.lessons[0]?.course_name ?? '-';
 
   async function refreshAfterLessonOperation() {
     const supabase = createClient();
@@ -124,7 +151,31 @@ export function StudentDetailClient({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-lg font-semibold">현재 회차권</h2>
         {detail.current_pass ? (
-          <StudentPassSummary pass={detail.current_pass} />
+          <>
+            <StudentPassSummary pass={detail.current_pass} fixedScheduleLabel={fixedScheduleLabel} />
+            {nextChangeableLesson ? (
+              <button
+                type="button"
+                className="mt-4 rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white"
+                onClick={() => {
+                  void (async () => {
+                    const supabase = createClient();
+                    const context = await fetchLessonScheduleEditContext(
+                      supabase,
+                      nextChangeableLesson.id,
+                    );
+                    if (context) {
+                      setWeeklyFrequency(context.weekly_frequency);
+                    }
+                    setScheduleDialogOpen(true);
+                  })();
+                }}
+                data-testid="student-schedule-change-open"
+              >
+                수업 일정 변경
+              </button>
+            ) : null}
+          </>
         ) : (
           <p className="mt-3 text-sm text-slate-600" data-testid="student-no-current-pass">
             현재 active/reserved pass가 없습니다.
@@ -189,6 +240,9 @@ export function StudentDetailClient({
                           student_name: detail.student.name,
                         }}
                         passUsage={detail.current_pass}
+                        scheduleSlots={detail.schedule_slots}
+                        weeklyFrequency={detail.schedule_slots.length || 1}
+                        teacherName={detail.teacher_name ?? '-'}
                         onLessonUpdated={handleLessonUpdated}
                         onPassUsageUpdated={handlePassUsageUpdated}
                       />
@@ -228,6 +282,34 @@ export function StudentDetailClient({
       ) : null}
 
       <StudentOperationalHistoryPanel history={history} />
+
+      {scheduleDialogOpen && nextChangeableLesson && detail.current_pass ? (
+        <OwnerScheduleChangeDialog
+          open={scheduleDialogOpen}
+          onClose={() => setScheduleDialogOpen(false)}
+          studentName={detail.student.name}
+          courseName={courseName}
+          teacherName={detail.teacher_name ?? '-'}
+          remainingLessonCount={detail.current_pass.remaining_lesson_count}
+          lesson={{
+            id: nextChangeableLesson.id,
+            scheduled_at: nextChangeableLesson.scheduled_at,
+            updated_at: nextChangeableLesson.updated_at,
+            status: nextChangeableLesson.status,
+            duration_minutes: nextChangeableLesson.duration_minutes,
+            pass_id: nextChangeableLesson.pass_id,
+            pass_updated_at: nextChangeableLesson.pass_updated_at,
+            sequence_number: nextChangeableLesson.sequence_number,
+            registered_lesson_count: nextChangeableLesson.registered_lesson_count,
+          }}
+          scheduleSlots={detail.schedule_slots}
+          weeklyFrequency={weeklyFrequency}
+          onSuccess={() => {
+            setScheduleDialogOpen(false);
+            void refreshAfterLessonOperation();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

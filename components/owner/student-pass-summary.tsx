@@ -1,7 +1,13 @@
 import type { PassUsageSummary } from '@/lib/domain/types';
-import { formatDateTimeSeoul } from '@/lib/domain/format';
+import { formatSeoulDateTimeShortWithWeekday } from '@/lib/domain/owner-schedule-edit';
 
-export function StudentPassSummary({ pass }: { pass: PassUsageSummary }) {
+export function StudentPassSummary({
+  pass,
+  fixedScheduleLabel,
+}: {
+  pass: PassUsageSummary;
+  fixedScheduleLabel: string | null;
+}) {
   return (
     <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
@@ -24,10 +30,16 @@ export function StudentPassSummary({ pass }: { pass: PassUsageSummary }) {
           {pass.remaining_lesson_count}
         </dd>
       </div>
-      <div className="sm:col-span-2">
+      {fixedScheduleLabel ? (
+        <div className="sm:col-span-2" data-testid="student-fixed-schedule-summary">
+          <dt className="text-sm text-slate-500">고정 일정</dt>
+          <dd className="font-medium">{fixedScheduleLabel}</dd>
+        </div>
+      ) : null}
+      <div className="sm:col-span-2" data-testid="student-next-lesson-summary">
         <dt className="text-sm text-slate-500">다음 수업</dt>
         <dd className="font-medium">
-          {pass.next_lesson_at ? formatDateTimeSeoul(pass.next_lesson_at) : '-'}
+          {pass.next_lesson_at ? formatSeoulDateTimeShortWithWeekday(pass.next_lesson_at) : '-'}
         </dd>
       </div>
     </dl>

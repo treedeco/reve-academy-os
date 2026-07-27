@@ -557,7 +557,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 SELECT has_function(
   'public', 'reve_owner_replace_pass_schedule_slots',
-  ARRAY['uuid', 'timestamptz', 'jsonb', 'text']
+  ARRAY['uuid', 'timestamptz', 'jsonb', 'text', 'date']
 );
 
 SELECT ok(

@@ -1,4 +1,4 @@
-import { WeeklyTimetableView } from '@/components/owner/weekly-timetable-view';
+import { WeeklyTimetableClient } from '@/components/owner/weekly-timetable-client';
 import { EmptyState, ErrorState } from '@/components/ui/state-blocks';
 import { fetchWeeklyTimetableLessons } from '@/lib/data/owner-queries';
 import { groupTimetableLessonsByWeekday } from '@/lib/domain/weekly-timetable';
@@ -37,7 +37,7 @@ export default async function WeeklySchedulePage() {
             description="활성 수강권의 이번 주 예정 수업이 등록되면 시간표에 표시됩니다."
           />
         ) : (
-          <WeeklyTimetableView columns={columns} weekContextLabel={buildWeekContextLabel()} />
+          <WeeklyTimetableClient initialColumns={columns} weekContextLabel={buildWeekContextLabel()} />
         )}
       </div>
     );

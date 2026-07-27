@@ -15,9 +15,10 @@ const pass: PassUsageSummary = {
 
 describe('StudentPassSummary', () => {
   it('renders derived used and remaining counts', () => {
-    render(<StudentPassSummary pass={pass} />);
+    render(<StudentPassSummary pass={pass} fixedScheduleLabel="매주 화요일 10:00" />);
     expect(screen.getByTestId('used-count')).toHaveTextContent('1');
     expect(screen.getByTestId('remaining-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('student-fixed-schedule-summary')).toHaveTextContent('매주 화요일 10:00');
     expect(screen.getByText('V-S1A1-001')).toBeInTheDocument();
   });
 });

@@ -49,6 +49,7 @@ export default async function StudentsPage({
                 <th className="px-4 py-3">상태</th>
                 <th className="px-4 py-3">과목</th>
                 <th className="px-4 py-3">강사</th>
+                <th className="px-4 py-3">고정 일정</th>
                 <th className="px-4 py-3">다음 수업</th>
                 <th className="px-4 py-3">잔여</th>
               </tr>
@@ -64,6 +65,7 @@ export default async function StudentsPage({
                   <td className="px-4 py-3">{student.operational_status}</td>
                   <td className="px-4 py-3">{student.course_name ?? '-'}</td>
                   <td className="px-4 py-3">{student.teacher_name ?? '-'}</td>
+                  <td className="px-4 py-3">{student.fixed_schedule_label ?? '-'}</td>
                   <td className="px-4 py-3">
                     {student.next_lesson_at
                       ? formatDateTimeSeoul(student.next_lesson_at)
@@ -86,6 +88,9 @@ export default async function StudentsPage({
               <p className="font-medium">{student.name}</p>
               <p className="mt-1 text-sm text-slate-600">
                 {student.course_name ?? '과목 없음'} · {student.teacher_name ?? '강사 없음'}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                고정 {student.fixed_schedule_label ?? '-'}
               </p>
               <p className="mt-2 text-sm">
                 잔여 {student.remaining_lesson_count ?? '-'} · 다음{' '}

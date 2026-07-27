@@ -61,6 +61,7 @@ export interface StudentListRow {
   course_id: string | null;
   course_name: string | null;
   teacher_name: string | null;
+  fixed_schedule_label: string | null;
   next_lesson_at: string | null;
   remaining_lesson_count: number | null;
   pass_id: string | null;
@@ -90,6 +91,7 @@ export interface StudentDetailData {
     weekday: number;
     local_start_time: string;
     duration_minutes: number;
+    teacher_id: string;
     teacher_name: string;
   }>;
   lessons: Array<{
@@ -323,6 +325,17 @@ export interface DirectRescheduleResult {
   schedule_change_event_id: string;
   cascaded_lesson_count: number;
   sms_notification_status: string | null;
+  no_change: boolean;
+}
+
+export interface FixedPassScheduleChangeResult {
+  pass_id: string;
+  pass_status: string;
+  pass_updated_at: string;
+  anchor_lesson_id: string | null;
+  anchor_rescheduled: boolean;
+  cascaded_lesson_count: number;
+  future_eligible_lesson_count: number;
   no_change: boolean;
 }
 

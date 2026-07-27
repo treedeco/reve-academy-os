@@ -1,8 +1,20 @@
-import type { WeeklyTimetableDayColumn } from '@/lib/domain/weekly-timetable';
+'use client';
+
+import type { WeeklyTimetableDayColumn, WeeklyTimetableLesson } from '@/lib/domain/weekly-timetable';
 import { formatMinutesAsLocalTime } from '@/lib/domain/academy-hours';
 import { WeeklyTimetableLessonCard } from '@/components/owner/weekly-timetable-lesson-card';
 
-export function WeeklyTimetableMobileList({ columns }: { columns: WeeklyTimetableDayColumn[] }) {
+export function WeeklyTimetableMobileList({
+  columns,
+  onLessonSelect,
+  onScheduleChange,
+  selectedLessonId,
+}: {
+  columns: WeeklyTimetableDayColumn[];
+  onLessonSelect?: (lesson: WeeklyTimetableLesson) => void;
+  onScheduleChange?: (lesson: WeeklyTimetableLesson) => void;
+  selectedLessonId?: string | null;
+}) {
   const nonEmpty = columns.filter((column) => column.lessons.length > 0);
 
   return (
@@ -17,7 +29,12 @@ export function WeeklyTimetableMobileList({ columns }: { columns: WeeklyTimetabl
                   {formatMinutesAsLocalTime(lesson.local_start_minutes)}
                 </p>
                 <div className="min-w-0 flex-1">
-                  <WeeklyTimetableLessonCard lesson={lesson} />
+                  <WeeklyTimetableLessonCard
+                    lesson={lesson}
+                    selected={selectedLessonId === lesson.lesson_id}
+                    onSelect={onLessonSelect}
+                    onScheduleChange={onScheduleChange}
+                  />
                 </div>
               </div>
             ))}

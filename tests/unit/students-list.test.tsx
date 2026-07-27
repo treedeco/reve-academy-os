@@ -39,6 +39,7 @@ const row: StudentListRow = {
   course_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeee101',
   course_name: 'Alpha Vocal Course',
   teacher_name: 'Alpha Teacher',
+  fixed_schedule_label: '매주 화요일 10:00',
   next_lesson_at: '2026-06-26T01:00:00.000Z',
   remaining_lesson_count: 4,
   pass_id: '66666666-6666-6666-6666-666666666101',
