@@ -21,7 +21,9 @@ export function WeeklyTimetableMobileList({
     <div className="space-y-8 lg:hidden" data-testid="weekly-timetable-mobile">
       {nonEmpty.map((column) => (
         <section key={column.weekday} data-testid={`weekly-timetable-mobile-day-${column.weekday}`}>
-          <h2 className="mb-3 text-lg font-semibold">{column.weekday_label}요일</h2>
+          <h2 className="mb-3 text-lg font-semibold" data-testid={`weekly-timetable-mobile-header-${column.weekday}`}>
+            {column.header_label}
+          </h2>
           <div className="space-y-3">
             {column.lessons.map((lesson) => (
               <div key={lesson.lesson_id} className="flex gap-3">

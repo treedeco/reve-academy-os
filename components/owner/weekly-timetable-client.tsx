@@ -9,19 +9,35 @@ import {
   fetchLessonScheduleEditContext,
 } from '@/lib/data/owner-schedule-edit';
 import { fetchWeeklyTimetableLessons } from '@/lib/data/owner-queries';
-import { groupTimetableLessonsByWeekday } from '@/lib/domain/weekly-timetable';
+import {
+  buildWeekContextLabel,
+  buildWeeklyTimetableColumns,
+} from '@/lib/domain/weekly-timetable';
 import type { WeeklyTimetableDayColumn, WeeklyTimetableLesson } from '@/lib/domain/weekly-timetable';
 import { createClient } from '@/lib/supabase/client';
 
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const base = new Date(`${dateKey}T12:00:00+09:00`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
 export function WeeklyTimetableClient({
   initialColumns,
+  weekReferenceDateKey,
   weekContextLabel,
+  isCurrentWeek,
 }: {
   initialColumns: WeeklyTimetableDayColumn[];
+  weekReferenceDateKey: string;
   weekContextLabel: string;
+  isCurrentWeek: boolean;
 }) {
   const router = useRouter();
   const [columns, setColumns] = useState(initialColumns);
+  const [weekLabel, setWeekLabel] = useState(weekContextLabel);
+  const [viewingCurrentWeek, setViewingCurrentWeek] = useState(isCurrentWeek);
+  const [activeWeekDateKey, setActiveWeekDateKey] = useState(weekReferenceDateKey);
   const [selectedLesson, setSelectedLesson] = useState<WeeklyTimetableLesson | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [dialogLesson, setDialogLesson] = useState<{
@@ -47,13 +63,39 @@ export function WeeklyTimetableClient({
   >([]);
   const [weeklyFrequency, setWeeklyFrequency] = useState(1);
   const [remainingCount, setRemainingCount] = useState<number | null>(null);
+  const [pendingWeekNav, setPendingWeekNav] = useState(false);
+
+  const loadWeek = useCallback(
+    async (mondayDateKey: string | null) => {
+      setPendingWeekNav(true);
+      try {
+        const weekReference = mondayDateKey
+          ? new Date(`${mondayDateKey}T12:00:00+09:00`)
+          : new Date();
+        const supabase = createClient();
+        const lessons = await fetchWeeklyTimetableLessons(supabase, { weekReference });
+        setColumns(buildWeeklyTimetableColumns(lessons, weekReference));
+        setWeekLabel(buildWeekContextLabel(weekReference));
+        setActiveWeekDateKey(
+          mondayDateKey ??
+            buildWeeklyTimetableColumns(lessons, weekReference)[0]?.date_key ??
+            weekReferenceDateKey,
+        );
+        setViewingCurrentWeek(mondayDateKey === null);
+
+        const nextUrl = mondayDateKey ? `/schedule?week=${mondayDateKey}` : '/schedule';
+        router.replace(nextUrl);
+        router.refresh();
+      } finally {
+        setPendingWeekNav(false);
+      }
+    },
+    [router, weekReferenceDateKey],
+  );
 
   const refreshTimetable = useCallback(async () => {
-    const supabase = createClient();
-    const lessons = await fetchWeeklyTimetableLessons(supabase);
-    setColumns(groupTimetableLessonsByWeekday(lessons));
-    router.refresh();
-  }, [router]);
+    await loadWeek(viewingCurrentWeek ? null : activeWeekDateKey);
+  }, [activeWeekDateKey, viewingCurrentWeek, loadWeek]);
 
   async function openScheduleChange(lesson: WeeklyTimetableLesson) {
     const supabase = createClient();
@@ -81,11 +123,46 @@ export function WeeklyTimetableClient({
     setScheduleDialogOpen(true);
   }
 
+  const mondayKey =
+    columns[0]?.date_key ??
+    activeWeekDateKey ??
+    weekReferenceDateKey;
+
   return (
     <>
+      <div className="flex flex-wrap items-center gap-2" data-testid="weekly-timetable-nav">
+        <button
+          type="button"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-50"
+          disabled={pendingWeekNav}
+          onClick={() => void loadWeek(addDaysToDateKey(mondayKey, -7))}
+          data-testid="weekly-timetable-prev-week"
+        >
+          이전 주
+        </button>
+        <button
+          type="button"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-50"
+          disabled={pendingWeekNav || viewingCurrentWeek}
+          onClick={() => void loadWeek(null)}
+          data-testid="weekly-timetable-current-week"
+        >
+          이번 주
+        </button>
+        <button
+          type="button"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-50"
+          disabled={pendingWeekNav}
+          onClick={() => void loadWeek(addDaysToDateKey(mondayKey, 7))}
+          data-testid="weekly-timetable-next-week"
+        >
+          다음 주
+        </button>
+      </div>
+
       <WeeklyTimetableView
         columns={columns}
-        weekContextLabel={weekContextLabel}
+        weekContextLabel={weekLabel}
         onLessonSelect={(lesson) => {
           setSelectedLesson(lesson);
         }}

@@ -893,8 +893,9 @@ type TimetableLessonRow = {
  */
 export async function fetchWeeklyTimetableLessons(
   supabase: SupabaseClient,
+  options?: { weekReference?: Date },
 ): Promise<WeeklyTimetableLesson[]> {
-  const { startIso, endIso } = getSeoulWeekBounds();
+  const { startIso, endIso } = getSeoulWeekBounds(options?.weekReference ?? new Date());
 
   const { data: lessonRows, error } = await supabase
     .from('lessons')

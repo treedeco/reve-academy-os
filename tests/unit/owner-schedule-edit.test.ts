@@ -7,9 +7,10 @@ import {
 } from '@/lib/domain/owner-schedule-edit';
 
 describe('owner schedule edit domain', () => {
-  it('builds 30-minute academy time options from 13:00 through 21:00', () => {
+  it('builds 30-minute academy time options from 10:00 through 21:00', () => {
     const options = buildAcademyTimeOptions();
-    expect(options[0]).toBe('13:00');
+    expect(options[0]).toBe('10:00');
+    expect(options[1]).toBe('10:30');
     expect(options[options.length - 1]).toBe('21:00');
     expect(options).toContain('14:00');
     expect(options).toContain('20:30');
@@ -36,7 +37,7 @@ describe('owner schedule edit domain', () => {
     ).toBe('변경 사유를 입력해 주세요.');
   });
 
-  it('rejects academy hours before 13:00', () => {
+  it('accepts 10:00 start within academy hours', () => {
     expect(
       validateSingleScheduleChange({
         dateKey: '2026-07-30',
@@ -44,6 +45,6 @@ describe('owner schedule edit domain', () => {
         durationMinutes: 60,
         reason: 'test',
       }),
-    ).toMatch(/13:00/);
+    ).toBeNull();
   });
 });

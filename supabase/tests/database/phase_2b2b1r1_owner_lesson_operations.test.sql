@@ -69,7 +69,7 @@ BEGIN
   PERFORM set_config('test.student_completed', v_student_completed::text, false);
   PERFORM set_config('test.enroll_date', v_enroll_date::text, false);
   PERFORM set_config('test.valid_new_time', timestamptz '2026-09-21 14:00:00+09'::text, false);
-  PERFORM set_config('test.hours_before_open', timestamptz '2026-09-21 12:00:00+09'::text, false);
+  PERFORM set_config('test.hours_before_open', timestamptz '2026-09-21 09:30:00+09'::text, false);
   PERFORM set_config('test.hours_at_close', timestamptz '2026-09-21 22:00:00+09'::text, false);
   PERFORM set_config('test.hours_end_after_close', timestamptz '2026-09-21 21:30:00+09'::text, false);
   PERFORM set_config('test.hours_last_window', timestamptz '2026-09-21 21:00:00+09'::text, false);

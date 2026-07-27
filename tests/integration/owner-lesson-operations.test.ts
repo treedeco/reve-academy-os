@@ -4,9 +4,16 @@ import {
   correctLessonStatus,
   directRescheduleLesson,
   fetchPassUsage,
+  fetchStudentDetail,
   fetchWeeklyTimetableLessons,
   transitionLessonStatus,
 } from '@/lib/data/owner-queries';
+import {
+  changeFixedPassSchedule,
+  changeSingleLessonSchedule,
+  countFutureEligibleLessons,
+} from '@/lib/data/owner-schedule-edit';
+import { scheduleSlotsFromPassSlots } from '@/lib/domain/owner-schedule-edit';
 import { mapDatabaseError } from '@/lib/domain/format';
 import { OWNER_AUTH_EMAIL } from '@/lib/auth/owner-login';
 import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
@@ -19,6 +26,8 @@ const alphaPassId = '66666666-6666-6666-6666-666666666101';
 const alphaTodayLessonId = '99999999-9999-9999-9999-999999999101';
 const deltaLesson3Id = '99999999-9999-9999-9999-999999999213';
 const deltaLesson4Id = '99999999-9999-9999-9999-999999999214';
+const deltaStudentId = '44444444-4444-4444-4444-444444444104';
+const deltaPassId = '66666666-6666-6666-6666-666666666103';
 
 const integrationEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -157,5 +166,86 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
       expect(first.registered_lesson_count).toBeGreaterThan(0);
       expect(first.sequence_number).toBeGreaterThan(0);
     }
+  });
+
+  it('accepts lesson start at 10:00 Seoul local time', async () => {
+    const { data: lesson } = await ownerClient
+      .from('lessons')
+      .select('updated_at')
+      .eq('id', deltaLesson4Id)
+      .single();
+
+    const result = await directRescheduleLesson(ownerClient, {
+      lessonId: deltaLesson4Id,
+      newScheduledAt: '2026-08-20T01:00:00.000Z',
+      expectedLessonUpdatedAt: lesson!.updated_at,
+      reason: 'Integration 10:00 slot',
+      cascade: false,
+    });
+
+    expect(result.new_scheduled_at).toContain('2026-08-20T01:00:00');
+  });
+
+  it('changes one lesson without altering pass counts', async () => {
+    const usageBefore = await fetchPassUsage(ownerClient, deltaPassId);
+    const { data: lesson } = await ownerClient
+      .from('lessons')
+      .select('updated_at')
+      .eq('id', deltaLesson3Id)
+      .single();
+
+    const result = await changeSingleLessonSchedule(ownerClient, {
+      lessonId: deltaLesson3Id,
+      newScheduledAt: '2026-08-21T05:00:00.000Z',
+      expectedLessonUpdatedAt: lesson!.updated_at,
+      reason: 'Integration single reschedule',
+    });
+
+    expect(result.new_scheduled_at).toContain('2026-08-21T05:00:00');
+
+    const usageAfter = await fetchPassUsage(ownerClient, deltaPassId);
+    expect(usageAfter?.remaining_lesson_count).toBe(usageBefore?.remaining_lesson_count);
+    expect(usageAfter?.registered_lesson_count).toBe(usageBefore?.registered_lesson_count);
+  });
+
+  it('changes fixed schedule and moves future eligible lessons', async () => {
+    const detailBefore = await fetchStudentDetail(ownerClient, deltaStudentId);
+    const { data: passRow } = await ownerClient
+      .from('passes')
+      .select('updated_at')
+      .eq('id', deltaPassId)
+      .single();
+    expect(passRow?.updated_at).toBeTruthy();
+
+    const currentSlot = detailBefore.schedule_slots[0];
+    expect(currentSlot).toBeDefined();
+    const currentWeekday = currentSlot!.weekday;
+    const currentTime = currentSlot!.local_start_time.slice(0, 5);
+    const targetWeekday = currentWeekday === 4 ? 2 : 4;
+    const targetTime = currentTime === '14:00' ? '15:00' : '14:00';
+
+    const slots = scheduleSlotsFromPassSlots(detailBefore.schedule_slots).map((slot) => ({
+      ...slot,
+      weekday: targetWeekday,
+      localTime: targetTime,
+    }));
+
+    const futureCount = await countFutureEligibleLessons(ownerClient, deltaPassId, '2026-07-01');
+    expect(futureCount).toBeGreaterThan(0);
+
+    const result = await changeFixedPassSchedule(ownerClient, {
+      passId: deltaPassId,
+      expectedPassUpdatedAt: passRow!.updated_at,
+      effectiveFrom: '2026-07-01',
+      slots,
+      reason: 'Integration fixed schedule change',
+    });
+
+    expect(result.no_change).toBe(false);
+    expect(result.future_eligible_lesson_count).toBeGreaterThan(0);
+
+    const detailAfter = await fetchStudentDetail(ownerClient, deltaStudentId);
+    expect(detailAfter.schedule_slots[0]?.weekday).toBe(targetWeekday);
+    expect(detailAfter.schedule_slots[0]?.local_start_time.slice(0, 5)).toBe(targetTime);
   });
 });

@@ -1,44 +1,44 @@
 import { WeeklyTimetableClient } from '@/components/owner/weekly-timetable-client';
-import { EmptyState, ErrorState } from '@/components/ui/state-blocks';
+import { ErrorState } from '@/components/ui/state-blocks';
 import { fetchWeeklyTimetableLessons } from '@/lib/data/owner-queries';
-import { groupTimetableLessonsByWeekday } from '@/lib/domain/weekly-timetable';
+import {
+  buildWeekContextLabel,
+  buildWeeklyTimetableColumns,
+  getSeoulWeekBounds,
+  isSameSeoulWeek,
+  parseWeekReference,
+} from '@/lib/domain/weekly-timetable';
 import { createClient } from '@/lib/supabase/server';
 
-function buildWeekContextLabel(): string {
-  const formatter = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  });
-  return `이번 주 수업 시간표 · 기준 ${formatter.format(new Date())} (Asia/Seoul)`;
-}
-
-export default async function WeeklySchedulePage() {
+export default async function WeeklySchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const { week } = await searchParams;
   const supabase = await createClient();
 
   try {
-    const lessons = await fetchWeeklyTimetableLessons(supabase);
-    const columns = groupTimetableLessonsByWeekday(lessons);
+    const weekReference = parseWeekReference(week);
+    const weekBounds = getSeoulWeekBounds(weekReference);
+    const lessons = await fetchWeeklyTimetableLessons(supabase, { weekReference });
+    const columns = buildWeeklyTimetableColumns(lessons, weekReference);
 
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">주간 시간표</h1>
           <p className="mt-1 text-sm text-slate-600">
-            이번 주 실제 수업 일정입니다. 개별 수업 이동은 고정 주간 패턴을 바꾸지 않습니다.
+            선택한 주의 실제 수업 일정입니다. 개별 수업 이동은 고정 주간 패턴을 바꾸지 않습니다.
           </p>
         </div>
 
-        {columns.every((column) => column.lessons.length === 0) ? (
-          <EmptyState
-            title="표시할 이번 주 수업이 없습니다"
-            description="활성 수강권의 이번 주 예정 수업이 등록되면 시간표에 표시됩니다."
-          />
-        ) : (
-          <WeeklyTimetableClient initialColumns={columns} weekContextLabel={buildWeekContextLabel()} />
-        )}
+        <WeeklyTimetableClient
+          initialColumns={columns}
+          weekReferenceDateKey={weekBounds.mondayDateKey}
+          weekContextLabel={buildWeekContextLabel(weekReference)}
+          isCurrentWeek={isSameSeoulWeek(weekReference, new Date())}
+        />
       </div>
     );
   } catch (error) {

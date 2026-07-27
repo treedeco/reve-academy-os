@@ -134,30 +134,45 @@ export function WeeklyTimetableGrid({
 
   return (
     <div className="hidden lg:block" data-testid="weekly-timetable-grid">
-      <div className="overflow-x-auto">
-        <div className="flex min-w-[960px]">
-          <div className="w-16 shrink-0" style={{ height: totalHeight }}>
-            {rows.map((row, index) => (
+      <div className="max-h-[70vh] overflow-y-auto overflow-x-auto" data-testid="weekly-timetable-scroll">
+        <div className="min-w-[960px]">
+          <div className="sticky top-0 z-20 flex border-b border-slate-200 bg-white shadow-sm">
+            <div className="w-16 shrink-0" />
+            {columns.map((column) => (
               <div
-                key={row.start_minutes}
-                className="border-t border-slate-200 pr-1 text-right text-xs tabular-nums text-slate-600"
-                style={{ height: ROW_HEIGHT_PX, lineHeight: `${ROW_HEIGHT_PX}px` }}
-                data-testid={`weekly-timetable-row-${row.start_minutes}`}
+                key={column.weekday}
+                className="min-w-0 flex-1 border-l border-slate-200 px-2 py-2 text-center text-sm font-semibold"
+                data-testid={`weekly-timetable-header-${column.weekday}`}
               >
-                {row.label}
+                {column.header_label}
               </div>
             ))}
           </div>
 
-          {columns.map((column) => (
-            <DayColumn
-              key={column.weekday}
-              column={column}
-              onLessonSelect={onLessonSelect}
-              onScheduleChange={onScheduleChange}
-              selectedLessonId={selectedLessonId}
-            />
-          ))}
+          <div className="flex">
+            <div className="w-16 shrink-0" style={{ height: totalHeight }}>
+              {rows.map((row, index) => (
+                <div
+                  key={row.start_minutes}
+                  className="border-t border-slate-200 pr-1 text-right text-xs tabular-nums text-slate-600"
+                  style={{ height: ROW_HEIGHT_PX, lineHeight: `${ROW_HEIGHT_PX}px` }}
+                  data-testid={`weekly-timetable-row-${row.start_minutes}`}
+                >
+                  {row.label}
+                </div>
+              ))}
+            </div>
+
+            {columns.map((column) => (
+              <DayColumn
+                key={column.weekday}
+                column={column}
+                onLessonSelect={onLessonSelect}
+                onScheduleChange={onScheduleChange}
+                selectedLessonId={selectedLessonId}
+              />
+            ))}
+          </div>
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-500" data-testid="weekly-timetable-range-label">

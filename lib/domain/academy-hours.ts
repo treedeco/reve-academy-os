@@ -1,5 +1,5 @@
 /** Academy operating window in Asia/Seoul local time (minutes from midnight). */
-export const ACADEMY_FIRST_START_MINUTES = 13 * 60;
+export const ACADEMY_FIRST_START_MINUTES = 10 * 60;
 export const ACADEMY_LAST_START_MINUTES = 21 * 60;
 export const ACADEMY_LAST_END_MINUTES = 22 * 60;
 
@@ -19,7 +19,7 @@ export function validateAcademyLessonWindow(
   durationMinutes: number,
 ): string | null {
   if (startMinutes < ACADEMY_FIRST_START_MINUTES) {
-    return '수업 시작은 13:00 이후여야 합니다.';
+    return '수업 시작은 10:00 이후여야 합니다.';
   }
   if (startMinutes >= ACADEMY_LAST_END_MINUTES) {
     return '수업 시작은 22:00 이전이어야 합니다.';

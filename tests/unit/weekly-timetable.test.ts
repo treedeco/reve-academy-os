@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildSeoulWeekDayHeaders,
   buildTimetableRows,
+  buildWeeklyTimetableColumns,
   computeTimetablePlacement,
+  formatWeekdayDateHeader,
+  getSeoulWeekBounds,
   mapLessonToTimetableEntry,
   TIMETABLE_END_MINUTES,
   TIMETABLE_INTERVAL_MINUTES,
@@ -10,9 +14,10 @@ import {
 import { formatLessonProgress } from '@/lib/domain/lesson-correction';
 
 describe('weekly timetable grid', () => {
-  it('builds 30-minute rows from 13:00 through 22:00 boundary', () => {
+  it('builds 30-minute rows from 10:00 through 22:00 boundary', () => {
     const rows = buildTimetableRows();
     expect(rows[0]?.start_minutes).toBe(TIMETABLE_START_MINUTES);
+    expect(rows[0]?.start_minutes).toBe(10 * 60);
     expect(rows[rows.length - 1]?.end_minutes).toBe(TIMETABLE_END_MINUTES);
     expect(rows.every((row) => row.end_minutes - row.start_minutes === TIMETABLE_INTERVAL_MINUTES)).toBe(
       true,
@@ -23,18 +28,18 @@ describe('weekly timetable grid', () => {
   });
 
   it('places 60-minute lessons across two rows', () => {
-    const placement = computeTimetablePlacement(13 * 60, 60);
+    const placement = computeTimetablePlacement(10 * 60, 60);
     expect(placement).toEqual({ rowStart: 0, rowSpan: 2 });
   });
 
   it('places 21:00 lesson through 22:00 boundary', () => {
     const placement = computeTimetablePlacement(21 * 60, 60);
-    expect(placement).toEqual({ rowStart: 16, rowSpan: 2 });
+    expect(placement).toEqual({ rowStart: 22, rowSpan: 2 });
   });
 
   it('rejects placements outside operating window', () => {
     expect(computeTimetablePlacement(22 * 60, 30)).toBeNull();
-    expect(computeTimetablePlacement(12 * 60, 60)).toBeNull();
+    expect(computeTimetablePlacement(9 * 60 + 30, 60)).toBeNull();
   });
 
   it('formats lesson progress as total-sequence', () => {
@@ -45,7 +50,7 @@ describe('weekly timetable grid', () => {
   it('maps lesson entries with Seoul weekday and progress label', () => {
     const entry = mapLessonToTimetableEntry({
       lesson_id: 'lesson-1',
-      scheduled_at: '2026-07-15T04:00:00.000Z',
+      scheduled_at: '2026-07-28T01:00:00.000Z',
       duration_minutes: 60,
       student_id: 'student',
       student_name: 'Student',
@@ -58,8 +63,50 @@ describe('weekly timetable grid', () => {
       registered_lesson_count: 4,
     });
 
-    expect(entry.weekday).toBe(3);
-    expect(entry.local_start_minutes).toBe(13 * 60);
+    expect(entry.weekday).toBe(2);
+    expect(entry.local_start_minutes).toBe(10 * 60);
     expect(entry.lesson_progress).toBe(formatLessonProgress(4, 2));
+  });
+
+  it('builds weekday date headers for a Seoul week with month boundary labels', () => {
+    const reference = new Date('2026-07-30T12:00:00+09:00');
+    const headers = buildSeoulWeekDayHeaders(reference);
+    expect(headers).toHaveLength(7);
+    expect(headers[0]?.header_label).toBe('월 7/27');
+    expect(headers[4]?.header_label).toBe('금 7/31');
+    expect(headers[5]?.header_label).toBe('토 8/1');
+    expect(formatWeekdayDateHeader('2026-07-28')).toBe('화 7/28');
+  });
+
+  it('excludes next Monday from the current Seoul week bounds', () => {
+    const reference = new Date('2026-07-28T12:00:00+09:00');
+    const bounds = getSeoulWeekBounds(reference);
+    expect(bounds.mondayDateKey).toBe('2026-07-27');
+    expect(bounds.sundayDateKey).toBe('2026-08-02');
+    expect(new Date(bounds.endIso).getTime()).toBeLessThan(
+      new Date('2026-08-03T00:00:00+09:00').getTime(),
+    );
+  });
+
+  it('groups lessons under week-aware headers', () => {
+    const reference = new Date('2026-07-28T12:00:00+09:00');
+    const lesson = mapLessonToTimetableEntry({
+      lesson_id: 'lesson-tue',
+      scheduled_at: '2026-07-28T01:00:00.000Z',
+      duration_minutes: 60,
+      student_id: 'student',
+      student_name: 'Alpha Student',
+      teacher_id: 'teacher',
+      teacher_name: 'Teacher',
+      course_id: 'course',
+      course_name: 'Course',
+      lesson_status: 'scheduled',
+      sequence_number: 1,
+      registered_lesson_count: 4,
+    });
+    const columns = buildWeeklyTimetableColumns([lesson], reference);
+    const tuesday = columns.find((column) => column.weekday === 2);
+    expect(tuesday?.header_label).toBe('화 7/28');
+    expect(tuesday?.lessons).toHaveLength(1);
   });
 });

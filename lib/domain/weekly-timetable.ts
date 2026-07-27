@@ -9,6 +9,7 @@ import { weekdayLabelMonFirst, WEEKDAY_ORDER_MON_FIRST } from '@/lib/domain/week
 
 export const TIMETABLE_INTERVAL_MINUTES = 30;
 
+/** Timetable grid displays rows from 10:00 through the 22:00 closing boundary. */
 export const TIMETABLE_START_MINUTES = ACADEMY_FIRST_START_MINUTES;
 export const TIMETABLE_END_MINUTES = ACADEMY_LAST_END_MINUTES;
 
@@ -33,6 +34,8 @@ export interface WeeklyTimetableLesson {
 export interface WeeklyTimetableDayColumn {
   weekday: number;
   weekday_label: string;
+  header_label: string;
+  date_key: string;
   lessons: WeeklyTimetableLesson[];
 }
 
@@ -40,6 +43,13 @@ export interface WeeklyTimetableRow {
   start_minutes: number;
   end_minutes: number;
   label: string;
+}
+
+export interface SeoulWeekBounds {
+  startIso: string;
+  endIso: string;
+  mondayDateKey: string;
+  sundayDateKey: string;
 }
 
 export function buildTimetableRows(): WeeklyTimetableRow[] {
@@ -59,29 +69,118 @@ export function buildTimetableRows(): WeeklyTimetableRow[] {
   return rows;
 }
 
-export function getSeoulWeekBounds(reference = new Date()): { startIso: string; endIso: string } {
-  const seoulDateParts = new Intl.DateTimeFormat('en-CA', {
+function seoulDateKeyFromReference(reference: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(reference);
+}
 
-  const ref = new Date(`${seoulDateParts}T12:00:00+09:00`);
-  const day = ref.getUTCDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(ref);
-  monday.setUTCDate(ref.getUTCDate() + mondayOffset);
-  monday.setUTCHours(0, 0, 0, 0);
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const base = new Date(`${dateKey}T12:00:00+09:00`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
+}
 
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  sunday.setUTCHours(23, 59, 59, 999);
+export function parseWeekReference(weekParam?: string | null): Date {
+  const trimmed = weekParam?.trim();
+  if (!trimmed || !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date();
+  }
+  return new Date(`${trimmed}T12:00:00+09:00`);
+}
+
+function seoulWeekdayFromDateKey(dateKey: string): number {
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+  }).format(new Date(`${dateKey}T12:00:00+09:00`));
+  const map: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return map[weekday] ?? 0;
+}
+
+export function getSeoulWeekBounds(reference = new Date()): SeoulWeekBounds {
+  const seoulDateKey = seoulDateKeyFromReference(reference);
+  const weekday = seoulWeekdayFromDateKey(seoulDateKey);
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  const mondayDateKey = addDaysToDateKey(seoulDateKey, mondayOffset);
+  const sundayDateKey = addDaysToDateKey(mondayDateKey, 6);
+  const startIso = new Date(`${mondayDateKey}T00:00:00+09:00`).toISOString();
+  const endIso = new Date(`${sundayDateKey}T23:59:59.999+09:00`).toISOString();
 
   return {
-    startIso: monday.toISOString(),
-    endIso: sunday.toISOString(),
+    startIso,
+    endIso,
+    mondayDateKey,
+    sundayDateKey,
   };
+}
+
+export function shiftWeekReference(reference: Date, weekDelta: number): Date {
+  if (weekDelta === 0) {
+    return reference;
+  }
+  const dateKey = seoulDateKeyFromReference(reference);
+  return new Date(`${addDaysToDateKey(dateKey, weekDelta * 7)}T12:00:00+09:00`);
+}
+
+export function isSameSeoulWeek(a: Date, b: Date): boolean {
+  return getSeoulWeekBounds(a).mondayDateKey === getSeoulWeekBounds(b).mondayDateKey;
+}
+
+export function formatWeekdayDateHeader(dateKey: string): string {
+  const date = new Date(`${dateKey}T12:00:00+09:00`);
+  const weekday = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+  })
+    .format(date)
+    .replace(/\./g, '')
+    .trim();
+  const month = Number.parseInt(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', month: 'numeric' }).format(date),
+    10,
+  );
+  const day = Number.parseInt(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', day: 'numeric' }).format(date),
+    10,
+  );
+  return `${weekday} ${month}/${day}`;
+}
+
+export function buildSeoulWeekDayHeaders(reference = new Date()): Array<{
+  weekday: number;
+  weekday_label: string;
+  header_label: string;
+  date_key: string;
+}> {
+  const { mondayDateKey } = getSeoulWeekBounds(reference);
+  return WEEKDAY_ORDER_MON_FIRST.map((weekday, index) => {
+    const dateKey = addDaysToDateKey(mondayDateKey, index);
+    return {
+      weekday,
+      weekday_label: weekdayLabelMonFirst(weekday),
+      header_label: formatWeekdayDateHeader(dateKey),
+      date_key: dateKey,
+    };
+  });
+}
+
+export function buildWeekContextLabel(reference = new Date()): string {
+  const { mondayDateKey, sundayDateKey } = getSeoulWeekBounds(reference);
+  const startLabel = formatWeekdayDateHeader(mondayDateKey);
+  const endLabel = formatWeekdayDateHeader(sundayDateKey);
+  return `${startLabel} – ${endLabel} (Asia/Seoul)`;
 }
 
 export function seoulWeekdayFromIso(iso: string): number {
@@ -126,8 +225,9 @@ export function computeTimetablePlacement(
   return { rowStart, rowSpan };
 }
 
-export function groupTimetableLessonsByWeekday(
+export function buildWeeklyTimetableColumns(
   lessons: WeeklyTimetableLesson[],
+  reference = new Date(),
 ): WeeklyTimetableDayColumn[] {
   const byWeekday = new Map<number, WeeklyTimetableLesson[]>();
   for (const lesson of lessons) {
@@ -136,15 +236,21 @@ export function groupTimetableLessonsByWeekday(
     byWeekday.set(lesson.weekday, list);
   }
 
-  return WEEKDAY_ORDER_MON_FIRST.map((weekday) => ({
-    weekday,
-    weekday_label: weekdayLabelMonFirst(weekday),
-    lessons: (byWeekday.get(weekday) ?? []).sort(
+  return buildSeoulWeekDayHeaders(reference).map((header) => ({
+    ...header,
+    lessons: (byWeekday.get(header.weekday) ?? []).sort(
       (a, b) =>
         a.local_start_minutes - b.local_start_minutes ||
         a.student_name.localeCompare(b.student_name, 'ko'),
     ),
   }));
+}
+
+/** @deprecated Use buildWeeklyTimetableColumns for week-aware headers. */
+export function groupTimetableLessonsByWeekday(
+  lessons: WeeklyTimetableLesson[],
+): WeeklyTimetableDayColumn[] {
+  return buildWeeklyTimetableColumns(lessons);
 }
 
 export function mapLessonToTimetableEntry(input: {

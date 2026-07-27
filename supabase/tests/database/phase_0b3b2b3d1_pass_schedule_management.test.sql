@@ -192,7 +192,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.replace_sig()
 RETURNS text LANGUAGE sql IMMUTABLE AS $$
-  SELECT 'public.reve_owner_replace_pass_schedule_slots(uuid,timestamptz,jsonb,text)'::text;
+  SELECT 'public.reve_owner_replace_pass_schedule_slots(uuid,timestamptz,jsonb,text,date)'::text;
 $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.audit_count()

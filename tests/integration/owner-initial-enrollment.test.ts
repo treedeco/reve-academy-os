@@ -30,14 +30,14 @@ const enrollmentScheduleFixtures = {
     {
       teacherId: alphaTeacherId,
       weekday: 2,
-      localTime: '14:00',
+      localTime: '11:00',
       durationMinutes: 60,
       slotOrder: 1,
     },
     {
       teacherId: alphaTeacherBId,
-      weekday: 4,
-      localTime: '15:00',
+      weekday: 5,
+      localTime: '16:00',
       durationMinutes: 60,
       slotOrder: 2,
     },

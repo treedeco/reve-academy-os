@@ -1,8 +1,8 @@
 import { BaseSequencer, type TestSpecification } from 'vitest/node';
 
 const integrationOrder = [
-  'owner-lesson-operations.test.ts',
   'owner-queries.test.ts',
+  'owner-lesson-operations.test.ts',
 ];
 
 function integrationRank(moduleId: string): number {
