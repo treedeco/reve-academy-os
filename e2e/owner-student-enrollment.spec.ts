@@ -87,7 +87,9 @@ test.describe('Owner student master and initial enrollment', () => {
     await expect(page.getByTestId('remaining-count')).toHaveText('4');
     await expect(page.getByTestId('student-lessons-table').locator('tbody tr')).toHaveCount(4);
     await expect(page.getByTestId('student-schedule-slots').locator('li')).toHaveCount(1);
-    await expect(page.getByTestId('initial-enrollment-panel')).toHaveCount(0);
+    // Additional courses remain enrollable when the catalog has more than one course.
+    await expect(page.getByRole('heading', { name: '과목 추가 등록' })).toBeVisible();
+    await expect(page.getByTestId('enrollment-course')).not.toContainText('Alpha Vocal Course');
   });
 
   test('persists four-lesson enrollment after reload', async ({ page }) => {

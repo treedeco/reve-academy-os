@@ -86,6 +86,8 @@ export interface StudentDetailData {
   };
   teacher_name: string | null;
   current_pass: PassUsageSummary | null;
+  /** Course IDs that already have any pass (initial enrollment allowed only once per course). */
+  enrolled_course_ids: string[];
   schedule_slots: Array<{
     id: string;
     weekday: number;

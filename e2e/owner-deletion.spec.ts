@@ -23,12 +23,6 @@ test.describe('Owner permanent deletion and fixed-schedule removal', () => {
     await expect(page.getByTestId(`teacher-item-${code}`)).toBeVisible({ timeout: 10_000 });
   }
 
-  async function readConfirmationPlaceholder(page: Page): Promise<string> {
-    const placeholder = await page.getByTestId('danger-confirmation').getAttribute('placeholder');
-    expect(placeholder).toBeTruthy();
-    return placeholder!;
-  }
-
   test('redirects unauthenticated users to login', async ({ page }) => {
     await page.goto('/students');
     await expect(page).toHaveURL(/\/login/);
@@ -75,11 +69,8 @@ test.describe('Owner permanent deletion and fixed-schedule removal', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId('danger-removed-items')).toBeVisible({ timeout: 15_000 });
 
-    const confirmationPhrase = await readConfirmationPlaceholder(page);
-    expect(confirmationPhrase).toMatch(/스케줄삭제$/);
-
     await page.getByTestId('danger-reason').fill('E2E fixed schedule removal');
-    await page.getByTestId('danger-confirmation').fill(confirmationPhrase);
+    await page.getByTestId('danger-confirmed').check();
     await expect(page.getByTestId('danger-submit')).toBeEnabled({ timeout: 15_000 });
     await page.getByTestId('danger-submit').click();
 
@@ -113,11 +104,8 @@ test.describe('Owner permanent deletion and fixed-schedule removal', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId('danger-removed-items')).toBeVisible({ timeout: 15_000 });
 
-    const confirmationPhrase = await readConfirmationPlaceholder(page);
-    expect(confirmationPhrase).toMatch(/영구삭제$/);
-
     await page.getByTestId('danger-reason').fill('E2E permanent student deletion');
-    await page.getByTestId('danger-confirmation').fill(confirmationPhrase);
+    await page.getByTestId('danger-confirmed').check();
     await expect(page.getByTestId('danger-submit')).toBeEnabled({ timeout: 15_000 });
     await page.getByTestId('danger-submit').click();
 
@@ -142,11 +130,8 @@ test.describe('Owner permanent deletion and fixed-schedule removal', () => {
       label: `${replacementTeacherName} (${replacementTeacherCode})`,
     });
 
-    const confirmationPhrase = await readConfirmationPlaceholder(page);
-    expect(confirmationPhrase).toMatch(/영구삭제$/);
-
     await page.getByTestId('danger-reason').fill('E2E permanent teacher deletion (reassign)');
-    await page.getByTestId('danger-confirmation').fill(confirmationPhrase);
+    await page.getByTestId('danger-confirmed').check();
     await expect(page.getByTestId('danger-submit')).toBeEnabled({ timeout: 15_000 });
     await page.getByTestId('danger-submit').click();
 

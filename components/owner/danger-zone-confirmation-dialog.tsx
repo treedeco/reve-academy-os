@@ -11,10 +11,8 @@ export function DangerZoneConfirmationDialog({
   removedItems,
   blockers,
   warnings,
-  confirmationLabel,
-  confirmationPlaceholder,
-  confirmationValue,
-  onConfirmationChange,
+  confirmed,
+  onConfirmedChange,
   reasonLabel = '삭제 사유',
   reasonValue,
   onReasonChange,
@@ -35,10 +33,8 @@ export function DangerZoneConfirmationDialog({
   removedItems?: string[];
   blockers?: string[];
   warnings?: string[];
-  confirmationLabel: string;
-  confirmationPlaceholder: string;
-  confirmationValue: string;
-  onConfirmationChange: (value: string) => void;
+  confirmed: boolean;
+  onConfirmedChange: (value: boolean) => void;
   reasonLabel?: string;
   reasonValue: string;
   onReasonChange: (value: string) => void;
@@ -160,22 +156,18 @@ export function DangerZoneConfirmationDialog({
           />
         </label>
 
-        <label className="block text-sm">
-          <span className="text-slate-600">{confirmationLabel}</span>
+        <label className="flex items-start gap-2 text-sm">
           <input
-            type="text"
-            value={confirmationValue}
-            onChange={(event) => onConfirmationChange(event.target.value)}
-            placeholder={confirmationPlaceholder}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            autoComplete="off"
+            type="checkbox"
+            checked={confirmed}
+            onChange={(event) => onConfirmedChange(event.target.checked)}
             disabled={pending}
-            aria-describedby={`${titleId}-confirm-help`}
-            data-testid="danger-confirmation"
+            className="mt-1"
+            data-testid="danger-confirmed"
           />
-          <p id={`${titleId}-confirm-help`} className="mt-1 text-xs text-slate-500">
-            정확히 「{confirmationPlaceholder}」 를 입력해야 삭제할 수 있습니다.
-          </p>
+          <span className="text-slate-700">
+            위 내용을 확인했으며, <strong>정말 삭제</strong>합니다.
+          </span>
         </label>
 
         {error ? (

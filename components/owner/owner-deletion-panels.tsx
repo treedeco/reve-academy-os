@@ -20,7 +20,6 @@ import {
   formatCountLabel,
   mapOwnerDeletionError,
   TEACHER_LINK_HANDLING_OPTIONS,
-  validateConfirmationPhrase,
   validateDeleteReason,
   validateEffectiveFromDate,
   validateReplacementTeacher,
@@ -56,7 +55,7 @@ export function RemoveFixedSchedulePanel({
   const [preview, setPreview] = useState<ScheduleRemovalPreview | null>(null);
   const [effectiveFrom, setEffectiveFrom] = useState(formatTodayDateInput());
   const [reason, setReason] = useState('');
-  const [confirmation, setConfirmation] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
   const [pending, setPending] = useState(false);
   const [previewPending, setPreviewPending] = useState(false);
   const [error, setError] = useState('');
@@ -87,7 +86,7 @@ export function RemoveFixedSchedulePanel({
   async function openDialog() {
     setDialogOpen(true);
     setReason('');
-    setConfirmation('');
+    setConfirmed(false);
     setSuccessMessage('');
     setError('');
     await loadPreview();
@@ -110,9 +109,8 @@ export function RemoveFixedSchedulePanel({
       return;
     }
 
-    const confirmationError = validateConfirmationPhrase(confirmation, expectedConfirmation);
-    if (confirmationError) {
-      setError(confirmationError);
+    if (!confirmed) {
+      setError('정말 삭제하려면 확인란을 선택해 주세요.');
       return;
     }
 
@@ -126,7 +124,7 @@ export function RemoveFixedSchedulePanel({
         expectedPassUpdatedAt: preview.pass_updated_at,
         effectiveFrom,
         reason: reason.trim(),
-        confirmationCode: confirmation.trim(),
+        confirmationCode: expectedConfirmation,
         preflightFingerprint: preview.preflight_fingerprint,
       });
 
@@ -224,10 +222,8 @@ export function RemoveFixedSchedulePanel({
         }
         blockers={preview?.blockers}
         warnings={preview?.warnings}
-        confirmationLabel="확인 문구"
-        confirmationPlaceholder={expectedConfirmation}
-        confirmationValue={confirmation}
-        onConfirmationChange={setConfirmation}
+        confirmed={confirmed}
+        onConfirmedChange={setConfirmed}
         reasonValue={reason}
         onReasonChange={setReason}
         extraFields={
@@ -255,7 +251,7 @@ export function RemoveFixedSchedulePanel({
         submitDisabled={
           !preview ||
           pending ||
-          confirmation.trim() !== expectedConfirmation ||
+          !confirmed ||
           !reason.trim() ||
           Boolean(preview.blockers?.length)
         }
@@ -276,7 +272,7 @@ export function StudentPermanentDeleteSection({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preview, setPreview] = useState<StudentDeletionPreview | null>(null);
   const [reason, setReason] = useState('');
-  const [confirmation, setConfirmation] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
   const [pending, setPending] = useState(false);
   const [previewPending, setPreviewPending] = useState(false);
   const [error, setError] = useState('');
@@ -286,7 +282,7 @@ export function StudentPermanentDeleteSection({
   async function openDialog() {
     setDialogOpen(true);
     setReason('');
-    setConfirmation('');
+    setConfirmed(false);
     setError('');
     setPreviewPending(true);
     try {
@@ -310,9 +306,8 @@ export function StudentPermanentDeleteSection({
       return;
     }
 
-    const confirmationError = validateConfirmationPhrase(confirmation, expectedConfirmation);
-    if (confirmationError) {
-      setError(confirmationError);
+    if (!confirmed) {
+      setError('정말 삭제하려면 확인란을 선택해 주세요.');
       return;
     }
 
@@ -324,7 +319,7 @@ export function StudentPermanentDeleteSection({
       await permanentlyDeleteStudent(supabase, {
         studentId,
         expectedUpdatedAt: preview.updated_at,
-        confirmationCode: confirmation.trim(),
+        confirmationCode: expectedConfirmation,
         reason: reason.trim(),
         preflightFingerprint: preview.preflight_fingerprint,
       });
@@ -403,10 +398,8 @@ export function StudentPermanentDeleteSection({
         preservedItems={['감사 로그 tombstone (개인정보 제외)']}
         blockers={preview?.blockers}
         warnings={preview?.warnings}
-        confirmationLabel="확인 문구"
-        confirmationPlaceholder={expectedConfirmation}
-        confirmationValue={confirmation}
-        onConfirmationChange={setConfirmation}
+        confirmed={confirmed}
+        onConfirmedChange={setConfirmed}
         reasonValue={reason}
         onReasonChange={setReason}
         submitLabel="학생 영구 삭제"
@@ -417,7 +410,7 @@ export function StudentPermanentDeleteSection({
         submitDisabled={
           !preview ||
           pending ||
-          confirmation.trim() !== expectedConfirmation ||
+          !confirmed ||
           !reason.trim() ||
           Boolean(preview.blockers?.length)
         }
@@ -440,7 +433,7 @@ export function TeacherPermanentDeleteSection({
   const [linkMode, setLinkMode] = useState<TeacherLinkHandlingMode>('reassign');
   const [replacementTeacherId, setReplacementTeacherId] = useState('');
   const [reason, setReason] = useState('');
-  const [confirmation, setConfirmation] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
   const [pending, setPending] = useState(false);
   const [previewPending, setPreviewPending] = useState(false);
   const [error, setError] = useState('');
@@ -457,7 +450,7 @@ export function TeacherPermanentDeleteSection({
   async function openDialog() {
     setDialogOpen(true);
     setReason('');
-    setConfirmation('');
+    setConfirmed(false);
     setError('');
     setLinkMode('reassign');
     setReplacementTeacherId(replacementOptions[0]?.id ?? '');
@@ -489,9 +482,8 @@ export function TeacherPermanentDeleteSection({
       return;
     }
 
-    const confirmationError = validateConfirmationPhrase(confirmation, expectedConfirmation);
-    if (confirmationError) {
-      setError(confirmationError);
+    if (!confirmed) {
+      setError('정말 삭제하려면 확인란을 선택해 주세요.');
       return;
     }
 
@@ -505,7 +497,7 @@ export function TeacherPermanentDeleteSection({
         expectedUpdatedAt: preview.updated_at,
         linkHandlingMode: linkMode,
         replacementTeacherId: linkMode === 'reassign' ? replacementTeacherId : null,
-        confirmationCode: confirmation.trim(),
+        confirmationCode: expectedConfirmation,
         reason: reason.trim(),
         preflightFingerprint: preview.preflight_fingerprint,
       });
@@ -568,10 +560,8 @@ export function TeacherPermanentDeleteSection({
         removedItems={['강사 마스터 row']}
         blockers={preview?.blockers}
         warnings={preview?.warnings}
-        confirmationLabel="확인 문구"
-        confirmationPlaceholder={expectedConfirmation}
-        confirmationValue={confirmation}
-        onConfirmationChange={setConfirmation}
+        confirmed={confirmed}
+        onConfirmedChange={setConfirmed}
         reasonValue={reason}
         onReasonChange={setReason}
         extraFields={
@@ -626,7 +616,7 @@ export function TeacherPermanentDeleteSection({
         submitDisabled={
           !preview ||
           pending ||
-          confirmation.trim() !== expectedConfirmation ||
+          !confirmed ||
           !reason.trim() ||
           Boolean(preview.blockers?.length) ||
           (linkMode === 'reassign' && !replacementTeacherId)

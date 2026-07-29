@@ -291,9 +291,13 @@ export async function fetchStudentDetail(
 
   const { data: passes } = await supabase
     .from('passes')
-    .select('id, pass_code, status, sequence_number')
+    .select('id, pass_code, status, sequence_number, course_id')
     .eq('student_id', studentId)
     .order('sequence_number', { ascending: false });
+
+  const enrolledCourseIds = [
+    ...new Set((passes ?? []).map((pass) => pass.course_id).filter(Boolean)),
+  ] as string[];
 
   const currentPassRow = (passes ?? []).find((pass) => ['active', 'reserved'].includes(pass.status));
   const currentPass = currentPassRow ? await fetchPassUsage(supabase, currentPassRow.id) : null;
@@ -371,6 +375,7 @@ export async function fetchStudentDetail(
     student,
     teacher_name: teacherName ?? null,
     current_pass: currentPass,
+    enrolled_course_ids: enrolledCourseIds,
     schedule_slots: (slots ?? []).map((slot) => ({
       id: slot.id,
       weekday: slot.weekday,

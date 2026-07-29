@@ -40,9 +40,11 @@ function formatTodayDateInput(): string {
 
 export function InitialEnrollmentPanel({
   student,
+  excludedCourseIds = [],
   onEnrollmentComplete,
 }: {
   student: OwnerStudentRow;
+  excludedCourseIds?: string[];
   onEnrollmentComplete: (result: OwnerInitialEnrollmentResult) => Promise<void>;
 }) {
   const idempotencyKeyRef = useRef(crypto.randomUUID());
@@ -70,18 +72,31 @@ export function InitialEnrollmentPanel({
   const catalog: OwnerEnrollmentCatalog | null =
     catalogState.status === 'ready' ? catalogState.catalog : null;
 
+  const availableCourses = useMemo(
+    () =>
+      catalog?.courses.filter((course) => !excludedCourseIds.includes(course.id)) ?? [],
+    [catalog?.courses, excludedCourseIds],
+  );
+
   const selectedProduct = useMemo(
     () => catalog?.products.find((product) => product.id === productId) ?? null,
     [catalog?.products, productId],
   );
 
   const productsForCourse = useMemo(
-    () => catalog?.products.filter((product) => product.course_id === courseId) ?? [],
-    [catalog?.products, courseId],
+    () =>
+      catalog?.products.filter(
+        (product) => product.course_id === courseId && !excludedCourseIds.includes(product.course_id),
+      ) ?? [],
+    [catalog?.products, courseId, excludedCourseIds],
   );
+
+  const allCoursesEnrolled =
+    catalogState.status === 'ready' && availableCourses.length === 0 && excludedCourseIds.length > 0;
 
   const canSubmit =
     catalogState.status === 'ready' &&
+    !allCoursesEnrolled &&
     Boolean(selectedProduct) &&
     slots.length > 0 &&
     !pending;
@@ -168,11 +183,21 @@ export function InitialEnrollmentPanel({
       className="rounded-lg border border-slate-200 bg-white p-4"
       data-testid="initial-enrollment-panel"
     >
-      <h2 className="text-lg font-semibold">초기 등록</h2>
+      <h2 className="text-lg font-semibold">
+        {excludedCourseIds.length > 0 ? '과목 추가 등록' : '초기 등록'}
+      </h2>
       <p className="mt-1 text-sm text-slate-600">
-        강사, 과목, 상품, 고정 일정을 선택해 첫 회차권과 수업을 생성합니다.
+        {excludedCourseIds.length > 0
+          ? '아직 등록하지 않은 과목에 대해 회차권과 수업을 추가합니다.'
+          : '강사, 과목, 상품, 고정 일정을 선택해 첫 회차권과 수업을 생성합니다.'}
       </p>
 
+      {allCoursesEnrolled ? (
+        <p className="mt-4 text-sm text-slate-600" data-testid="enrollment-all-courses-enrolled">
+          등록 가능한 과목이 없습니다. 모든 과목에 회차권이 이미 있습니다.
+        </p>
+      ) : (
+      <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="text-slate-600">과목</span>
@@ -184,7 +209,7 @@ export function InitialEnrollmentPanel({
             disabled={pending || catalogState.status !== 'ready'}
           >
             <option value="">과목 선택</option>
-            {catalog?.courses.map((course) => (
+            {availableCourses.map((course) => (
               <option key={course.id} value={course.id}>
                 {course.name} ({course.course_code})
               </option>
@@ -372,8 +397,10 @@ export function InitialEnrollmentPanel({
         className="mt-4 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         data-testid="enrollment-submit"
       >
-        {pending ? '등록 중…' : '초기 등록 실행'}
+        {pending ? '등록 중…' : excludedCourseIds.length > 0 ? '과목 등록 실행' : '초기 등록 실행'}
       </button>
+      </>
+      )}
     </section>
   );
 }

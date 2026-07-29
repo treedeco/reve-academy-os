@@ -155,9 +155,10 @@ export function StudentDetailClient({
 
       <StudentMasterPanel student={master} onStudentChange={setMaster} />
 
-      {master.operational_status === 'active' && !detail.current_pass ? (
+      {master.operational_status === 'active' ? (
         <InitialEnrollmentPanel
           student={master}
+          excludedCourseIds={detail.enrolled_course_ids}
           onEnrollmentComplete={refreshAfterEnrollment}
         />
       ) : null}
