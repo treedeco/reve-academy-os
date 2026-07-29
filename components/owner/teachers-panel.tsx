@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { TeacherPermanentDeleteSection } from '@/components/owner/owner-deletion-panels';
 import {
   createOwnerTeacher,
   setOwnerTeacherActive,
@@ -473,6 +474,14 @@ export function TeachersPanel({ initialTeachers }: { initialTeachers: OwnerTeach
                     {rowError}
                   </p>
                 ) : null}
+
+                <TeacherPermanentDeleteSection
+                  teacher={teacher}
+                  activeTeachers={teachers}
+                  onDeleted={() => {
+                    setTeachers((prev) => prev.filter((row) => row.id !== teacher.id));
+                  }}
+                />
               </article>
             );
           })}

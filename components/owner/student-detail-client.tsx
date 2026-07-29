@@ -6,6 +6,10 @@ import { InitialEnrollmentPanel } from '@/components/owner/initial-enrollment-pa
 import { LessonOperationsPanel } from '@/components/owner/lesson-operations-panel';
 import { OwnerScheduleChangeDialog } from '@/components/owner/owner-schedule-change-dialog';
 import { StudentMasterPanel } from '@/components/owner/student-master-panel';
+import {
+  RemoveFixedSchedulePanel,
+  StudentPermanentDeleteSection,
+} from '@/components/owner/owner-deletion-panels';
 import { StudentOperationalHistoryPanel } from '@/components/owner/student-operational-history-panel';
 import { StudentPassSummary } from '@/components/owner/student-pass-summary';
 import { fetchLessonScheduleEditContext } from '@/lib/data/owner-schedule-edit';
@@ -86,6 +90,16 @@ export function StudentDetailClient({
     }));
   }
 
+  async function refreshStudentDetail() {
+    const supabase = createClient();
+    const [nextDetail, nextMaster] = await Promise.all([
+      fetchStudentDetail(supabase, master.id),
+      fetchOwnerStudentMasterRow(supabase, master.id),
+    ]);
+    setDetail(nextDetail);
+    setMaster(nextMaster);
+  }
+
   async function refreshAfterEnrollment(_result: OwnerInitialEnrollmentResult) {
     const supabase = createClient();
     const [nextDetail, nextMaster, paymentsResult] = await Promise.all([
@@ -153,6 +167,13 @@ export function StudentDetailClient({
         {detail.current_pass ? (
           <>
             <StudentPassSummary pass={detail.current_pass} fixedScheduleLabel={fixedScheduleLabel} />
+            <RemoveFixedSchedulePanel
+              studentName={detail.student.name}
+              studentCode={detail.student.student_code}
+              currentPass={detail.current_pass}
+              scheduleSlotsLabel={fixedScheduleLabel}
+              onScheduleRemoved={refreshAfterLessonOperation}
+            />
             {nextChangeableLesson ? (
               <button
                 type="button"
@@ -282,6 +303,12 @@ export function StudentDetailClient({
       ) : null}
 
       <StudentOperationalHistoryPanel history={history} />
+
+      <StudentPermanentDeleteSection
+        studentId={master.id}
+        studentCode={master.student_code}
+        studentName={master.name}
+      />
 
       {scheduleDialogOpen && nextChangeableLesson && detail.current_pass ? (
         <OwnerScheduleChangeDialog

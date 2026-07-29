@@ -6,15 +6,17 @@
 
 ## Current priority — Minimum Owner Go-Live
 
-**Active focus (2026-07-16):** Phase 2B-2B1-R1 — Owner lesson correction, direct rescheduling, and weekly timetable (before payment renewal UI).
+**Active focus (2026-07-29):** Phase 2B-2B5 — Owner permanent deletion and fixed-schedule removal.
 
 **Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2B1-R1).
 
-**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, and a time-aligned weekly timetable (13:00–22:00, final valid start 21:00)**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
+**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, weekly timetable, direct fixed-schedule editing, and owner-gated permanent deletion workflows (schedule removal, student delete, teacher delete)**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
 
 **Owner login credential change (reve username):** Implementation **`783c8015f0546422d9795cee06558495b0e4d381`**. Runtime verification passed on **2026-07-17** (evidence: [docs/manual-verification-owner-alpha.md](./manual-verification-owner-alpha.md) — Owner login credential change section). Checkpoint tag: **`owner-login-reve-runtime-verified`**.
 
-**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — wire `reve_complete_payment_and_renew_pass` to Owner UI with tests — **only after Phase 2B-2B1-R1 operator manual verification and runtime-verified tag**.
+**Deferred (blocked):** **Phase 2B-2B2 / 2B-2B5 payment renewal UI** — `reve_complete_payment_and_renew_pass` lacks a pending-payment creation RPC; rollback tag `phase-2b2b5-owner-payment-renewal-rollback` @ `98d8c21` (local only, do not push).
+
+**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — requires new pending-payment RPC before Owner UI wiring.
 
 **Following phase:** **Phase 2B-2C — Production Go-Live Operations** — deployment, bootstrap, backup/restore runbooks.
 
@@ -36,10 +38,20 @@
 - Automated tests + `scripts/verify_phase_2b2b1.ps1`
 - Manual checklist: [docs/manual-verification-owner-student-initial-enrollment.md](./manual-verification-owner-student-initial-enrollment.md)
 
-### Phase 2B-2B2 — Payment and pass renewal (planned)
+### Phase 2B-2B5 — Owner permanent deletion and schedule removal
+
+- Fixed pass schedule removal (slot deactivate + future lessons `advance_cancelled`; past history preserved)
+- Student permanent deletion (preflight → confirmation phrase → atomic cascade delete + tombstone audit)
+- Teacher permanent deletion (`reassign` or `remove_future_schedule`; past lessons keep name snapshot; profile/auth user retained)
+- Confirmation phrases: `{pass_code} 스케줄삭제`, `{student_code} 영구삭제`, `{teacher_code} 영구삭제`
+- Migration: `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql` (local 26/26; production 25/25 until next deploy)
+- Automated tests + `scripts/verify_phase_2b2b5.ps1`
+- Manual checklist: [docs/manual-verification-owner-deletion.md](./manual-verification-owner-deletion.md)
+
+### Phase 2B-2B2 — Payment and pass renewal (deferred)
 
 - Owner payment record UI for pass renewal
-- `reve_complete_payment_and_renew_pass` wiring
+- `reve_complete_payment_and_renew_pass` wiring — **blocked** until pending-payment creation RPC exists
 - Excludes production deployment
 
 ### Phase 2B-2C — Production go-live operations (planned)

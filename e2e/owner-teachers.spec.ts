@@ -114,10 +114,13 @@ test.describe('Owner teacher master data', () => {
     await page.getByTestId(`teacher-edit-phone-${createdCode}`).fill('010-9999-0000');
     await page.getByTestId(`teacher-save-${createdCode}`).click();
 
-    await expect(page.getByText(updatedName)).toBeVisible({ timeout: 10_000 });
+    // Scoped to the row heading: the teacher's name also appears inside the
+    // permanent-delete danger-zone summary text within the same row.
+    const teacherRow = page.getByTestId(`teacher-item-${createdCode}`);
+    await expect(teacherRow.getByRole('heading', { name: updatedName })).toBeVisible({ timeout: 10_000 });
 
     await page.reload();
-    await expect(page.getByText(updatedName)).toBeVisible({ timeout: 10_000 });
+    await expect(teacherRow.getByRole('heading', { name: updatedName })).toBeVisible({ timeout: 10_000 });
   });
 
   test('deactivates an unassigned teacher', async ({ page }) => {
@@ -167,11 +170,14 @@ test.describe('Owner teacher master data', () => {
     await expect(assignedRow.getByTestId(`teacher-status-${assignedTeacherCode}`)).toHaveText('활성');
   });
 
-  test('does not expose delete actions', async ({ page }) => {
+  test('does not expose a quick delete action outside the confirmation-gated danger zone', async ({ page }) => {
     await loginAsOwner(page);
     await page.goto('/teachers');
 
-    await expect(page.getByRole('button', { name: /삭제/ })).toHaveCount(0);
+    // Phase 2B-2B5 intentionally exposes a confirmation-gated "영구 삭제" (permanent delete) action;
+    // this only guards against a bare one-click "삭제" affordance outside that gated flow.
+    await expect(page.getByRole('button', { name: '삭제', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '강사 영구 삭제' }).first()).toBeVisible();
   });
 
   test('mobile layout remains usable without horizontal overflow', async ({ page }) => {

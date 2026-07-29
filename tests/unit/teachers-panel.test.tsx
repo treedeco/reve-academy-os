@@ -124,7 +124,7 @@ describe('TeachersPanel', () => {
     await user.click(screen.getByTestId('teacher-save-T-UNASSGN'));
 
     expect(updateOwnerTeacher).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Renamed Teacher')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Renamed Teacher' })).toBeInTheDocument();
     expect(screen.queryByTestId('teacher-save-T-UNASSGN')).not.toBeInTheDocument();
   });
 
@@ -230,9 +230,12 @@ describe('TeachersPanel', () => {
     });
   });
 
-  it('does not expose delete actions', () => {
+  it('does not expose a quick delete action outside the confirmation-gated danger zone', () => {
     render(<TeachersPanel initialTeachers={[activeTeacher]} />);
     const panel = screen.getByTestId('teachers-panel');
-    expect(within(panel).queryByRole('button', { name: /삭제/ })).toBeNull();
+    // Phase 2B-2B5 intentionally exposes a confirmation-gated "영구 삭제" (permanent delete) action;
+    // this only guards against a bare one-click "삭제" affordance outside that gated flow.
+    expect(within(panel).queryByRole('button', { name: '삭제' })).toBeNull();
+    expect(within(panel).getByRole('button', { name: '강사 영구 삭제' })).toBeInTheDocument();
   });
 });

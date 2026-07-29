@@ -19,7 +19,7 @@ test.describe('Owner student operational history', () => {
 
     await expect(page.getByRole('heading', { name: 'Delta Student' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '현재 회차권' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '고정 일정' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '고정 일정', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '수업 이력' })).toBeVisible();
 
     const historyPanel = page.getByTestId('student-operational-history');

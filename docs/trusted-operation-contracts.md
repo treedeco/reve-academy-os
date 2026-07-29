@@ -702,6 +702,59 @@ All internal: `REVOKE EXECUTE FROM PUBLIC, authenticated`; callable only from ot
 
 ---
 
+## 14. Owner permanent deletion and schedule removal — **Implemented (2B-2B5)**
+
+Migration `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql`.
+
+Historical-protection triggers (`reve_block_row_delete`, `reve_block_row_mutation`) bypass only when `reve.trusted_deletion = 'on'` inside these trusted functions.
+
+### Fixed pass schedule removal
+
+| RPC | Purpose |
+|-----|---------|
+| `reve_owner_preview_remove_fixed_pass_schedule` | Read-only impact preview |
+| `reve_owner_remove_fixed_pass_schedule` | Deactivate active slots; future non-completed lessons → `advance_cancelled` |
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Confirmation | Exact phrase `{pass_code} 스케줄삭제` |
+| Inputs | `pass_id`, `effective_start_date`, `reason`, `confirmation_phrase` |
+| Preserved | Past/completed lessons; manually moved future lessons (counted in preview) |
+| Prohibited | Physical DELETE on lessons/slots |
+
+### Student permanent deletion
+
+| RPC | Purpose |
+|-----|---------|
+| `reve_owner_preview_delete_student` | Preflight counts (passes, lessons, payments, etc.) |
+| `reve_owner_permanently_delete_student` | Ordered cascade DELETE + tombstone audit (no PII) |
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Confirmation | Exact phrase `{student_code} 영구삭제` |
+| Delete order | lesson_schedule_changes → schedule_change_requests → lesson_notes → lessons → schedule_slots → sms → payment_refunds → payments → passes → student (+ profile when linked) |
+| Auth user | Not deleted in RPC; returns `auth_user_id` for operator cleanup |
+| Failure | Full ROLLBACK |
+
+### Teacher permanent deletion
+
+| RPC | Purpose |
+|-----|---------|
+| `reve_owner_preview_delete_teacher` | Preflight; modes `reassign` \| `remove_future_schedule` |
+| `reve_owner_permanently_delete_teacher` | Snapshot past lesson teacher name; NULL future `assigned_teacher_id`; delete teacher row only |
+
+| Aspect | Specification |
+|--------|---------------|
+| Caller | Active owner only |
+| Confirmation | Exact phrase `{teacher_code} 영구삭제` |
+| Modes | `reassign` (replacement teacher required) or `remove_future_schedule` |
+| Preserved | Profile and Supabase Auth user (schedule_change_requests FK); past lessons via `assigned_teacher_name_snapshot` |
+| Prohibited | Silent rewrite of completed lesson history |
+
+---
+
 ## Read-only client RPC contracts (Phase 0B-3B-2A)
 
 These are **not** mutation operations. Wrong role or inactive profile → **empty result set** (no row-existence leak).

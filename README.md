@@ -127,6 +127,33 @@ npx playwright test
 powershell -ExecutionPolicy Bypass -File scripts/verify_phase_0b3b2b3e.ps1
 ```
 
+## Phase 2B-2B5 — Owner permanent deletion and schedule removal
+
+**Routes**: `/students/[studentId]` (schedule removal + student delete), `/teachers` (teacher delete)
+
+**RPCs** (Owner-only; preflight + confirmation phrase):
+
+| RPC | Purpose |
+|-----|---------|
+| `reve_owner_preview_remove_fixed_pass_schedule` | Impact preview for fixed schedule removal |
+| `reve_owner_remove_fixed_pass_schedule` | Deactivate slots; future lessons → `advance_cancelled` |
+| `reve_owner_preview_delete_student` | Preflight counts before student delete |
+| `reve_owner_permanently_delete_student` | Atomic cascade delete + tombstone audit |
+| `reve_owner_preview_delete_teacher` | Preflight for teacher delete modes |
+| `reve_owner_permanently_delete_teacher` | Delete teacher row; reassign or remove future schedule |
+
+**Migration**: `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql`
+
+**Validation**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify_phase_2b2b5.ps1
+```
+
+Manual checklist: [docs/manual-verification-owner-deletion.md](./docs/manual-verification-owner-deletion.md)
+
+**Deferred**: Payment renewal Owner UI (`reve_complete_payment_and_renew_pass`) — pending-payment RPC not yet available.
+
 ## Phase 0B-3B-2B-3E — Owner payment refund (database)
 
 **RPC**: `public.reve_process_payment_refund(p_payment_id uuid, p_refunded_amount_krw integer, p_reason text)` — Owner-only; active/reserved pass full refund; duplicate attempt → `REVE_REFUND_ALREADY_EXISTS`. **Migration**: `20260708120000_phase_0b3b2b3e_owner_payment_refund.sql`.
