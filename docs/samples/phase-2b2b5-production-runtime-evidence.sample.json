@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "runId": "PHASE2B2B5-20260729-ON8T7N",
+  "stage1": {
+    "loginSucceeded": true,
+    "authUserId": "2e4716e5…",
+    "ownerRole": "owner",
+    "ownerAccountState": "active",
+    "supabaseProjectRef": "bfhptqhgxignyggyxxkx",
+    "migrationRows": 26,
+    "migrations26of26": true,
+    "productionUrl": "https://reve-academy-os.vercel.app",
+    "expectedCommit": "e6a9ba6"
+  },
+  "workflows": {
+    "fixedScheduleRemoval": { "result": "PASS", "checkboxGatingVerified": true },
+    "studentPermanentDeletion": { "result": "PASS" },
+    "teacherReassignmentDeletion": { "result": "PASS" },
+    "teacherFutureScheduleRemoval": { "result": "PASS" }
+  },
+  "dbEvidence": {
+    "unrelatedRowControl": { "nonDisposableStudentCount": 4 }
+  },
+  "cleanup": {
+    "realProductionRecordsAffected": false
+  }
+}

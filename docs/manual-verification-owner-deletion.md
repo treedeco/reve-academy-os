@@ -90,7 +90,7 @@ Owner login: username `reve`, password from `.env.local` (`OWNER_PASSWORD`).
 | Safety verdict | **`SAFE_MODIFIED`** |
 | Runtime run ID | `PHASE2B2B5-20260729-ON8T7N` |
 | Evidence file | `backups/phase-2b2b5-production-runtime-evidence.json` |
-| Verification script | `scripts/run_phase_2b2b5_production_runtime.ps1` (`-AllowPlainPrompt`) |
+| Verification script | `scripts/run_phase_2b2b5_production_runtime.ps1` (`-ConfirmProduction -AllowSecurePrompt`) |
 | Owner production login | **PASS** (Stage 1; auth user `2e4716e5-6ad4-4e2e-bc39-7c5a435602e4`) |
 | Fixed schedule removal | **PASS** (pass `V-S0009-001`; checkbox gating verified; active slots 1→0; future scheduled 4→`advance_cancelled` 4) |
 | Student permanent deletion | **PASS** (disposable `S0010` / `2473d534-59e2-4f83-ba61-1cbf58845a4d`; student row count 0; detail not-found-like) |

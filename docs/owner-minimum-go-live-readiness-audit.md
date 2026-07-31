@@ -358,3 +358,32 @@ Baseline unchanged-application verification via `scripts/verify_phase_2b1.ps1` �
 **Not ready for real academy operations without SQL/RPC assistance.**
 
 The database layer is production-grade and extensively tested. The Owner UI supports **daily operations on pre-seeded or externally created data** (today’s lessons, SMS confirm, refunds, schedule-change review, teacher CRUD, read views). The **onboarding and renewal chain** (student create → enrollment → payment → next pass) is **not available in the browser** and **production cutover procedures are undocumented**.
+
+---
+
+## Phase 2B-2B5 production runtime update (2026-07-30)
+
+| Item | Value |
+|------|-------|
+| Status | **Phase 2B-2B5 complete — production runtime verified** |
+| Production app commit verified | **`e6a9ba6`** |
+| Closure evidence commit | **`f66c1fd`** |
+| Runtime tag | `phase-2b2b5-owner-deletion-runtime-verified` → `f66c1fd` |
+| Production URL | `https://reve-academy-os.vercel.app` |
+| Supabase project ref | `bfhptqhgxignyggyxxkx` |
+| Production migration state | **26/26** (`20260728120000` applied) |
+| Runtime run ID | `PHASE2B2B5-20260729-ON8T7N` |
+| Manual evidence | [manual-verification-owner-deletion.md](./manual-verification-owner-deletion.md) |
+
+**Workflows verified on production (disposable records only):**
+
+- Fixed pass schedule removal — **PASS**
+- Student permanent deletion — **PASS**
+- Teacher reassignment deletion — **PASS**
+- Teacher future-schedule removal deletion — **PASS**
+
+**Safety classification:** **`SAFE_MODIFIED`** at `e6a9ba6` (checkbox confirmation UX; server RPC contract unchanged).
+
+**Updated go-live verdict (2026-07-31):** Phase 2B-2B5 closes Owner-gated deletion / schedule-removal risk for the verified production deployment. The application remains **not fully go-live ready** until **Phase 2B-2C1** (backup/restore/rollback safety gate), **Phase 2B-2B2A/B** (payment renewal contract + UI), and **Phase 2B-2C2** (final ops closure) complete.
+
+**Recommended next sequence:** 2B-2C1 → 2B-2B2A → 2B-2B2B → 2B-2C2 (see [roadmap.md](./roadmap.md)).

@@ -36,3 +36,11 @@ yarn-error.log*
 next-env.d.ts
 tsconfig.tsbuildinfo
 .vercel
+
+# operator-generated production evidence / handoff (never commit)
+/backups/
+/reve-prod-keys-*.json
+reve-prod-keys-*.json
+reve-phase2b2b5-owner-password.clixml
+*.clixml
+.cursor-tmp-*.json

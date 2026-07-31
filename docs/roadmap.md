@@ -6,19 +6,24 @@
 
 ## Current priority — Minimum Owner Go-Live
 
-**Active focus (2026-07-29):** Phase 2B-2B5 — Owner permanent deletion and fixed-schedule removal.
+**Active focus (2026-07-31):** Phase 2B-2B5-H1 — closure, security, and runtime tooling hardening (complete after production runtime PASS).
 
-**Audit checkpoint:** [docs/owner-minimum-go-live-readiness-audit.md](./owner-minimum-go-live-readiness-audit.md) (Phase 2B-2B1-R1).
+**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, weekly timetable, direct fixed-schedule editing, and owner-gated permanent deletion workflows (schedule removal, student delete, teacher delete)** — **Phase 2B-2B5 production runtime verified on 2026-07-30**. Payment record UI, production backup/restore safety gates, and final go-live ops runbooks remain open. **Not go-live ready** until Phase 2B-2C1 / 2B-2B2 land.
 
-**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, weekly timetable, direct fixed-schedule editing, and owner-gated permanent deletion workflows (schedule removal, student delete, teacher delete)**. Payment record UI, production deployment, bootstrap, and backup runbooks remain open. **Not go-live ready** until Phase 2B-2B2 and ops runbook work land.
+**Recommended next sequence:**
+
+1. **Phase 2B-2C1** — production backup / restore / rollback safety gate
+2. **Phase 2B-2B2A** — payment / pass renewal database contract (pending-payment RPC)
+3. **Phase 2B-2B2B** — Owner payment UI
+4. **Phase 2B-2C2** — final go-live closure
 
 **Owner login credential change (reve username):** Implementation **`783c8015f0546422d9795cee06558495b0e4d381`**. Runtime verification passed on **2026-07-17** (evidence: [docs/manual-verification-owner-alpha.md](./manual-verification-owner-alpha.md) — Owner login credential change section). Checkpoint tag: **`owner-login-reve-runtime-verified`**.
 
-**Deferred (blocked):** **Phase 2B-2B2 / 2B-2B5 payment renewal UI** — `reve_complete_payment_and_renew_pass` lacks a pending-payment creation RPC; rollback tag `phase-2b2b5-owner-payment-renewal-rollback` @ `98d8c21` (local only, do not push).
+**Deferred (blocked):** **Phase 2B-2B2 / 2B-2B2B payment renewal UI** — `reve_complete_payment_and_renew_pass` lacks a pending-payment creation RPC; rollback tag `phase-2b2b5-owner-payment-renewal-rollback` @ `98d8c21` (local only, do not push).
 
-**Next recommended implementation (single phase):** **Phase 2B-2B2 — Payment and Pass Renewal** — requires new pending-payment RPC before Owner UI wiring.
+**Next recommended implementation (single phase):** **Phase 2B-2C1 — Production backup / restore / rollback safety gate**, then **Phase 2B-2B2A — payment / pass renewal database contract**.
 
-**Following phase:** **Phase 2B-2C — Production Go-Live Operations** — deployment, bootstrap, backup/restore runbooks.
+**Following phases:** **Phase 2B-2B2B — Owner payment UI** → **Phase 2B-2C2 — final go-live closure**.
 
 ### Phase 2B-2B1-R1 — Owner lesson correction, rescheduling, and weekly timetable
 
@@ -40,23 +45,36 @@
 
 ### Phase 2B-2B5 — Owner permanent deletion and schedule removal
 
+**Complete** — production runtime verification passed on **2026-07-30** (run `PHASE2B2B5-20260729-ON8T7N`). Evidence: [docs/manual-verification-owner-deletion.md](./manual-verification-owner-deletion.md). Implementation tag: `phase-2b2b5-owner-deletion-implemented` @ `f38b89a`. Runtime tag: `phase-2b2b5-owner-deletion-runtime-verified` @ closure commit `f66c1fd`. Production app commit verified: **`e6a9ba6`**. Production migration state: **26/26**.
+
 - Fixed pass schedule removal (slot deactivate + future lessons `advance_cancelled`; past history preserved)
 - Student permanent deletion (preflight → confirmation phrase → atomic cascade delete + tombstone audit)
 - Teacher permanent deletion (`reassign` or `remove_future_schedule`; past lessons keep name snapshot; profile/auth user retained)
-- Confirmation phrases: `{pass_code} 스케줄삭제`, `{student_code} 영구삭제`, `{teacher_code} 영구삭제`
-- Migration: `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql` (local 26/26; production 25/25 until next deploy)
+- Confirmation UX at **`e6a9ba6`**: checkbox gates submission; client auto-passes server exact phrase (`{pass_code} 스케줄삭제`, `{student_code} 영구삭제`, `{teacher_code} 영구삭제`)
+- Migration: `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql` (local **26/26**; production **26/26**)
 - Automated tests + `scripts/verify_phase_2b2b5.ps1`
 - Manual checklist: [docs/manual-verification-owner-deletion.md](./manual-verification-owner-deletion.md)
+- Hardened operator tooling (Phase 2B-2B5-H1): `scripts/run_phase_2b2b5_production_runtime.ps1`, `scripts/run_cleanup_phase_2b2b5_production_disposables.ps1`, `scripts/run_rotate_production_owner_password.ps1`
 
-### Phase 2B-2B2 — Payment and pass renewal (deferred)
+### Phase 2B-2C1 — Production backup / restore / rollback safety gate (next)
 
-- Owner payment record UI for pass renewal
-- `reve_complete_payment_and_renew_pass` wiring — **blocked** until pending-payment creation RPC exists
+- Backup and restore runbooks with fail-closed production guards
+- Rollback rehearsal against tagged checkpoints
+- Excludes payment UI
+
+### Phase 2B-2B2A — Payment / pass renewal database contract (planned)
+
+- Pending-payment creation RPC required before Owner UI wiring
 - Excludes production deployment
 
-### Phase 2B-2C — Production go-live operations (planned)
+### Phase 2B-2B2B — Owner payment UI (planned)
 
-- Deployment runbooks, owner bootstrap, backup/restore
+- Owner payment record UI for pass renewal
+- `reve_complete_payment_and_renew_pass` wiring after 2B-2B2A
+
+### Phase 2B-2C2 — Final go-live closure (planned)
+
+- Deployment runbooks, owner bootstrap, backup/restore sign-off
 - Runtime verification on target environment
 
 ---
