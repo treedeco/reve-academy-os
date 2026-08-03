@@ -7,6 +7,53 @@ function Write-ProductionOperatorStage {
   Write-Host "[production-operator] stage=$Stage"
 }
 
+function Assert-ProductionProjectRefConfirmed {
+  param(
+    [Parameter(Mandatory = $true)][string]$ProvidedRef,
+    [string]$ExpectedRef = 'bfhptqhgxignyggyxxkx'
+  )
+
+  $normalized = $ProvidedRef.Trim()
+  if ($normalized.Length -eq 0) {
+    throw 'Production project ref confirmation is required.'
+  }
+  if ($normalized -ne $ExpectedRef) {
+    throw "Production project ref mismatch: expected $ExpectedRef."
+  }
+
+  return $normalized
+}
+
+function Read-SecureBackupEncryptionPassphrase {
+  Remove-Item Env:REVE_BACKUP_ENCRYPTION_PASSPHRASE -ErrorAction SilentlyContinue
+  Write-Host 'Enter the backup encryption passphrase (min 12 chars). Input is hidden. This is NOT stored in the manifest.'
+  $secure = Read-Host 'Backup encryption passphrase' -AsSecureString
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    $env:REVE_BACKUP_ENCRYPTION_PASSPHRASE = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+  }
+  finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    $secure.Dispose()
+  }
+}
+
+function Read-SecureProductionDbPassword {
+  Remove-Item Env:REVE_PRODUCTION_DB_PASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+  Write-Host 'Enter the production Postgres password (Supabase Dashboard -> Project Settings -> Database). Input is hidden.'
+  $securePassword = Read-Host 'Production database password' -AsSecureString
+  $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+  try {
+    $env:REVE_PRODUCTION_DB_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto($passwordPointer)
+  }
+  finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+    $securePassword.Dispose()
+    Remove-Variable securePassword, passwordPointer -ErrorAction SilentlyContinue
+  }
+}
+
 function Read-SecureProductionOwnerPassword {
   Remove-Item Env:PRODUCTION_OWNER_PASSWORD -ErrorAction SilentlyContinue
   Write-Host 'Enter the production Owner password used at /login (username: reve). Input is hidden.'
@@ -310,10 +357,18 @@ function Invoke-ProductionNodeScript {
 
 function Clear-ProductionOperatorEnv {
   Remove-Item Env:PRODUCTION_SUPABASE_ANON_KEY -ErrorAction SilentlyContinue
+  Remove-Item Env:PRODUCTION_OWNER_PASSWORD -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_CONFIRM_PRODUCTION -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_CONFIRM_RESTORE_VALIDATION -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_CLEANUP_APPLY_RUN_ID -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_ANON_KEY_OUTPUT_PATH -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_SUPABASE_PROJECT_REF -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_PRODUCTION_PROJECT_REF_CONFIRM -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_PRODUCTION_DB_PASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_BACKUP_LABEL -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_BACKUP_ENCRYPTION_PASSPHRASE -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_BACKUP_DESTINATION -ErrorAction SilentlyContinue
+  Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
   Remove-Item Env:NEW_OWNER_PASSWORD -ErrorAction SilentlyContinue
   Remove-Item Env:SUPABASE_SECRET_KEY -ErrorAction SilentlyContinue
   Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue

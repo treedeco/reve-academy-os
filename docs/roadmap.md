@@ -8,11 +8,11 @@
 
 **Active focus (2026-07-31):** Phase 2B-2B5-H1 — closure, security, and runtime tooling hardening (complete after production runtime PASS).
 
-**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, weekly timetable, direct fixed-schedule editing, and owner-gated permanent deletion workflows (schedule removal, student delete, teacher delete)** — **Phase 2B-2B5 production runtime verified on 2026-07-30**. Payment record UI, production backup/restore safety gates, and final go-live ops runbooks remain open. **Not go-live ready** until Phase 2B-2C1 / 2B-2B2 land.
+**Verdict:** Database trusted operations are ready; **Owner UI now includes student create/edit/status, initial enrollment, lesson status correction, direct lesson rescheduling, weekly timetable, direct fixed-schedule editing, and owner-gated permanent deletion workflows (schedule removal, student delete, teacher delete)** — **Phase 2B-2B5 production runtime verified on 2026-07-30**. **Phase 2B-2C1 backup/restore safety gate is implemented in repo (runtime verification pending).** Payment record UI and final go-live ops runbooks remain open. **Not go-live ready** until Phase 2B-2C1 runtime verification and Phase 2B-2B2 land.
 
 **Recommended next sequence:**
 
-1. **Phase 2B-2C1** — production backup / restore / rollback safety gate
+1. **Phase 2B-2C1** — production backup / restore / rollback safety gate (**implemented — runtime verification pending**)
 2. **Phase 2B-2B2A** — payment / pass renewal database contract (pending-payment RPC)
 3. **Phase 2B-2B2B** — Owner payment UI
 4. **Phase 2B-2C2** — final go-live closure
@@ -21,7 +21,7 @@
 
 **Deferred (blocked):** **Phase 2B-2B2 / 2B-2B2B payment renewal UI** — `reve_complete_payment_and_renew_pass` lacks a pending-payment creation RPC; rollback tag `phase-2b2b5-owner-payment-renewal-rollback` @ `98d8c21` (local only, do not push).
 
-**Next recommended implementation (single phase):** **Phase 2B-2C1 — Production backup / restore / rollback safety gate**, then **Phase 2B-2B2A — payment / pass renewal database contract**.
+**Next recommended implementation (single phase):** **Phase 2B-2B2A — payment / pass renewal database contract**, then **Phase 2B-2B2B — Owner payment UI**.
 
 **Following phases:** **Phase 2B-2B2B — Owner payment UI** → **Phase 2B-2C2 — final go-live closure**.
 
@@ -56,11 +56,18 @@
 - Manual checklist: [docs/manual-verification-owner-deletion.md](./manual-verification-owner-deletion.md)
 - Hardened operator tooling (Phase 2B-2B5-H1): `scripts/run_phase_2b2b5_production_runtime.ps1`, `scripts/run_cleanup_phase_2b2b5_production_disposables.ps1`, `scripts/run_rotate_production_owner_password.ps1`
 
-### Phase 2B-2C1 — Production backup / restore / rollback safety gate (next)
+### Phase 2B-2C1 — Production backup / restore / rollback safety gate (implemented — runtime unverified)
 
-- Backup and restore runbooks with fail-closed production guards
-- Rollback rehearsal against tagged checkpoints
-- Excludes payment UI
+- **Status:** implementation complete in repo; production backup **not run**; restore drill **not run**; cleanup apply **blocked**
+- Guarded multi-artifact encrypted backup runner: `scripts/run_backup_production.ps1`
+- Offline verify: `scripts/run_verify_production_backup.ps1`
+- Isolated local restore validation: `scripts/run_restore_validate_production_backup.ps1`
+- Runbook: [docs/backup-restore-runbook.md](./backup-restore-runbook.md)
+- Aggregate verify: `scripts/verify_phase_2b2c1.ps1`
+- Contract: `2b2c1-v2` (eight explicit `supabase db dump` artifacts + encrypted manifest)
+- Rollback tag: `phase-2b2c1-pre-backup-restore-safety-gate`
+- Implementation tag: `phase-2b2c1-production-backup-restore-implemented`
+- Excludes payment UI and direct production restore automation
 
 ### Phase 2B-2B2A — Payment / pass renewal database contract (planned)
 

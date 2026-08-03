@@ -58,6 +58,14 @@ Apply every file under `supabase/migrations/` in lexicographic order:
 18. `20260708130100_phase_1a_owner_read_projections.sql`
 19. `20260708130200_phase_1a_deferred_trigger_security.sql`
 20. `20260716180000_phase_2b2b1r1_owner_lesson_operations.sql`
+21. `20260722120000_phase_1a_profile_deferred_trigger_security.sql`
+22. `20260723160000_phase_1a_owner_password_change_audit.sql`
+23. `20260723180000_phase_2b2b2_canonical_courses_student_codes.sql`
+24. `20260727120000_phase_2b2b4_owner_direct_schedule_editing.sql`
+25. `20260727180000_phase_2b2b4r1_academy_hours_10am.sql`
+26. `20260728120000_phase_2b2b5_owner_permanent_deletion_and_schedule_removal.sql`
+
+**Expect 26 migration versions** when running `npx supabase migration list --linked` against production.
 
 `supabase/seed.sql` is intentionally empty. **Do not** run local alpha seeds in production.
 
