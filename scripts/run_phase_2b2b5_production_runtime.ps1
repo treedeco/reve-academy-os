@@ -12,9 +12,12 @@ Set-Location $repoRoot
 
 try {
   Assert-ProductionConfirmed -ConfirmProduction:$ConfirmProduction
+  Write-ProductionOperatorStage 'confirm_production_complete'
 
   if ($AllowSecurePrompt -or [string]::IsNullOrWhiteSpace($env:PRODUCTION_OWNER_PASSWORD)) {
+    Write-ProductionOperatorStage 'secure_password_prompt_start'
     Read-SecureProductionOwnerPassword
+    Write-ProductionOperatorStage 'secure_password_prompt_complete'
   }
 
   if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_OWNER_PASSWORD)) {
@@ -35,7 +38,10 @@ try {
   }
 
   $runtimeResult = Invoke-ProductionNodeScript -ScriptPath $nodeScript
-  Write-Host $runtimeResult.Output.TrimEnd()
+  if ($runtimeResult.Output.Trim().Length -gt 0) {
+    Write-Host $runtimeResult.Output.TrimEnd()
+  }
+  Write-ProductionOperatorStage 'runner_complete'
   exit $runtimeResult.ExitCode
 }
 finally {

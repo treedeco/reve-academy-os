@@ -1,6 +1,12 @@
 # Shared helpers for production operator PowerShell runners.
 # Dot-source from scripts/*.ps1 — never log secrets.
 
+function Write-ProductionOperatorStage {
+  param([string]$Stage)
+
+  Write-Host "[production-operator] stage=$Stage"
+}
+
 function Read-SecureProductionOwnerPassword {
   Remove-Item Env:PRODUCTION_OWNER_PASSWORD -ErrorAction SilentlyContinue
   Write-Host 'Enter the production Owner password used at /login (username: reve). Input is hidden.'
@@ -41,54 +47,228 @@ function Assert-ProductionConfirmed {
 
 function Set-ProductionSupabaseAnonKey {
   param(
-    [string]$ProjectRef = 'bfhptqhgxignyggyxxkx'
+    [string]$ProjectRef = 'bfhptqhgxignyggyxxkx',
+    [int]$TimeoutSeconds = 120
   )
 
   if ($ProjectRef -ne 'bfhptqhgxignyggyxxkx') {
     throw "Refusing production operator action for unexpected project ref: $ProjectRef"
   }
 
+  Write-ProductionOperatorStage 'resolve_anon_key_start'
   $keysFile = Join-Path $env:TEMP ("reve-prod-keys-$([Guid]::NewGuid().ToString()).json")
+  $env:REVE_ANON_KEY_OUTPUT_PATH = $keysFile
+  $env:REVE_SUPABASE_PROJECT_REF = $ProjectRef
+
   try {
-    & npx supabase projects api-keys --project-ref $ProjectRef -o json | Out-File -FilePath $keysFile -Encoding utf8
+    $result = Invoke-ProductionNodeScript `
+      -ScriptPath 'scripts/lib/resolve-production-supabase-anon-key.mjs' `
+      -TimeoutSeconds $TimeoutSeconds
+
+    if ($result.Output.Trim().Length -gt 0) {
+      Write-Host $result.Output.Trim()
+    }
+
+    if ($result.ExitCode -ne 0) {
+      throw 'Failed to resolve production anon key.'
+    }
+    if (-not (Test-Path $keysFile)) {
+      throw 'Production anon key output file was not created.'
+    }
+
     $keysPayload = Get-Content $keysFile -Raw | ConvertFrom-Json
-    $anonKey = ($keysPayload | Where-Object { $_.id -eq 'anon' } | Select-Object -First 1).api_key
-    if ([string]::IsNullOrWhiteSpace($anonKey)) {
+    if ($keysPayload.projectRef -ne $ProjectRef) {
+      throw 'Production anon key project ref mismatch.'
+    }
+    if ([string]::IsNullOrWhiteSpace($keysPayload.anonKey)) {
       throw 'Failed to resolve production anon key.'
     }
 
     $env:PRODUCTION_SUPABASE_URL = "https://$ProjectRef.supabase.co"
-    $env:PRODUCTION_SUPABASE_ANON_KEY = $anonKey
+    $env:PRODUCTION_SUPABASE_ANON_KEY = $keysPayload.anonKey
     $env:PRODUCTION_URL = 'https://reve-academy-os.vercel.app'
+    Write-ProductionOperatorStage 'resolve_anon_key_complete'
   }
   finally {
     Remove-Item $keysFile -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:REVE_ANON_KEY_OUTPUT_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:REVE_SUPABASE_PROJECT_REF -ErrorAction SilentlyContinue
   }
+}
+
+function Resolve-ProductionNodeProcessArguments {
+  param(
+    [Parameter(Mandatory = $true)][string]$ScriptPath,
+    [AllowNull()][object[]]$NodeArgs = @()
+  )
+
+  if ([string]::IsNullOrWhiteSpace($ScriptPath)) {
+    Write-ProductionOperatorStage 'node_args_invalid reason=missing_script_path'
+    throw 'Node script path is required.'
+  }
+
+  if ($null -eq $NodeArgs) {
+    Write-ProductionOperatorStage 'node_args_invalid reason=null_node_args_collection'
+    throw 'Node script arguments must not be null; omit the parameter or pass an empty array.'
+  }
+
+  $validatedArgs = New-Object System.Collections.Generic.List[string]
+  for ($index = 0; $index -lt $NodeArgs.Count; $index++) {
+    $value = $NodeArgs[$index]
+    if ($null -eq $value) {
+      Write-ProductionOperatorStage "node_args_invalid reason=null_element index=$index"
+      throw "Node script argument at index $index is null."
+    }
+    if ($value -isnot [string]) {
+      Write-ProductionOperatorStage "node_args_invalid reason=invalid_type index=$index"
+      throw "Node script argument at index $index must be a string."
+    }
+    [void]$validatedArgs.Add($value)
+  }
+
+  if ($validatedArgs.Count -eq 0) {
+    return ,@($ScriptPath)
+  }
+
+  return ,(@($ScriptPath) + @($validatedArgs.ToArray()))
+}
+
+function Resolve-ProductionChildProcessExitCode {
+  param(
+    [Parameter(Mandatory = $true)]
+    $Process,
+    [int]$RetryCount = 5,
+    [int]$RetryDelayMs = 50
+  )
+
+  if ($null -eq $Process) {
+    Write-ProductionOperatorStage 'process_exit_code_unavailable reason=null_process'
+    throw 'Child process exit code is unavailable.'
+  }
+
+  if (-not $Process.HasExited) {
+    Write-ProductionOperatorStage 'process_exit_code_unavailable reason=process_not_exited'
+    throw 'Child process exit code is unavailable because the process has not exited.'
+  }
+
+  for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+    try {
+      $Process.Refresh()
+    }
+    catch {
+      # Refresh can race briefly after WaitForExit; retry within the finite window.
+    }
+
+    if ($null -ne $Process.ExitCode) {
+      return [int]$Process.ExitCode
+    }
+
+    if ($attempt -lt $RetryCount) {
+      Start-Sleep -Milliseconds $RetryDelayMs
+    }
+  }
+
+  Write-ProductionOperatorStage 'process_exit_code_unavailable reason=exit_code_null_after_refresh'
+  throw 'Child process exit code is unavailable after process exit.'
+}
+
+function ConvertTo-ProductionProcessArgumentsString {
+  param(
+    [Parameter(Mandatory = $true)][string[]]$ArgumentList
+  )
+
+  return (($ArgumentList | ForEach-Object {
+    $arg = [string]$_
+    if ($arg -match '[\s"]') {
+      '"' + ($arg -replace '\\', '\\' -replace '"', '\"') + '"'
+    }
+    else {
+      $arg
+    }
+  }) -join ' ')
+}
+
+function Start-ProductionNodeProcess {
+  param(
+    [Parameter(Mandatory = $true)][string[]]$ArgumentList
+  )
+
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = 'node'
+  $psi.UseShellExecute = $false
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.CreateNoWindow = $true
+
+  $argumentListProperty = $psi.PSObject.Properties['ArgumentList']
+  if ($null -ne $argumentListProperty -and $null -ne $argumentListProperty.Value) {
+    foreach ($arg in $ArgumentList) {
+      [void]$psi.ArgumentList.Add([string]$arg)
+    }
+  }
+  else {
+    $psi.Arguments = ConvertTo-ProductionProcessArgumentsString -ArgumentList $ArgumentList
+  }
+
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $psi
+  [void]$process.Start()
+  return $process
 }
 
 function Invoke-ProductionNodeScript {
   param(
     [Parameter(Mandatory = $true)][string]$ScriptPath,
-    [Parameter(ValueFromRemainingArguments = $true)][string[]]$NodeArgs
+    [object[]]$NodeArgs = @(),
+    [int]$TimeoutSeconds = 180
   )
 
-  $previousErrorAction = $ErrorActionPreference
-  $ErrorActionPreference = 'Continue'
+  $argumentList = Resolve-ProductionNodeProcessArguments -ScriptPath $ScriptPath -NodeArgs $NodeArgs
+
+  Write-ProductionOperatorStage "node_start script=$ScriptPath"
+  $process = $null
+
   try {
-    $lines = @(& node $ScriptPath @NodeArgs 2>&1)
-    return @{
-      Output = ($lines | ForEach-Object {
-        if ($_ -is [System.Management.Automation.ErrorRecord]) {
-          $_.ToString()
+    $process = Start-ProductionNodeProcess -ArgumentList $argumentList
+
+    $finished = $process.WaitForExit($TimeoutSeconds * 1000)
+    if (-not $finished) {
+      if ($process.Id) {
+        if ($IsWindows -or $env:OS -match 'Windows') {
+          Start-Process -FilePath 'taskkill' -ArgumentList @('/pid', $process.Id, '/t', '/f') -NoNewWindow -Wait -ErrorAction SilentlyContinue | Out-Null
         } else {
-          [string]$_
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         }
-      }) -join [Environment]::NewLine
-      ExitCode = $LASTEXITCODE
+      }
+      Write-ProductionOperatorStage "node_timeout after=${TimeoutSeconds}s"
+      throw "Node script timed out after ${TimeoutSeconds}s ($ScriptPath)."
+    }
+
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $combinedOutput = @(
+      if ($stdout) { $stdout.TrimEnd() }
+      if ($stderr) { $stderr.TrimEnd() }
+    ) -join [Environment]::NewLine
+
+    $exitCode = Resolve-ProductionChildProcessExitCode -Process $process
+    Write-ProductionOperatorStage "node_complete exit=$exitCode"
+    return @{
+      Output = $combinedOutput
+      ExitCode = $exitCode
     }
   }
   finally {
-    $ErrorActionPreference = $previousErrorAction
+    if ($process -and -not $process.HasExited) {
+      if ($IsWindows -or $env:OS -match 'Windows') {
+        Start-Process -FilePath 'taskkill' -ArgumentList @('/pid', $process.Id, '/t', '/f') -NoNewWindow -Wait -ErrorAction SilentlyContinue | Out-Null
+      } else {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+      }
+    }
+    if ($process) {
+      $process.Dispose()
+    }
   }
 }
 
@@ -96,6 +276,8 @@ function Clear-ProductionOperatorEnv {
   Remove-Item Env:PRODUCTION_SUPABASE_ANON_KEY -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_CONFIRM_PRODUCTION -ErrorAction SilentlyContinue
   Remove-Item Env:REVE_CLEANUP_APPLY_RUN_ID -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_ANON_KEY_OUTPUT_PATH -ErrorAction SilentlyContinue
+  Remove-Item Env:REVE_SUPABASE_PROJECT_REF -ErrorAction SilentlyContinue
   Remove-Item Env:NEW_OWNER_PASSWORD -ErrorAction SilentlyContinue
   Remove-Item Env:SUPABASE_SECRET_KEY -ErrorAction SilentlyContinue
   Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue

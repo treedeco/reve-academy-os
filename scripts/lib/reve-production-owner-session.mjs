@@ -8,6 +8,12 @@ import {
   assertProductionAppUrl,
   assertProductionSupabaseUrl,
 } from './reve-production-operator-guard.mjs';
+import {
+  DEFAULT_FETCH_TIMEOUT_MS,
+  ProductionOperatorTimeoutError,
+  createTimedFetch,
+  logStage,
+} from './reve-production-operator-io.mjs';
 
 export const OWNER_AUTH_EMAIL = 'reve@owner.local';
 
@@ -15,6 +21,9 @@ export async function createProductionOwnerSession({
   supabaseUrl = process.env.PRODUCTION_SUPABASE_URL ?? PRODUCTION_SUPABASE_URL,
   anonKey = process.env.PRODUCTION_SUPABASE_ANON_KEY ?? '',
   ownerPassword = process.env.PRODUCTION_OWNER_PASSWORD ?? '',
+  fetchTimeoutMs = DEFAULT_FETCH_TIMEOUT_MS,
+  fetchImpl = createTimedFetch(fetchTimeoutMs),
+  createClientImpl = createClient,
 } = {}) {
   assertProductionSupabaseUrl(supabaseUrl);
   assertProductionAppUrl(process.env.PRODUCTION_URL);
@@ -26,7 +35,9 @@ export async function createProductionOwnerSession({
     throw new Error('PRODUCTION_OWNER_PASSWORD is required in the current process environment.');
   }
 
-  const authClient = createClient(supabaseUrl, anonKey, {
+  logStage('owner_sign_in_start');
+  const authClient = createClientImpl(supabaseUrl, anonKey, {
+    global: { fetch: fetchImpl },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -36,11 +47,19 @@ export async function createProductionOwnerSession({
   });
 
   if (error || !data.session) {
-    throw new Error(`Owner login failed: ${error?.message ?? 'no_session'}`);
+    const message = error?.message ?? 'no_session';
+    if (error?.name === 'AbortError' || /aborted|timed out after \d+ms/i.test(message)) {
+      throw new ProductionOperatorTimeoutError('fetch', fetchTimeoutMs, 'owner_sign_in');
+    }
+    throw new Error(`Owner login failed: ${message}`);
   }
 
-  const client = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${data.session.access_token}` } },
+  logStage('owner_profile_lookup_start');
+  const client = createClientImpl(supabaseUrl, anonKey, {
+    global: {
+      fetch: fetchImpl,
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+    },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -54,6 +73,7 @@ export async function createProductionOwnerSession({
     throw new Error('Owner profile validation failed.');
   }
 
+  logStage('owner_session_ready');
   return { client, userId: data.user.id };
 }
 

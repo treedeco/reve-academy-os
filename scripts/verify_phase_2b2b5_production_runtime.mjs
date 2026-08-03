@@ -14,18 +14,30 @@ import {
   resolveProductionSupabaseUrlFromEnv,
 } from './lib/reve-production-operator-guard.mjs';
 import { redactProductionEvidence } from './lib/reve-production-evidence-redaction.mjs';
+import { createTimedFetch, logStage, DEFAULT_CHILD_PROCESS_TIMEOUT_MS, ProductionOperatorTimeoutError } from './lib/reve-production-operator-io.mjs';
 
 function runNpxSync(args) {
   const spawnArgs =
     process.platform === 'win32' ? ['cmd.exe', ['/d', '/s', '/c', 'npx', ...args]] : ['npx', args];
+  logStage('verify_npx_start', args[0] ?? 'npx');
   try {
     const stdout = execFileSync(spawnArgs[0], spawnArgs[1], {
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
+      timeout: DEFAULT_CHILD_PROCESS_TIMEOUT_MS,
       stdio: ['ignore', 'pipe', 'pipe'],
+      killSignal: 'SIGKILL',
     });
+    logStage('verify_npx_complete');
     return stdout;
   } catch (error) {
+    if (error && (error.killed || error.signal)) {
+      throw new ProductionOperatorTimeoutError(
+        'child_process',
+        DEFAULT_CHILD_PROCESS_TIMEOUT_MS,
+        'verify_npx',
+      );
+    }
     const stdout = error.stdout ?? '';
     const stderr = error.stderr ?? '';
     const combined = `${stdout}\n${stderr}`.trim();
@@ -183,6 +195,7 @@ function assertRunId(value) {
 }
 
 async function stage1Preflight() {
+  logStage('runtime_stage1_start');
   if (!OWNER_PASSWORD) {
     fail('stage1', 'ENV_NOT_VISIBLE_TO_VERIFICATION_PROCESS');
   }
@@ -192,10 +205,14 @@ async function stage1Preflight() {
     fail('stage1', 'PRODUCTION_SUPABASE_ANON_KEY missing');
   }
 
+  const timedFetch = createTimedFetch();
+
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { fetch: timedFetch },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  logStage('runtime_owner_sign_in_start');
   const { data: signInData, error: signInError } = await authClient.auth.signInWithPassword({
     email: OWNER_EMAIL,
     password: OWNER_PASSWORD,
@@ -212,10 +229,14 @@ async function stage1Preflight() {
   evidence.stage1.authUserId = signInData.user?.id ?? null;
 
   const authed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${signInData.session.access_token}` } },
+    global: {
+      fetch: timedFetch,
+      headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+    },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  logStage('runtime_owner_profile_lookup_start');
   const { data: profile, error: profileError } = await authed
     .from('profiles')
     .select('id, role, account_state, display_name')
@@ -233,6 +254,7 @@ async function stage1Preflight() {
   evidence.stage1.ownerAccountState = profile.account_state;
   evidence.stage1.supabaseProjectRef = PROJECT_REF;
 
+  logStage('runtime_migration_list_start');
   const migrationsRaw = runNpxSync(['supabase', 'migration', 'list', '--linked']);
   const migrationCount = countLinkedMigrations(migrationsRaw);
   evidence.stage1.migrationRows = migrationCount;

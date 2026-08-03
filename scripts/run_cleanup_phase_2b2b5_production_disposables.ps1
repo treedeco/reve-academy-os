@@ -37,7 +37,7 @@ try {
 
   Set-ProductionSupabaseAnonKey
 
-  $result = Invoke-ProductionNodeScript -ScriptPath 'scripts/cleanup_phase_2b2b5_production_disposables.mjs' @nodeArgs
+  $result = Invoke-ProductionNodeScript -ScriptPath 'scripts/cleanup_phase_2b2b5_production_disposables.mjs' -NodeArgs $nodeArgs
   Write-Host $result.Output.TrimEnd()
   exit $result.ExitCode
 }
