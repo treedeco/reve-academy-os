@@ -46,4 +46,5 @@ try {
 }
 finally {
   Clear-ProductionOperatorEnv
+  Restore-ProductionConfirmation
 }

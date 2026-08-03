@@ -11,22 +11,18 @@ Set-Location $repoRoot
 . (Join-Path $PSScriptRoot 'lib/ProductionOperator.ps1')
 
 $nodeArgs = @()
-if ($Apply) {
-  if (-not $ConfirmProduction) {
-    throw 'Apply requires -ConfirmProduction.'
-  }
-  if ([string]::IsNullOrWhiteSpace($RunId)) {
-    throw 'Apply requires -RunId from the prior dry-run output.'
-  }
-  $env:REVE_CLEANUP_APPLY_RUN_ID = $RunId
-  Assert-ProductionConfirmed -ConfirmProduction
-  $nodeArgs += '--apply'
-}
-else {
-  Remove-Item Env:REVE_CONFIRM_PRODUCTION -ErrorAction SilentlyContinue
-}
 
 try {
+  Assert-ProductionConfirmed -ConfirmProduction:$ConfirmProduction
+
+  if ($Apply) {
+    if ([string]::IsNullOrWhiteSpace($RunId)) {
+      throw 'Apply requires -RunId from the prior dry-run output.'
+    }
+    $env:REVE_CLEANUP_APPLY_RUN_ID = $RunId
+    $nodeArgs += '--apply'
+  }
+
   if ($Apply -or [string]::IsNullOrWhiteSpace($env:PRODUCTION_OWNER_PASSWORD)) {
     Read-SecureProductionOwnerPassword
   }
@@ -43,4 +39,5 @@ try {
 }
 finally {
   Clear-ProductionOperatorEnv
+  Restore-ProductionConfirmation
 }

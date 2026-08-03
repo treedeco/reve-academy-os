@@ -155,6 +155,17 @@ export function runNpxWithTimeout(args, timeoutMs = DEFAULT_CHILD_PROCESS_TIMEOU
   });
 }
 
+export function mapFetchTimeoutError(error, stage, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS) {
+  if (error instanceof ProductionOperatorTimeoutError) {
+    throw new ProductionOperatorTimeoutError('fetch', error.timeoutMs ?? timeoutMs, stage);
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (/aborted|timed out after \d+ms/i.test(message)) {
+    throw new ProductionOperatorTimeoutError('fetch', timeoutMs, stage);
+  }
+  throw error;
+}
+
 export function extractJsonPayload(raw) {
   const jsonStart = raw.indexOf('{');
   const arrayStart = raw.indexOf('[');

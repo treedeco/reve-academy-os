@@ -13,6 +13,7 @@ import {
   ProductionOperatorTimeoutError,
   createTimedFetch,
   logStage,
+  mapFetchTimeoutError,
 } from './reve-production-operator-io.mjs';
 
 export const OWNER_AUTH_EMAIL = 'reve@owner.local';
@@ -54,6 +55,7 @@ export async function createProductionOwnerSession({
     throw new Error(`Owner login failed: ${message}`);
   }
 
+  logStage('owner_sign_in_complete');
   logStage('owner_profile_lookup_start');
   const client = createClientImpl(supabaseUrl, anonKey, {
     global: {
@@ -86,51 +88,75 @@ function readRpcRow(data) {
 }
 
 export async function previewDeleteStudent(client, studentId) {
-  const { data, error } = await client.rpc('reve_owner_preview_delete_student', {
-    p_student_id: studentId,
-  });
-  if (error) {
-    throw new Error(error.message);
+  logStage('preview_delete_student_start');
+  try {
+    const { data, error } = await client.rpc('reve_owner_preview_delete_student', {
+      p_student_id: studentId,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    logStage('preview_delete_student_complete');
+    return readRpcRow(data);
+  } catch (error) {
+    mapFetchTimeoutError(error, 'preview_delete_student');
   }
-  return readRpcRow(data);
 }
 
 export async function permanentlyDeleteStudent(client, input) {
-  const { data, error } = await client.rpc('reve_owner_permanently_delete_student', {
-    p_student_id: input.studentId,
-    p_expected_updated_at: input.expectedUpdatedAt,
-    p_confirmation_code: input.confirmationCode,
-    p_reason: input.reason,
-    p_preflight_fingerprint: input.preflightFingerprint,
-  });
-  if (error) {
-    throw new Error(error.message);
+  logStage('permanent_delete_student_start');
+  try {
+    const { data, error } = await client.rpc('reve_owner_permanently_delete_student', {
+      p_student_id: input.studentId,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_confirmation_code: input.confirmationCode,
+      p_reason: input.reason,
+      p_preflight_fingerprint: input.preflightFingerprint,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    logStage('permanent_delete_student_complete');
+    return readRpcRow(data);
+  } catch (error) {
+    mapFetchTimeoutError(error, 'permanent_delete_student');
   }
-  return readRpcRow(data);
 }
 
 export async function previewDeleteTeacher(client, teacherId) {
-  const { data, error } = await client.rpc('reve_owner_preview_delete_teacher', {
-    p_teacher_id: teacherId,
-  });
-  if (error) {
-    throw new Error(error.message);
+  logStage('preview_delete_teacher_start');
+  try {
+    const { data, error } = await client.rpc('reve_owner_preview_delete_teacher', {
+      p_teacher_id: teacherId,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    logStage('preview_delete_teacher_complete');
+    return readRpcRow(data);
+  } catch (error) {
+    mapFetchTimeoutError(error, 'preview_delete_teacher');
   }
-  return readRpcRow(data);
 }
 
 export async function permanentlyDeleteTeacher(client, input) {
-  const { data, error } = await client.rpc('reve_owner_permanently_delete_teacher', {
-    p_teacher_id: input.teacherId,
-    p_expected_updated_at: input.expectedUpdatedAt,
-    p_link_handling_mode: input.linkHandlingMode,
-    p_replacement_teacher_id: input.replacementTeacherId,
-    p_confirmation_code: input.confirmationCode,
-    p_reason: input.reason,
-    p_preflight_fingerprint: input.preflightFingerprint,
-  });
-  if (error) {
-    throw new Error(error.message);
+  logStage('permanent_delete_teacher_start');
+  try {
+    const { data, error } = await client.rpc('reve_owner_permanently_delete_teacher', {
+      p_teacher_id: input.teacherId,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_link_handling_mode: input.linkHandlingMode,
+      p_replacement_teacher_id: input.replacementTeacherId,
+      p_confirmation_code: input.confirmationCode,
+      p_reason: input.reason,
+      p_preflight_fingerprint: input.preflightFingerprint,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    logStage('permanent_delete_teacher_complete');
+    return readRpcRow(data);
+  } catch (error) {
+    mapFetchTimeoutError(error, 'permanent_delete_teacher');
   }
-  return readRpcRow(data);
 }

@@ -8,6 +8,13 @@ Set-Location $repoRoot
 $failures = @()
 $probeScripts = @()
 
+Get-ChildItem -Path $env:TEMP -Filter 'reve-node-probe-*.mjs' -ErrorAction SilentlyContinue | ForEach-Object {
+  Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+}
+Get-ChildItem -Path $env:TEMP -Filter 'reve-cleanup-probe-*.mjs' -ErrorAction SilentlyContinue | ForEach-Object {
+  Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+}
+
 function Assert-ContractTest {
   param(
     [string]$Name,
@@ -253,6 +260,37 @@ Assert-ContractTest 'resolver temp file is removed after child timeout' {
     if ($_.Exception.Message -notmatch 'timed out') {
       throw
     }
+  }
+}
+
+Assert-ContractTest 'Invoke-ProductionNodeScript captures stdout larger than 64 KB without pipe deadlock' {
+  $probeScript = New-ProbeScript "process.stdout.write('x'.repeat(70000)); process.exit(0);"
+  $result = Invoke-ProductionNodeScript -ScriptPath $probeScript -TimeoutSeconds 30
+  if ($result.ExitCode -ne 0 -or $result.Output.Length -lt 70000) {
+    throw "Expected large stdout capture, got exit=$($result.ExitCode) length=$($result.Output.Length)"
+  }
+}
+
+Assert-ContractTest 'Invoke-ProductionNodeScript captures stderr larger than 64 KB without pipe deadlock' {
+  $probeScript = New-ProbeScript "process.stderr.write('y'.repeat(70000)); process.stdout.write('stderr_ok'); process.exit(0);"
+  $result = Invoke-ProductionNodeScript -ScriptPath $probeScript -TimeoutSeconds 30
+  if ($result.ExitCode -ne 0 -or $result.Output -notmatch 'stderr_ok') {
+    throw "Expected stderr and stdout capture, got exit=$($result.ExitCode)"
+  }
+  if ($result.Output.Length -lt 70000) {
+    throw "Expected combined output length >= 70000, got $($result.Output.Length)"
+  }
+}
+
+Assert-ContractTest 'Invoke-ProductionNodeScript returns after child writes output and exits' {
+  $probeScript = New-ProbeScript @'
+process.stderr.write('[production-operator] stage=cleanup_complete\n');
+process.stdout.write(JSON.stringify({ ok: true, mode: 'dry-run' }));
+process.exit(0);
+'@
+  $result = Invoke-ProductionNodeScript -ScriptPath $probeScript -TimeoutSeconds 30
+  if ($result.ExitCode -ne 0 -or $result.Output -notmatch '"ok"\s*:\s*true') {
+    throw "Expected dry-run JSON output, got exit=$($result.ExitCode) output=$($result.Output)"
   }
 }
 

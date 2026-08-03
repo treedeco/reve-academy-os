@@ -8,9 +8,9 @@
  *   REVE_CONFIRM_PRODUCTION=1
  *   REVE_CLEANUP_APPLY_RUN_ID=<run id printed by dry-run>
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DISPOSABLE_NAME_PREFIX,
   assertDisposableName,
@@ -19,6 +19,7 @@ import {
   resolveProductionSupabaseUrlFromEnv,
 } from './lib/reve-production-operator-guard.mjs';
 import { redactProductionEvidence, redactUuid } from './lib/reve-production-evidence-redaction.mjs';
+import { logStage } from './lib/reve-production-operator-io.mjs';
 import {
   createProductionOwnerSession,
   permanentlyDeleteStudent,
@@ -27,15 +28,13 @@ import {
   previewDeleteTeacher,
 } from './lib/reve-production-owner-session.mjs';
 
-const APPLY = process.argv.includes('--apply');
-const APPLY_RUN_ID = process.env.REVE_CLEANUP_APPLY_RUN_ID ?? '';
-
-function buildRunId() {
-  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+export function buildCleanupRunId(date = new Date()) {
+  const stamp = date.toISOString().slice(0, 10).replace(/-/g, '');
   return `CLEANUP-PHASE2B2B5-${stamp}-${randomUUID().slice(0, 6).toUpperCase()}`;
 }
 
 async function countNonDisposableStudents(client) {
+  logStage('candidate_query_start', 'non_disposable_student_count');
   const { count, error } = await client
     .from('students')
     .select('*', { count: 'exact', head: true })
@@ -43,10 +42,12 @@ async function countNonDisposableStudents(client) {
   if (error) {
     throw new Error(`non-disposable student count failed: ${error.message}`);
   }
+  logStage('candidate_query_complete', 'non_disposable_student_count');
   return count ?? 0;
 }
 
 async function loadDisposableStudents(client) {
+  logStage('candidate_query_start', 'disposable_students');
   const { data, error } = await client
     .from('students')
     .select('id, name, student_code, updated_at')
@@ -55,10 +56,12 @@ async function loadDisposableStudents(client) {
   if (error) {
     throw new Error(`disposable student lookup failed: ${error.message}`);
   }
+  logStage('candidate_query_complete', 'disposable_students');
   return data ?? [];
 }
 
 async function loadDisposableTeachers(client) {
+  logStage('candidate_query_start', 'disposable_teachers');
   const { data, error } = await client
     .from('teachers')
     .select('id, teacher_code, name, updated_at, is_active')
@@ -67,6 +70,7 @@ async function loadDisposableTeachers(client) {
   if (error) {
     throw new Error(`disposable teacher lookup failed: ${error.message}`);
   }
+  logStage('candidate_query_complete', 'disposable_teachers');
   return data ?? [];
 }
 
@@ -174,21 +178,32 @@ function summarizePlan(plan) {
   };
 }
 
-async function main() {
+export async function runCleanupProductionDisposables({
+  apply = false,
+  applyRunId = '',
+  buildRunId = buildCleanupRunId,
+  createSession = createProductionOwnerSession,
+  outputWriter = (payload) => {
+    console.log(JSON.stringify(redactProductionEvidence(payload), null, 2));
+  },
+} = {}) {
+  logStage('cleanup_start', apply ? 'apply' : 'dry-run');
   resolveProductionSupabaseUrlFromEnv();
   resolveProductionAppUrlFromEnv();
+  logStage('production_guard_complete');
 
-  const runId = APPLY ? APPLY_RUN_ID : buildRunId();
-  if (APPLY && !runId) {
+  const runId = apply ? applyRunId : buildRunId();
+  if (apply && !runId) {
     throw new Error('Apply requires REVE_CLEANUP_APPLY_RUN_ID from a prior dry-run.');
   }
 
-  const { client } = await createProductionOwnerSession();
+  const { client } = await createSession();
 
   const baselineNonDisposableCount = await countNonDisposableStudents(client);
   const disposableStudents = await loadDisposableStudents(client);
   const disposableTeachers = await loadDisposableTeachers(client);
 
+  logStage('dry_run_result_build_start');
   const studentPlans = [];
   for (const student of disposableStudents) {
     studentPlans.push(await buildStudentPlan(client, student));
@@ -202,10 +217,11 @@ async function main() {
   const plan = { students: studentPlans, teachers: teacherPlans };
   const currentNonDisposableCount = await countNonDisposableStudents(client);
   assertPlanSafety(plan, baselineNonDisposableCount, currentNonDisposableCount);
+  logStage('dry_run_result_build_complete');
 
   const payload = {
     ok: true,
-    mode: APPLY ? 'apply' : 'dry-run',
+    mode: apply ? 'apply' : 'dry-run',
     runId,
     disposablePrefix: DISPOSABLE_NAME_PREFIX,
     nonDisposableStudentCount: baselineNonDisposableCount,
@@ -216,17 +232,20 @@ async function main() {
     plan: summarizePlan(plan),
   };
 
-  if (!APPLY) {
+  if (!apply) {
     payload.nextStep = {
       applyRequires: ['REVE_CONFIRM_PRODUCTION=1', `REVE_CLEANUP_APPLY_RUN_ID=${runId}`, '--apply'],
       runnerExample:
         'powershell -ExecutionPolicy Bypass -File scripts/run_cleanup_phase_2b2b5_production_disposables.ps1 -ConfirmProduction -Apply -RunId <runId>',
     };
-    console.log(JSON.stringify(redactProductionEvidence(payload), null, 2));
+    logStage('output_write_start');
+    outputWriter(payload);
+    logStage('output_write_complete');
+    logStage('cleanup_complete');
     return 0;
   }
 
-  if (!APPLY_RUN_ID || APPLY_RUN_ID !== runId) {
+  if (!applyRunId || applyRunId !== runId) {
     throw new Error(
       'Apply requires REVE_CLEANUP_APPLY_RUN_ID matching the dry-run runId for this invocation.',
     );
@@ -249,26 +268,36 @@ async function main() {
     teachers: afterTeachers.length,
   };
   payload.completedAt = new Date().toISOString();
-  console.log(JSON.stringify(redactProductionEvidence(payload), null, 2));
+  logStage('output_write_start');
+  outputWriter(payload);
+  logStage('output_write_complete');
+  logStage('cleanup_complete');
   return 0;
 }
 
-main()
-  .then(async (exitCode) => {
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    process.exit(exitCode);
-  })
-  .catch(async (error) => {
-    console.log(
-      JSON.stringify(
-        {
-          ok: false,
-          message: error instanceof Error ? error.message : String(error),
-        },
-        null,
-        2,
-      ),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    process.exit(1);
-  });
+const isDirectExecution =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectExecution) {
+  const APPLY = process.argv.includes('--apply');
+  const APPLY_RUN_ID = process.env.REVE_CLEANUP_APPLY_RUN_ID ?? '';
+
+  runCleanupProductionDisposables({ apply: APPLY, applyRunId: APPLY_RUN_ID })
+    .then((exitCode) => {
+      process.exit(exitCode);
+    })
+    .catch((error) => {
+      logStage('cleanup_failed');
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            message: error instanceof Error ? error.message : String(error),
+          },
+          null,
+          2,
+        ),
+      );
+      process.exit(1);
+    });
+}

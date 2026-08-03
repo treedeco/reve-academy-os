@@ -42,7 +42,20 @@ function Assert-ProductionConfirmed {
     throw 'Explicit production confirmation is required. Re-run with -ConfirmProduction.'
   }
 
+  $script:SavedReveConfirmProduction = $env:REVE_CONFIRM_PRODUCTION
   $env:REVE_CONFIRM_PRODUCTION = '1'
+}
+
+function Restore-ProductionConfirmation {
+  if (Get-Variable -Name SavedReveConfirmProduction -Scope Script -ErrorAction SilentlyContinue) {
+    if ($null -ne $script:SavedReveConfirmProduction -and $script:SavedReveConfirmProduction -ne '') {
+      $env:REVE_CONFIRM_PRODUCTION = $script:SavedReveConfirmProduction
+    }
+    else {
+      Remove-Item Env:REVE_CONFIRM_PRODUCTION -ErrorAction SilentlyContinue
+    }
+    Remove-Variable SavedReveConfirmProduction -Scope Script -ErrorAction SilentlyContinue
+  }
 }
 
 function Set-ProductionSupabaseAnonKey {
@@ -188,32 +201,44 @@ function ConvertTo-ProductionProcessArgumentsString {
   }) -join ' ')
 }
 
-function Start-ProductionNodeProcess {
+function Resolve-ProductionCmdWrappedExitCode {
   param(
-    [Parameter(Mandatory = $true)][string[]]$ArgumentList
+    [Parameter(Mandatory = $true)]
+    $Process,
+    [string]$ExitCodeFile,
+    [int]$RetryCount = 5,
+    [int]$RetryDelayMs = 50
   )
 
-  $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = 'node'
-  $psi.UseShellExecute = $false
-  $psi.RedirectStandardOutput = $true
-  $psi.RedirectStandardError = $true
-  $psi.CreateNoWindow = $true
+  for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+    try {
+      $Process.Refresh()
+    }
+    catch {
+      # Refresh can race briefly after WaitForExit; retry within the finite window.
+    }
 
-  $argumentListProperty = $psi.PSObject.Properties['ArgumentList']
-  if ($null -ne $argumentListProperty -and $null -ne $argumentListProperty.Value) {
-    foreach ($arg in $ArgumentList) {
-      [void]$psi.ArgumentList.Add([string]$arg)
+    if ($null -ne $Process.ExitCode) {
+      return [int]$Process.ExitCode
+    }
+
+    if ($ExitCodeFile -and (Test-Path $ExitCodeFile)) {
+      $rawContent = Get-Content $ExitCodeFile -Raw -ErrorAction SilentlyContinue
+      if ($null -ne $rawContent) {
+        $raw = $rawContent.Trim()
+        if ($raw -match '^\d+$') {
+          return [int]$raw
+        }
+      }
+    }
+
+    if ($attempt -lt $RetryCount) {
+      Start-Sleep -Milliseconds $RetryDelayMs
     }
   }
-  else {
-    $psi.Arguments = ConvertTo-ProductionProcessArgumentsString -ArgumentList $ArgumentList
-  }
 
-  $process = New-Object System.Diagnostics.Process
-  $process.StartInfo = $psi
-  [void]$process.Start()
-  return $process
+  Write-ProductionOperatorStage 'process_exit_code_unavailable reason=exit_code_null_after_refresh'
+  throw 'Child process exit code is unavailable after process exit.'
 }
 
 function Invoke-ProductionNodeScript {
@@ -226,10 +251,18 @@ function Invoke-ProductionNodeScript {
   $argumentList = Resolve-ProductionNodeProcessArguments -ScriptPath $ScriptPath -NodeArgs $NodeArgs
 
   Write-ProductionOperatorStage "node_start script=$ScriptPath"
+  $stdoutFile = [System.IO.Path]::GetTempFileName()
+  $stderrFile = [System.IO.Path]::GetTempFileName()
+  $exitCodeFile = [System.IO.Path]::GetTempFileName()
   $process = $null
 
   try {
-    $process = Start-ProductionNodeProcess -ArgumentList $argumentList
+    $nodeCommand = 'node ' + (ConvertTo-ProductionProcessArgumentsString -ArgumentList $argumentList)
+    $process = Start-Process `
+      -FilePath 'cmd.exe' `
+      -ArgumentList @('/d', '/v:on', '/c', "$nodeCommand 1> `"$stdoutFile`" 2> `"$stderrFile`" & (echo !ERRORLEVEL!)> `"$exitCodeFile`"") `
+      -NoNewWindow `
+      -PassThru
 
     $finished = $process.WaitForExit($TimeoutSeconds * 1000)
     if (-not $finished) {
@@ -244,14 +277,14 @@ function Invoke-ProductionNodeScript {
       throw "Node script timed out after ${TimeoutSeconds}s ($ScriptPath)."
     }
 
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
+    $stdout = if (Test-Path $stdoutFile) { Get-Content $stdoutFile -Raw -ErrorAction SilentlyContinue } else { '' }
+    $stderr = if (Test-Path $stderrFile) { Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue } else { '' }
     $combinedOutput = @(
       if ($stdout) { $stdout.TrimEnd() }
       if ($stderr) { $stderr.TrimEnd() }
     ) -join [Environment]::NewLine
 
-    $exitCode = Resolve-ProductionChildProcessExitCode -Process $process
+    $exitCode = Resolve-ProductionCmdWrappedExitCode -Process $process -ExitCodeFile $exitCodeFile
     Write-ProductionOperatorStage "node_complete exit=$exitCode"
     return @{
       Output = $combinedOutput
@@ -269,6 +302,9 @@ function Invoke-ProductionNodeScript {
     if ($process) {
       $process.Dispose()
     }
+    Remove-Item $stdoutFile -Force -ErrorAction SilentlyContinue
+    Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
+    Remove-Item $exitCodeFile -Force -ErrorAction SilentlyContinue
   }
 }
 
