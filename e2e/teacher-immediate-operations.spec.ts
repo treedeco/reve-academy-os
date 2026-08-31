@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedOwnerAlphaFixture } from './helpers/apply-sql-fixture';
+import { applySqlFixture, seedOwnerAlphaFixture } from './helpers/apply-sql-fixture';
 import { loginAsOwner } from './helpers/login-as-owner';
 import { loginAsTeacher } from './helpers/login-as-teacher';
 
@@ -45,11 +45,14 @@ test.describe('Immediate teacher operations', () => {
   });
 
   test('owner can save lesson content on today lessons', async ({ page }) => {
+    applySqlFixture('fixture-reset-owner-alpha-today-lesson.sql');
     await loginAsOwner(page);
     await page.goto('/lessons/today');
     const row = page.getByTestId(`today-lesson-${ALPHA_TODAY_LESSON_ID}`);
     const noteBody = `E2E owner note ${Date.now()}`;
-    await row.getByLabel('수업 내용').fill(noteBody);
+    const noteInput = row.getByLabel('수업 내용');
+    await noteInput.clear();
+    await noteInput.fill(noteBody);
     await row.getByTestId(`lesson-note-save-${ALPHA_TODAY_LESSON_ID}`).click();
     await expect(row.getByRole('status')).toHaveText('저장됨', { timeout: 10_000 });
 

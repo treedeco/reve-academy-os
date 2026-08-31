@@ -38,10 +38,9 @@ export async function saveLessonNote(
     if (error) {
       throw new Error(error.message);
     }
-    if (!data) {
-      throw new Error('REVE_LESSON_NOTE_NOT_FOUND');
+    if (data) {
+      return data;
     }
-    return data;
   }
 
   const { data, error } = await supabase

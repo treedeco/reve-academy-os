@@ -4,6 +4,15 @@ BEGIN;
 
 SELECT plan(3);
 
+CREATE OR REPLACE FUNCTION pg_temp.test_auth_as(p_user uuid)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', p_user::text, false);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', false);
+  SET ROLE authenticated;
+END;
+$$;
+
 DO $$
 DECLARE
   v_owner uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaab01';

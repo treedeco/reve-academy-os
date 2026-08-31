@@ -119,4 +119,40 @@ describe('LessonNoteField', () => {
     });
     expect(update).toHaveBeenCalled();
   });
+
+  it('creates a new note when update is not permitted for the existing note', async () => {
+    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    single.mockResolvedValueOnce({
+      data: {
+        id: 'note-2',
+        lesson_id: 'lesson-1',
+        body: 'Teacher note',
+        visibility: 'internal',
+        author_profile_id: 'profile-teacher',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+
+    render(
+      <LessonNoteField
+        lessonId="lesson-1"
+        authorProfileId="profile-teacher"
+        initialBody="Owner note"
+        initialNoteId="note-owner"
+      />,
+    );
+
+    const textarea = screen.getByLabelText('수업 내용');
+    await userEvent.clear(textarea);
+    await userEvent.type(textarea, 'Teacher note');
+    await userEvent.click(screen.getByTestId('lesson-note-save-lesson-1'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('저장됨');
+    });
+    expect(update).toHaveBeenCalled();
+    expect(insert).toHaveBeenCalled();
+  });
 });
