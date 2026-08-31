@@ -21,6 +21,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_ACADEMY_HOURS_AFTER_CLOSE: '수업 시작은 22:00 이전이어야 합니다.',
   REVE_ACADEMY_HOURS_END_AFTER_CLOSE: '수업 종료는 22:00을 넘을 수 없습니다.',
   REVE_STUDENT_SCHEDULE_COLLISION: '학생의 다른 수업과 일정이 겹칩니다.',
+  REVE_LESSON_NOTE_EMPTY: '수업 내용을 입력해 주세요.',
+  REVE_LESSON_NOTE_NOT_FOUND: '수업 메모를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.',
 };
 
 export function mapDatabaseError(error: { message?: string; code?: string } | null): string {

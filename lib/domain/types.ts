@@ -36,6 +36,7 @@ export interface TodayLessonRow {
   pass_id: string;
   pass_updated_at: string;
   memo_summary: string | null;
+  memo_note_id: string | null;
 }
 
 export interface OwnerLessonOperationsRow {

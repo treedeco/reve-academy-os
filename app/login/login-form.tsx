@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { resolveOwnerLoginEmail } from '@/lib/auth/owner-login';
-import { mapDatabaseError } from '@/lib/domain/format';
+import { resolveLoginEmail } from '@/lib/auth/app-login';
 import { OWNER_PASSWORD_CHANGED_LOGIN_MESSAGE } from '@/lib/domain/owner-password';
+import { mapDatabaseError } from '@/lib/domain/format';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function LoginForm() {
       return;
     }
 
-    const authEmail = resolveOwnerLoginEmail(username);
+    const authEmail = resolveLoginEmail(username);
     if (!authEmail) {
       setError('사용자 이름 또는 비밀번호가 올바르지 않습니다.');
       setPending(false);
@@ -63,14 +63,39 @@ export default function LoginForm() {
         .eq('id', user.id)
         .maybeSingle();
 
-      if (profileError || profile?.role !== 'owner' || profile.account_state !== 'active') {
+      if (profileError || !profile || profile.account_state !== 'active') {
         await supabase.auth.signOut();
         throw new Error('REVE_INVALID_PROFILE');
       }
 
-      const next = searchParams.get('next') || '/dashboard';
-      router.push(next);
-      router.refresh();
+      if (profile.role === 'owner') {
+        const next = searchParams.get('next');
+        const destination =
+          next && next.startsWith('/') && !next.startsWith('/teacher') ? next : '/dashboard';
+        router.push(destination);
+        router.refresh();
+        return;
+      }
+
+      if (profile.role === 'teacher') {
+        const { data: teacher, error: teacherError } = await supabase
+          .from('teachers')
+          .select('id, is_active')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+
+        if (teacherError || !teacher?.is_active) {
+          await supabase.auth.signOut();
+          throw new Error('REVE_INVALID_PROFILE');
+        }
+
+        router.push('/teacher/lessons/today');
+        router.refresh();
+        return;
+      }
+
+      await supabase.auth.signOut();
+      throw new Error('REVE_INVALID_PROFILE');
     } catch (caught) {
       setError(mapDatabaseError(caught as { message?: string }));
     } finally {
@@ -82,7 +107,7 @@ export default function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">REVE ACADEMY OS</h1>
-        <p className="mt-2 text-sm text-slate-600">Owner 로그인</p>
+        <p className="mt-2 text-sm text-slate-600">Owner / 강사 로그인</p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -98,6 +123,7 @@ export default function LoginForm() {
               onChange={(event) => setUsername(event.target.value)}
               disabled={pending}
             />
+            <p className="mt-1 text-xs text-slate-500">Owner: reve · 강사: 등록된 이메일</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor="password">

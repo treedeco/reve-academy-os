@@ -28,14 +28,18 @@ function buildLesson(overrides: Partial<TodayLessonRow> & Pick<TodayLessonRow, '
     pass_id: '66666666-6666-6666-6666-6666666661a1',
     pass_updated_at: new Date().toISOString(),
     memo_summary: null,
+    memo_note_id: null,
     ...overrides,
   };
 }
+
+const ownerProfileId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa101';
 
 const lessonA = buildLesson({
   id: '99999999-9999-9999-9999-9999999991a1',
   student_name: 'Alpha Student',
   memo_summary: 'Alpha seed memo',
+  memo_note_id: 'abababab-abab-abab-abab-ababababa101',
 });
 
 const lessonB = buildLesson({
@@ -55,14 +59,14 @@ describe('TodayLessonsPanel', () => {
   });
 
   it('renders today lessons', () => {
-    render(<TodayLessonsPanel initialLessons={[lessonA]} />);
+    render(<TodayLessonsPanel initialLessons={[lessonA]} authorProfileId={ownerProfileId} />);
     expect(screen.getByText('Alpha Student')).toBeInTheDocument();
-    expect(screen.getByText(/Alpha seed memo/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Alpha seed memo')).toBeInTheDocument();
   });
 
   it('rolls back failed status changes', async () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'REVE_INVALID_TRANSITION' } });
-    render(<TodayLessonsPanel initialLessons={[lessonA]} />);
+    render(<TodayLessonsPanel initialLessons={[lessonA]} authorProfileId={ownerProfileId} />);
 
     await userEvent.selectOptions(within(screen.getByTestId(`today-lesson-${lessonA.id}`)).getByLabelText('상태 변경'), 'completed');
 
@@ -94,7 +98,7 @@ describe('TodayLessonsPanel', () => {
         }),
     );
 
-    render(<TodayLessonsPanel initialLessons={[lessonA]} />);
+    render(<TodayLessonsPanel initialLessons={[lessonA]} authorProfileId={ownerProfileId} />);
     await userEvent.selectOptions(within(screen.getByTestId(`today-lesson-${lessonA.id}`)).getByLabelText('상태 변경'), 'completed');
 
     expect(screen.getByText('저장 중…')).toBeInTheDocument();
@@ -114,7 +118,7 @@ describe('TodayLessonsPanel', () => {
       error: null,
     });
 
-    render(<TodayLessonsPanel initialLessons={[lessonA, lessonB]} />);
+    render(<TodayLessonsPanel initialLessons={[lessonA, lessonB]} authorProfileId={ownerProfileId} />);
 
     const lessonACard = screen.getByTestId(`today-lesson-${lessonA.id}`);
     const lessonBCard = screen.getByTestId(`today-lesson-${lessonB.id}`);
