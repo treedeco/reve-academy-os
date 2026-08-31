@@ -29,7 +29,7 @@ describe('backup-production', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reve-backup-run-'));
     tempDirs.push(dir);
     fs.mkdirSync(path.join(dir, 'supabase', 'migrations'), { recursive: true });
-    for (let index = 0; index < 26; index += 1) {
+    for (let index = 0; index < 27; index += 1) {
       const version = String(20260626120000 + index);
       fs.writeFileSync(
         path.join(dir, 'supabase', 'migrations', `${version}_migration_${index}.sql`),
@@ -61,7 +61,7 @@ describe('backup-production', () => {
 
     const runNpx = vi.fn(async (args) => {
       if (args[1] === 'migration') {
-        return { stdout: '{ "migrations": [' + '1,'.repeat(25) + '1] }', stderr: '' };
+        return { stdout: '{ "migrations": [' + '1,'.repeat(26) + '1] }', stderr: '' };
       }
       const fileIndex = args.indexOf('-f');
       const dumpPath = args[fileIndex + 1];
