@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { LessonNoteField } from '@/components/shared/lesson-note-field';
 import { LessonRescheduleDialog } from '@/components/owner/lesson-reschedule-dialog';
 import { LessonStatusCorrectionDialog } from '@/components/owner/lesson-status-correction-dialog';
 import { createClient } from '@/lib/supabase/client';
@@ -20,7 +21,13 @@ import {
   type TodayLessonRow,
 } from '@/lib/domain/types';
 
-export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLessonRow[] }) {
+export function TodayLessonsPanel({
+  initialLessons,
+  authorProfileId,
+}: {
+  initialLessons: TodayLessonRow[];
+  authorProfileId: string;
+}) {
   const [lessons, setLessons] = useState(initialLessons);
   const [pendingLessonId, setPendingLessonId] = useState<string | null>(null);
   const [errorByLesson, setErrorByLesson] = useState<Record<string, string>>({});
@@ -163,9 +170,6 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
                   현재 상태:{' '}
                   <span className="font-medium">{formatLessonStatus(lesson.status)}</span>
                 </p>
-                {lesson.memo_summary ? (
-                  <p className="mt-2 text-sm text-slate-600">메모: {lesson.memo_summary}</p>
-                ) : null}
                 <Link
                   href={`/students/${lesson.student_id}`}
                   className="mt-3 inline-block text-sm font-medium text-brand-700"
@@ -174,7 +178,7 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
                 </Link>
               </div>
 
-              <div className="w-full max-w-sm space-y-2">
+              <div className="w-full max-w-sm space-y-3">
                 {showOrdinarySelect ? (
                   <>
                     <label
@@ -248,6 +252,13 @@ export function TodayLessonsPanel({ initialLessons }: { initialLessons: TodayLes
                     {errorByLesson[lesson.id]}
                   </p>
                 ) : null}
+
+                <LessonNoteField
+                  lessonId={lesson.id}
+                  authorProfileId={authorProfileId}
+                  initialBody={lesson.memo_summary}
+                  initialNoteId={lesson.memo_note_id}
+                />
               </div>
             </div>
           </article>

@@ -1,10 +1,16 @@
 import { TodayLessonsPanel } from '@/components/owner/today-lessons-panel';
 import { EmptyState, ErrorState } from '@/components/ui/state-blocks';
+import { getAuthenticatedOwner } from '@/lib/auth/owner-session';
 import { fetchTodayLessons } from '@/lib/data/owner-queries';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function TodayLessonsPage() {
   const supabase = await createClient();
+  const { profile, error } = await getAuthenticatedOwner(supabase);
+
+  if (!profile) {
+    return <ErrorState message={error ?? 'Owner 권한이 없습니다.'} />;
+  }
 
   try {
     const lessons = await fetchTodayLessons(supabase);
@@ -22,11 +28,11 @@ export default async function TodayLessonsPage() {
             description="새 수업이 등록되면 이 화면에 표시됩니다."
           />
         ) : (
-          <TodayLessonsPanel initialLessons={lessons} />
+          <TodayLessonsPanel initialLessons={lessons} authorProfileId={profile.id} />
         )}
       </div>
     );
-  } catch (error) {
-    return <ErrorState message={(error as Error).message} />;
+  } catch (caught) {
+    return <ErrorState message={(caught as Error).message} />;
   }
 }

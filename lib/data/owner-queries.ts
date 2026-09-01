@@ -93,7 +93,7 @@ export async function fetchTodayLessons(supabase: SupabaseClient): Promise<Today
     supabase.from('teachers').select('id, name').in('id', teacherIds),
     supabase
       .from('lesson_notes')
-      .select('lesson_id, body, created_at')
+      .select('id, lesson_id, body, created_at')
       .in('lesson_id', lessonIds)
       .order('created_at', { ascending: false }),
   ]);
@@ -111,11 +111,11 @@ export async function fetchTodayLessons(supabase: SupabaseClient): Promise<Today
   const studentsById = new Map((studentsResult.data ?? []).map((row) => [row.id, row.name]));
   const coursesById = new Map((coursesResult.data ?? []).map((row) => [row.id, row.name]));
   const teachersById = new Map((teachersResult.data ?? []).map((row) => [row.id, row.name]));
-  const notesByLesson = new Map<string, string>();
+  const notesByLesson = new Map<string, { id: string; body: string }>();
 
   for (const note of notesResult.data ?? []) {
     if (!notesByLesson.has(note.lesson_id)) {
-      notesByLesson.set(note.lesson_id, note.body);
+      notesByLesson.set(note.lesson_id, { id: note.id, body: note.body });
     }
   }
 
@@ -146,7 +146,8 @@ export async function fetchTodayLessons(supabase: SupabaseClient): Promise<Today
       teacher_name: teachersById.get(row.assigned_teacher_id) ?? '',
       pass_id: row.pass_id,
       pass_updated_at: pass?.updated_at ?? '',
-      memo_summary: notesByLesson.get(row.id) ?? null,
+      memo_summary: notesByLesson.get(row.id)?.body ?? null,
+      memo_note_id: notesByLesson.get(row.id)?.id ?? null,
     };
   });
 }

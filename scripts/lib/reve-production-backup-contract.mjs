@@ -14,7 +14,7 @@ import {
 } from './reve-production-backup-dump-contract.mjs';
 
 export const BACKUP_CONTRACT_VERSION = '2b2c1-v2';
-export const EXPECTED_MIGRATION_COUNT = 26;
+export const EXPECTED_MIGRATION_COUNT = 27;
 export { PRODUCTION_PROJECT_REF, BACKUP_MECHANISM, BACKUP_ARTIFACTS, RESTORE_ARTIFACT_ORDER };
 
 export const REQUIRED_PUBLIC_TABLES = Object.freeze([
