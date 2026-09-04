@@ -5,8 +5,10 @@ import { fetchTeacherTodayLessons } from '@/lib/data/teacher-queries';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function TeacherTodayLessonsPage() {
-  const supabase = await createClient();
-  const { profile, error } = await getAuthenticatedTeacher(supabase);
+  const [{ profile, error }, supabase] = await Promise.all([
+    getAuthenticatedTeacher(),
+    createClient(),
+  ]);
 
   if (!profile) {
     return <ErrorState message={error ?? '강사 권한이 없습니다.'} />;

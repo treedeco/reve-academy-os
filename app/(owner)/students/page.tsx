@@ -58,7 +58,11 @@ export default async function StudentsPage({
               {students.map((student) => (
                 <tr key={student.id} className="border-b border-slate-100">
                   <td className="px-4 py-3">
-                    <Link href={`/students/${student.id}`} className="font-medium text-brand-700">
+                    <Link
+                      href={`/students/${student.id}`}
+                      prefetch={false}
+                      className="font-medium text-brand-700"
+                    >
                       {student.name}
                     </Link>
                   </td>
@@ -83,6 +87,7 @@ export default async function StudentsPage({
             <Link
               key={student.id}
               href={`/students/${student.id}`}
+              prefetch={false}
               className="block rounded-lg border border-slate-200 bg-white p-4"
             >
               <p className="font-medium">{student.name}</p>

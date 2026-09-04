@@ -47,6 +47,7 @@ export function TeacherShell({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`min-h-11 whitespace-nowrap rounded-full px-4 py-2 text-sm ${
                 pathname.startsWith(item.href)
                   ? 'bg-brand-600 text-white'

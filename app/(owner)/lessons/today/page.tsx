@@ -5,8 +5,10 @@ import { fetchTodayLessons } from '@/lib/data/owner-queries';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function TodayLessonsPage() {
-  const supabase = await createClient();
-  const { profile, error } = await getAuthenticatedOwner(supabase);
+  const [{ profile, error }, supabase] = await Promise.all([
+    getAuthenticatedOwner(),
+    createClient(),
+  ]);
 
   if (!profile) {
     return <ErrorState message={error ?? 'Owner 권한이 없습니다.'} />;

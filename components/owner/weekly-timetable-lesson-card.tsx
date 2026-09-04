@@ -51,7 +51,11 @@ export function WeeklyTimetableLessonCard({
             상세
           </button>
         ) : (
-          <Link href={`/students/${lesson.student_id}`} className="text-brand-700 underline">
+          <Link
+            href={`/students/${lesson.student_id}`}
+            prefetch={false}
+            className="text-brand-700 underline"
+          >
             상세
           </Link>
         )}

@@ -172,6 +172,7 @@ export function TodayLessonsPanel({
                 </p>
                 <Link
                   href={`/students/${lesson.student_id}`}
+                  prefetch={false}
                   className="mt-3 inline-block text-sm font-medium text-brand-700"
                 >
                   학생 상세 보기

@@ -60,6 +60,7 @@ export function OwnerShell({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`whitespace-nowrap rounded-full px-3 py-1 text-sm ${
                 pathname.startsWith(item.href)
                   ? 'bg-brand-600 text-white'
@@ -85,6 +86,7 @@ export function OwnerShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`block rounded-md px-3 py-2 text-sm ${
                   pathname.startsWith(item.href)
                     ? 'bg-brand-50 font-medium text-brand-700'

@@ -39,6 +39,7 @@ export function OwnerAccountNavLink({ pathname }: { pathname: string }) {
   return (
     <Link
       href="/account/password"
+      prefetch={false}
       className={`block rounded-md px-3 py-2 text-sm ${
         isActive
           ? 'bg-brand-50 font-medium text-brand-700'
