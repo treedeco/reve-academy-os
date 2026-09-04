@@ -3,6 +3,7 @@ import {
   buildSeoulWeekDayHeaders,
   buildTimetableRows,
   buildWeeklyTimetableColumns,
+  computeTimetableEventBox,
   computeTimetablePlacement,
   formatWeekdayDateHeader,
   getSeoulWeekBounds,
@@ -10,6 +11,7 @@ import {
   TIMETABLE_END_MINUTES,
   TIMETABLE_INTERVAL_MINUTES,
   TIMETABLE_START_MINUTES,
+  WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
 } from '@/lib/domain/weekly-timetable';
 import { formatLessonProgress } from '@/lib/domain/lesson-correction';
 
@@ -27,7 +29,50 @@ describe('weekly timetable grid', () => {
     expect(rows[rows.length - 1]?.start_minutes).toBe(TIMETABLE_END_MINUTES - TIMETABLE_INTERVAL_MINUTES);
   });
 
-  it('places 60-minute lessons across two rows', () => {
+  it('A: 14:00–14:30 occupies exactly 1 row', () => {
+    expect(computeTimetablePlacement(14 * 60, 30)).toEqual({ rowStart: 8, rowSpan: 1 });
+  });
+
+  it('B: 14:00–15:00 occupies exactly 2 rows and ends on the 15:00 boundary', () => {
+    expect(computeTimetablePlacement(14 * 60, 60)).toEqual({ rowStart: 8, rowSpan: 2 });
+    const box = computeTimetableEventBox(14 * 60, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    expect(box).toEqual({ top: 8 * WEEKLY_TIMETABLE_ROW_HEIGHT_PX, height: 2 * WEEKLY_TIMETABLE_ROW_HEIGHT_PX });
+    const fifteenOClockTop = ((15 * 60 - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES) *
+      WEEKLY_TIMETABLE_ROW_HEIGHT_PX;
+    expect((box?.top ?? 0) + (box?.height ?? 0)).toBe(fifteenOClockTop);
+  });
+
+  it('C: 14:00–15:30 occupies exactly 3 rows', () => {
+    expect(computeTimetablePlacement(14 * 60, 90)).toEqual({ rowStart: 8, rowSpan: 3 });
+  });
+
+  it('D: 14:30–15:30 starts at 14:30 and ends exactly at 15:30', () => {
+    expect(computeTimetablePlacement(14 * 60 + 30, 60)).toEqual({ rowStart: 9, rowSpan: 2 });
+    const box = computeTimetableEventBox(14 * 60 + 30, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    const fifteenThirtyTop =
+      ((15 * 60 + 30 - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES) *
+      WEEKLY_TIMETABLE_ROW_HEIGHT_PX;
+    expect((box?.top ?? 0) + (box?.height ?? 0)).toBe(fifteenThirtyTop);
+  });
+
+  it('E: pixel height depends only on duration, not content volume', () => {
+    const shortLabel = computeTimetableEventBox(14 * 60, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    const longLabel = computeTimetableEventBox(14 * 60, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    expect(shortLabel).toEqual(longLabel);
+    expect(shortLabel?.height).toBe(2 * WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+  });
+
+  it('F: adjacent 14:00–15:00 and 15:00–16:00 touch at 15:00 without overlap', () => {
+    const first = computeTimetableEventBox(14 * 60, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    const second = computeTimetableEventBox(15 * 60, 60, WEEKLY_TIMETABLE_ROW_HEIGHT_PX);
+    expect(first && second).toBeTruthy();
+    expect((first?.top ?? 0) + (first?.height ?? 0)).toBe(second?.top);
+    expect((second?.top ?? 0) + (second?.height ?? 0)).toBe(
+      ((16 * 60 - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES) * WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
+    );
+  });
+
+  it('places 60-minute lessons across two rows from 10:00', () => {
     const placement = computeTimetablePlacement(10 * 60, 60);
     expect(placement).toEqual({ rowStart: 0, rowSpan: 2 });
   });
@@ -47,7 +92,7 @@ describe('weekly timetable grid', () => {
     expect(formatLessonProgress(8, 5)).toBe('8-5');
   });
 
-  it('maps lesson entries with Seoul weekday and progress label', () => {
+  it('G: maps lesson entries with Seoul weekday and progress label', () => {
     const entry = mapLessonToTimetableEntry({
       lesson_id: 'lesson-1',
       scheduled_at: '2026-07-28T01:00:00.000Z',

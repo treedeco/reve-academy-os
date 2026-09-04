@@ -3,14 +3,16 @@
 import type { WeeklyTimetableDayColumn, WeeklyTimetableLesson } from '@/lib/domain/weekly-timetable';
 import {
   buildTimetableRows,
+  computeTimetableEventBox,
   TIMETABLE_END_MINUTES,
   TIMETABLE_INTERVAL_MINUTES,
   TIMETABLE_START_MINUTES,
+  WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
 } from '@/lib/domain/weekly-timetable';
 import { formatMinutesAsLocalTime } from '@/lib/domain/academy-hours';
 import { WeeklyTimetableLessonCard } from '@/components/owner/weekly-timetable-lesson-card';
 
-const ROW_HEIGHT_PX = 32;
+export { WEEKLY_TIMETABLE_ROW_HEIGHT_PX };
 
 function assignOverlapLanes(lessons: WeeklyTimetableLesson[]) {
   const lanes = new Map<string, { lane: number; laneCount: number }>();
@@ -61,7 +63,7 @@ function DayColumn({
   selectedLessonId?: string | null;
 }) {
   const rows = buildTimetableRows();
-  const totalHeight = rows.length * ROW_HEIGHT_PX;
+  const totalHeight = rows.length * WEEKLY_TIMETABLE_ROW_HEIGHT_PX;
   const lanes = assignOverlapLanes(column.lessons);
 
   return (
@@ -74,34 +76,36 @@ function DayColumn({
           <div
             key={row.start_minutes}
             className="absolute inset-x-0 border-t border-slate-100"
-            style={{ top: index * ROW_HEIGHT_PX, height: ROW_HEIGHT_PX }}
+            style={{ top: index * WEEKLY_TIMETABLE_ROW_HEIGHT_PX, height: WEEKLY_TIMETABLE_ROW_HEIGHT_PX }}
             data-testid={`weekly-timetable-cell-${column.weekday}-${row.start_minutes}`}
           />
         ))}
 
         {column.lessons.map((lesson) => {
           const laneInfo = lanes.get(lesson.lesson_id) ?? { lane: 0, laneCount: 1 };
-          const top =
-            ((lesson.local_start_minutes - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES) *
-            ROW_HEIGHT_PX;
-          const height = Math.max(
-            ROW_HEIGHT_PX,
-            (lesson.duration_minutes / TIMETABLE_INTERVAL_MINUTES) * ROW_HEIGHT_PX,
+          const box = computeTimetableEventBox(
+            lesson.local_start_minutes,
+            lesson.duration_minutes,
+            WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
           );
+          if (!box) {
+            return null;
+          }
           const widthPercent = 100 / laneInfo.laneCount;
           const leftPercent = widthPercent * laneInfo.lane;
 
           return (
             <div
               key={lesson.lesson_id}
-              className="absolute px-0.5"
+              className="absolute overflow-hidden px-0.5"
               style={{
-                top,
-                height,
+                top: box.top,
+                height: box.height,
                 left: `${leftPercent}%`,
                 width: `${widthPercent}%`,
               }}
               data-testid={`weekly-timetable-placement-${lesson.lesson_id}`}
+              data-row-span={Math.round(box.height / WEEKLY_TIMETABLE_ROW_HEIGHT_PX)}
             >
               <WeeklyTimetableLessonCard
                 lesson={lesson}
@@ -130,7 +134,7 @@ export function WeeklyTimetableGrid({
   selectedLessonId?: string | null;
 }) {
   const rows = buildTimetableRows();
-  const totalHeight = rows.length * ROW_HEIGHT_PX;
+  const totalHeight = rows.length * WEEKLY_TIMETABLE_ROW_HEIGHT_PX;
 
   return (
     <div className="hidden lg:block" data-testid="weekly-timetable-grid">
@@ -151,11 +155,14 @@ export function WeeklyTimetableGrid({
 
           <div className="flex">
             <div className="w-16 shrink-0" style={{ height: totalHeight }}>
-              {rows.map((row, index) => (
+              {rows.map((row) => (
                 <div
                   key={row.start_minutes}
                   className="border-t border-slate-200 pr-1 text-right text-xs tabular-nums text-slate-600"
-                  style={{ height: ROW_HEIGHT_PX, lineHeight: `${ROW_HEIGHT_PX}px` }}
+                  style={{
+                    height: WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
+                    lineHeight: `${WEEKLY_TIMETABLE_ROW_HEIGHT_PX}px`,
+                  }}
                   data-testid={`weekly-timetable-row-${row.start_minutes}`}
                 >
                   {row.label}

@@ -9,6 +9,9 @@ import { weekdayLabelMonFirst, WEEKDAY_ORDER_MON_FIRST } from '@/lib/domain/week
 
 export const TIMETABLE_INTERVAL_MINUTES = 30;
 
+/** Fixed visual height of one 30-minute grid row (px). Shared by overlay math and CSS. */
+export const WEEKLY_TIMETABLE_ROW_HEIGHT_PX = 32;
+
 /** Timetable grid displays rows from 10:00 through the 22:00 closing boundary. */
 export const TIMETABLE_START_MINUTES = ACADEMY_FIRST_START_MINUTES;
 export const TIMETABLE_END_MINUTES = ACADEMY_LAST_END_MINUTES;
@@ -213,16 +216,46 @@ export function seoulLocalStartMinutes(iso: string): number {
   return hour * 60 + minute;
 }
 
+/**
+ * Place a lesson on the fixed 30-minute grid.
+ * End time is an exclusive visual boundary: 14:00–15:00 occupies rows
+ * [14:00–14:30) and [14:30–15:00) only — never the 15:00–15:30 row.
+ */
 export function computeTimetablePlacement(
   startMinutes: number,
   durationMinutes: number,
 ): { rowStart: number; rowSpan: number } | null {
-  if (startMinutes < TIMETABLE_START_MINUTES || startMinutes >= TIMETABLE_END_MINUTES) {
+  if (
+    !Number.isFinite(startMinutes) ||
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes <= 0 ||
+    startMinutes < TIMETABLE_START_MINUTES ||
+    startMinutes >= TIMETABLE_END_MINUTES
+  ) {
     return null;
   }
+
+  const endMinutes = startMinutes + durationMinutes;
   const rowStart = Math.floor((startMinutes - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES);
-  const rowSpan = Math.max(1, Math.ceil(durationMinutes / TIMETABLE_INTERVAL_MINUTES));
+  const rowEnd = Math.ceil((endMinutes - TIMETABLE_START_MINUTES) / TIMETABLE_INTERVAL_MINUTES);
+  const rowSpan = Math.max(1, rowEnd - rowStart);
   return { rowStart, rowSpan };
+}
+
+/** Pixel box for absolute overlay on the fixed-height 30-minute grid. */
+export function computeTimetableEventBox(
+  startMinutes: number,
+  durationMinutes: number,
+  rowHeightPx: number,
+): { top: number; height: number } | null {
+  const placement = computeTimetablePlacement(startMinutes, durationMinutes);
+  if (!placement || rowHeightPx <= 0) {
+    return null;
+  }
+  return {
+    top: placement.rowStart * rowHeightPx,
+    height: placement.rowSpan * rowHeightPx,
+  };
 }
 
 export function buildWeeklyTimetableColumns(
