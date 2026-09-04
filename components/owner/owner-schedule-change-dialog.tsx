@@ -250,6 +250,8 @@ export function OwnerScheduleChangeDialog({
           newScheduledAt,
           expectedLessonUpdatedAt: lesson.updated_at,
           reason: reason.trim(),
+          cascade: true,
+          expectedPassUpdatedAt: lesson.pass_updated_at,
         });
         onSuccess({ mode: 'single', single: result });
         onClose();
@@ -487,7 +489,11 @@ export function OwnerScheduleChangeDialog({
                   기존: {formatSeoulDateTimeShortWithWeekday(lesson.scheduled_at)}
                 </p>
                 <p>변경: {formatSeoulDateTimeShortWithWeekday(newSingleScheduledAt)}</p>
-                <p>적용 범위: 이번 수업만</p>
+                <p>적용 범위: 이번 수업 직접 변경 + 이후 미진행 수업 자동 이동</p>
+                <p className="mt-2 text-slate-600">
+                  같은 회차권의 이후 scheduled/postponed 수업은 고정 일정에 맞춰 연쇄 이동합니다.
+                  완료·취소된 수업과 고정 요일/시간(schedule_slots)은 유지됩니다.
+                </p>
               </>
             ) : null}
             {mode === 'recurring' ? (

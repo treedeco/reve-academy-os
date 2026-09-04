@@ -66,15 +66,19 @@ export async function changeSingleLessonSchedule(
     newScheduledAt: string;
     expectedLessonUpdatedAt: string;
     reason: string;
+    /** Default true: subsequent eligible lessons cascade on the same pass. */
+    cascade?: boolean;
+    expectedPassUpdatedAt?: string | null;
   },
 ): Promise<DirectRescheduleResult> {
+  const cascade = input.cascade !== false;
   return directRescheduleLesson(supabase, {
     lessonId: input.lessonId,
     newScheduledAt: input.newScheduledAt,
     expectedLessonUpdatedAt: input.expectedLessonUpdatedAt,
     reason: input.reason,
-    cascade: false,
-    expectedPassUpdatedAt: null,
+    cascade,
+    expectedPassUpdatedAt: cascade ? (input.expectedPassUpdatedAt ?? null) : null,
   });
 }
 

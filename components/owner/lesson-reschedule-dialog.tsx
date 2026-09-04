@@ -41,7 +41,7 @@ export function LessonRescheduleDialog({
 }) {
   const [dateValue, setDateValue] = useState('');
   const [timeValue, setTimeValue] = useState('');
-  const [cascade, setCascade] = useState(false);
+  const [cascade, setCascade] = useState(true);
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -52,7 +52,7 @@ export function LessonRescheduleDialog({
       const [date, time] = local.split('T');
       setDateValue(date ?? '');
       setTimeValue(time ?? '');
-      setCascade(false);
+      setCascade(true);
       setReason('');
       setError('');
       setPending(false);
@@ -175,16 +175,25 @@ export function LessonRescheduleDialog({
           </div>
         </div>
 
-        <label className="mt-4 flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={cascade}
-            disabled={pending}
-            onChange={(event) => setCascade(event.target.checked)}
-            data-testid="reschedule-cascade"
-          />
-          이후 수업 연쇄 재배치
-        </label>
+        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={cascade}
+              disabled={pending}
+              onChange={(event) => setCascade(event.target.checked)}
+              data-testid="reschedule-cascade"
+            />
+            <span>
+              <span className="font-medium">이후 미진행 수업 자동 이동 (권장)</span>
+              <span className="mt-1 block text-slate-600">
+                선택한 수업만 직접 변경하고, 같은 회차권의 이후 scheduled/postponed 수업은
+                고정 요일·시간에 맞춰 자동으로 밀립니다. 완료·취소된 과거 수업은 건드리지 않습니다.
+              </span>
+            </span>
+          </label>
+        </div>
 
         <label className="mt-4 block text-sm font-medium text-slate-700" htmlFor="reschedule-reason">
           변경 사유 (필수)

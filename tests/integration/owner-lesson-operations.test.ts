@@ -199,6 +199,7 @@ describe.skipIf(!integrationEnabled)('Owner lesson operations integration', () =
       newScheduledAt: '2026-08-21T05:00:00.000Z',
       expectedLessonUpdatedAt: lesson!.updated_at,
       reason: 'Integration single reschedule',
+      cascade: false,
     });
 
     expect(result.new_scheduled_at).toContain('2026-08-21T05:00:00');
