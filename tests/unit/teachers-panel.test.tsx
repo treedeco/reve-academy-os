@@ -48,12 +48,24 @@ describe('TeachersPanel', () => {
     vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
-  it('renders teacher list and status badges', () => {
+  it('renders active teachers by default and toggles inactive teachers visibility', async () => {
+    const user = userEvent.setup();
     render(<TeachersPanel initialTeachers={[activeTeacher, inactiveTeacher]} />);
 
     expect(screen.getByTestId('teachers-list')).toBeInTheDocument();
     expect(screen.getByTestId('teacher-status-T-UNASSGN')).toHaveTextContent('활성');
+    expect(screen.queryByTestId('teacher-item-T-INACT')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('inactive-teachers-section')).not.toBeInTheDocument();
+
+    // Toggle inactive teachers
+    await user.click(screen.getByTestId('show-inactive-teachers-checkbox'));
+    expect(screen.getByTestId('inactive-teachers-section')).toBeInTheDocument();
     expect(screen.getByTestId('teacher-status-T-INACT')).toHaveTextContent('비활성');
+
+    // Toggle off hides inactive teachers again
+    await user.click(screen.getByTestId('show-inactive-teachers-checkbox'));
+    expect(screen.queryByTestId('inactive-teachers-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('teacher-item-T-INACT')).not.toBeInTheDocument();
   });
 
   it('renders empty state', () => {
@@ -191,7 +203,7 @@ describe('TeachersPanel', () => {
       updated_at: '2026-07-05T00:00:00.000Z',
     });
 
-    render(<TeachersPanel initialTeachers={[inactiveTeacher]} />);
+    render(<TeachersPanel initialTeachers={[inactiveTeacher]} initialShowInactive />);
     await user.type(screen.getByTestId('teacher-status-reason-T-INACT'), 'returning teacher');
     await user.click(screen.getByTestId('teacher-reactivate-T-INACT'));
 

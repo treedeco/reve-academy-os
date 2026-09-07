@@ -137,12 +137,20 @@ test.describe('Owner teacher master data', () => {
     });
 
     await page.reload();
+    // Inactive teacher is hidden by default
+    await expect(page.getByTestId(`teacher-item-${createdCode}`)).toHaveCount(0);
+    await expect(page.getByTestId('inactive-teachers-section')).toHaveCount(0);
+
+    // Inactive teacher becomes visible when "비활성 강사 보기" is enabled
+    await page.getByTestId('show-inactive-teachers-checkbox').check();
+    await expect(page.getByTestId('inactive-teachers-section')).toBeVisible();
     await expect(page.getByTestId(`teacher-status-${createdCode}`)).toHaveText('비활성');
   });
 
   test('reactivates a teacher', async ({ page }) => {
     await loginAsOwner(page);
     await page.goto('/teachers');
+    await page.getByTestId('show-inactive-teachers-checkbox').check();
     await expect(page.getByTestId(`teacher-item-${createdCode}`)).toBeVisible({ timeout: 10_000 });
 
     await page.getByTestId(`teacher-status-reason-${createdCode}`).fill('E2E reactivate teacher');
