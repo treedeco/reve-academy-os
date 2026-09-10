@@ -111,6 +111,7 @@ function DayColumn({
                 lesson={lesson}
                 compact
                 selected={selectedLessonId === lesson.lesson_id}
+                hasTimeOverlap={laneInfo.laneCount > 1}
                 onSelect={onLessonSelect}
                 onScheduleChange={onScheduleChange}
               />

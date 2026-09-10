@@ -6,15 +6,19 @@ import {
   changeFixedPassSchedule,
   changeSingleLessonSchedule,
   countFutureEligibleLessons,
+  previewPassScheduleCollisions,
 } from '@/lib/data/owner-schedule-edit';
 import { loadOwnerEnrollmentCatalog } from '@/lib/data/owner-enrollment';
 import {
+  buildEmptyFixedScheduleSlotInputs,
   formatFixedWeeklyScheduleLabel,
   formatFixedWeeklySchedulesLabel,
+  formatScheduleCollisionSummary,
   formatSeoulDateTimeShortWithWeekday,
   formatSeoulDateTimeWithWeekday,
   formatSeoulWeekdayLabel,
   mapOwnerScheduleEditError,
+  OWNER_FIXED_SCHEDULE_CREATE_LABEL,
   OWNER_SCHEDULE_CHANGE_MODE_LABELS,
   scheduleSlotsFromPassSlots,
   validateRecurringScheduleChange,
@@ -28,13 +32,14 @@ import type {
   EnrollmentScheduleSlotInput,
   FixedPassScheduleChangeResult,
   LessonStatus,
+  ScheduleCollisionPreviewRow,
 } from '@/lib/domain/types';
 import { WEEKDAY_LABELS } from '@/lib/domain/types';
 import { createClient } from '@/lib/supabase/client';
 
 type ScheduleLessonContext = {
   id: string;
-  scheduled_at: string;
+  scheduled_at: string | null;
   updated_at: string;
   status: LessonStatus;
   duration_minutes: number;
@@ -42,6 +47,7 @@ type ScheduleLessonContext = {
   pass_updated_at: string;
   sequence_number: number;
   registered_lesson_count: number;
+  assigned_teacher_id?: string | null;
 };
 
 type ScheduleSlotContext = {
@@ -53,7 +59,7 @@ type ScheduleSlotContext = {
   teacher_name: string;
 };
 
-type DialogStep = 'mode' | 'form' | 'confirm';
+type DialogStep = 'mode' | 'form' | 'confirm' | 'conflict';
 
 function formatTodayDateInput(): string {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -77,6 +83,7 @@ export function OwnerScheduleChangeDialog({
   weeklyFrequency,
   onSuccess,
   initialMode = null,
+  createFixedOnly = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -93,9 +100,14 @@ export function OwnerScheduleChangeDialog({
     recurring?: FixedPassScheduleChangeResult;
   }) => void;
   initialMode?: OwnerScheduleChangeMode | null;
+  /** When true, skip mode picker and open recurring create form (no current fixed slots). */
+  createFixedOnly?: boolean;
 }) {
-  const [step, setStep] = useState<DialogStep>(initialMode ? 'form' : 'mode');
-  const [mode, setMode] = useState<OwnerScheduleChangeMode | null>(initialMode);
+  const resolvedInitialMode: OwnerScheduleChangeMode | null = createFixedOnly
+    ? 'recurring'
+    : initialMode;
+  const [step, setStep] = useState<DialogStep>(resolvedInitialMode ? 'form' : 'mode');
+  const [mode, setMode] = useState<OwnerScheduleChangeMode | null>(resolvedInitialMode);
   const [dateValue, setDateValue] = useState('');
   const [timeValue, setTimeValue] = useState('');
   const [effectiveDate, setEffectiveDate] = useState(formatTodayDateInput());
@@ -105,31 +117,46 @@ export function OwnerScheduleChangeDialog({
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [collisions, setCollisions] = useState<ScheduleCollisionPreviewRow[]>([]);
 
   const fixedScheduleLabel = useMemo(
     () => formatFixedWeeklySchedulesLabel(scheduleSlots),
     [scheduleSlots],
   );
 
-  const canChangeLesson = isScheduleChangeableLessonStatus(lesson.status);
+  const canChangeLesson =
+    lesson.scheduled_at != null && isScheduleChangeableLessonStatus(lesson.status);
+
+  const dialogTitle = createFixedOnly
+    ? OWNER_FIXED_SCHEDULE_CREATE_LABEL
+    : '수업 일정 변경';
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    const local = toDateTimeLocalSeoul(lesson.scheduled_at);
-    const [date, time] = local.split('T');
-    setStep(initialMode ? 'form' : 'mode');
-    setMode(initialMode);
+    const local = lesson.scheduled_at ? toDateTimeLocalSeoul(lesson.scheduled_at) : '';
+    const [date, time] = local ? local.split('T') : ['', ''];
+    setStep(resolvedInitialMode ? 'form' : 'mode');
+    setMode(resolvedInitialMode);
     setDateValue(date ?? '');
     setTimeValue(time ?? '');
     setEffectiveDate(formatTodayDateInput());
-    setSlotInputs(scheduleSlotsFromPassSlots(scheduleSlots));
-    setReason('');
+    setSlotInputs(
+      scheduleSlots.length > 0
+        ? scheduleSlotsFromPassSlots(scheduleSlots)
+        : buildEmptyFixedScheduleSlotInputs({
+            weeklyFrequency: Math.max(weeklyFrequency, 1),
+            teacherId: lesson.assigned_teacher_id ?? scheduleSlots[0]?.teacher_id ?? '',
+            durationMinutes: lesson.duration_minutes,
+          }),
+    );
+    setReason(createFixedOnly ? '고정 일정 재등록' : '');
     setError('');
     setPending(false);
     setFutureLessonCount(null);
+    setCollisions([]);
 
     void (async () => {
       const supabase = createClient();
@@ -138,7 +165,17 @@ export function OwnerScheduleChangeDialog({
         setTeachers(catalog.catalog.teachers.map((row) => ({ id: row.id, name: row.name })));
       }
     })();
-  }, [open, lesson.id, lesson.scheduled_at, initialMode, scheduleSlots]);
+  }, [
+    open,
+    lesson.id,
+    lesson.scheduled_at,
+    lesson.assigned_teacher_id,
+    lesson.duration_minutes,
+    resolvedInitialMode,
+    scheduleSlots,
+    weeklyFrequency,
+    createFixedOnly,
+  ]);
 
   useEffect(() => {
     if (!open || mode !== 'recurring' || !lesson.pass_id || !effectiveDate) {
@@ -216,6 +253,19 @@ export function OwnerScheduleChangeDialog({
     setStep('confirm');
   }
 
+  async function saveRecurring(allowConflictOverride: boolean) {
+    const result = await changeFixedPassSchedule(createClient(), {
+      passId: lesson.pass_id,
+      expectedPassUpdatedAt: lesson.pass_updated_at,
+      effectiveFrom: effectiveDate,
+      slots: slotInputs,
+      reason: reason.trim(),
+      allowConflictOverride,
+    });
+    onSuccess({ mode: 'recurring', recurring: result });
+    onClose();
+  }
+
   async function handleSave() {
     if (!mode) {
       return;
@@ -258,15 +308,29 @@ export function OwnerScheduleChangeDialog({
         return;
       }
 
-      const result = await changeFixedPassSchedule(supabase, {
+      const preview = await previewPassScheduleCollisions(supabase, {
         passId: lesson.pass_id,
-        expectedPassUpdatedAt: lesson.pass_updated_at,
-        effectiveFrom: effectiveDate,
         slots: slotInputs,
-        reason: reason.trim(),
       });
-      onSuccess({ mode: 'recurring', recurring: result });
-      onClose();
+      if (preview.length > 0) {
+        setCollisions(preview);
+        setStep('conflict');
+        return;
+      }
+
+      await saveRecurring(false);
+    } catch (caught) {
+      setError(mapOwnerScheduleEditError(caught as { message?: string }));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleOverrideSave() {
+    setPending(true);
+    setError('');
+    try {
+      await saveRecurring(true);
     } catch (caught) {
       setError(mapOwnerScheduleEditError(caught as { message?: string }));
     } finally {
@@ -282,7 +346,7 @@ export function OwnerScheduleChangeDialog({
       aria-modal="true"
     >
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-lg">
-        <h2 className="text-lg font-semibold">수업 일정 변경</h2>
+        <h2 className="text-lg font-semibold">{dialogTitle}</h2>
 
         <dl className="mt-4 space-y-2 text-sm">
           <div>
@@ -299,7 +363,11 @@ export function OwnerScheduleChangeDialog({
           </div>
           <div>
             <dt className="inline text-slate-500">현재 수업 </dt>
-            <dd className="inline">{formatSeoulDateTimeWithWeekday(lesson.scheduled_at)}</dd>
+            <dd className="inline">
+              {lesson.scheduled_at
+                ? formatSeoulDateTimeWithWeekday(lesson.scheduled_at)
+                : '일정 미정'}
+            </dd>
           </div>
           <div>
             <dt className="inline text-slate-500">고정 일정 </dt>
@@ -376,7 +444,9 @@ export function OwnerScheduleChangeDialog({
         {step === 'form' && mode === 'recurring' ? (
           <div className="mt-5 space-y-4">
             <p className="text-sm font-medium text-brand-700">
-              {OWNER_SCHEDULE_CHANGE_MODE_LABELS.recurring}
+              {createFixedOnly
+                ? OWNER_FIXED_SCHEDULE_CREATE_LABEL
+                : OWNER_SCHEDULE_CHANGE_MODE_LABELS.recurring}
             </p>
             <div>
               <label className="block text-sm font-medium text-slate-700" htmlFor="schedule-effective-date">
@@ -486,7 +556,10 @@ export function OwnerScheduleChangeDialog({
             {mode === 'single' && newSingleScheduledAt ? (
               <>
                 <p>
-                  기존: {formatSeoulDateTimeShortWithWeekday(lesson.scheduled_at)}
+                  기존:{' '}
+                  {lesson.scheduled_at
+                    ? formatSeoulDateTimeShortWithWeekday(lesson.scheduled_at)
+                    : '일정 미정'}
                 </p>
                 <p>변경: {formatSeoulDateTimeShortWithWeekday(newSingleScheduledAt)}</p>
                 <p>적용 범위: 이번 수업 직접 변경 + 이후 미진행 수업 자동 이동</p>
@@ -504,6 +577,25 @@ export function OwnerScheduleChangeDialog({
                 <p>변경 대상: 미진행 수업 {futureLessonCount ?? 0}건</p>
               </>
             ) : null}
+          </div>
+        ) : null}
+
+        {step === 'conflict' ? (
+          <div
+            className="mt-5 space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm"
+            data-testid="schedule-conflict-warning"
+            role="alert"
+          >
+            <p className="font-medium text-amber-900">같은 시간에 다른 수업이 있습니다.</p>
+            <ul className="space-y-2" data-testid="schedule-conflict-list">
+              {collisions.map((row, index) => (
+                <li key={`${row.conflicting_schedule_slot_id ?? 'n'}-${index}`}>
+                  <span className="text-amber-950">{formatScheduleCollisionSummary(row)}</span>
+                  <span className="ml-2 text-xs text-amber-800">({row.conflict_type})</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-amber-900">겹치는 일정을 그대로 등록할까요?</p>
           </div>
         ) : null}
 
@@ -537,6 +629,10 @@ export function OwnerScheduleChangeDialog({
             className="rounded-md border border-slate-300 px-4 py-2 text-sm"
             disabled={pending}
             onClick={() => {
+              if (step === 'conflict') {
+                setStep('confirm');
+                return;
+              }
               if (step === 'confirm') {
                 setStep('form');
                 return;
@@ -545,8 +641,30 @@ export function OwnerScheduleChangeDialog({
             }}
             data-testid="schedule-change-cancel"
           >
-            {step === 'confirm' ? '뒤로' : '취소'}
+            {step === 'conflict' || step === 'confirm' ? '뒤로' : '취소'}
           </button>
+          {step === 'conflict' ? (
+            <>
+              <button
+                type="button"
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm"
+                disabled={pending}
+                onClick={onClose}
+                data-testid="schedule-conflict-cancel"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                disabled={pending}
+                onClick={() => void handleOverrideSave()}
+                data-testid="schedule-conflict-override"
+              >
+                그래도 등록
+              </button>
+            </>
+          ) : null}
           {step === 'form' ? (
             <button
               type="button"

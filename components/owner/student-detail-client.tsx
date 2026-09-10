@@ -47,6 +47,19 @@ function findNextChangeableLesson(
   return [...eligible].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))[0] ?? null;
 }
 
+function findAnchorLessonForFixedScheduleCreate(
+  lessons: StudentDetailData['lessons'],
+  passId: string,
+): StudentDetailData['lessons'][number] | null {
+  const eligible = lessons
+    .filter(
+      (lesson) =>
+        lesson.pass_id === passId && isScheduleChangeableLessonStatus(lesson.status),
+    )
+    .sort((a, b) => a.sequence_number - b.sequence_number);
+  return eligible[0] ?? null;
+}
+
 export function StudentDetailClient({
   initialDetail,
   initialMaster,
@@ -60,7 +73,12 @@ export function StudentDetailClient({
   const [master, setMaster] = useState(initialMaster);
   const [history, setHistory] = useState(operationalHistory);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [createFixedOnly, setCreateFixedOnly] = useState(false);
   const [weeklyFrequency, setWeeklyFrequency] = useState(1);
+  const [dialogTeacherId, setDialogTeacherId] = useState<string | null>(null);
+  const [dialogAnchorLesson, setDialogAnchorLesson] = useState<
+    StudentDetailData['lessons'][number] | null
+  >(null);
 
   const fixedScheduleLabel = useMemo(
     () => formatFixedWeeklySchedulesLabel(detail.schedule_slots),
@@ -70,7 +88,31 @@ export function StudentDetailClient({
     () => findNextChangeableLesson(detail.lessons),
     [detail.lessons],
   );
+  const fixedScheduleCreateAnchor = useMemo(() => {
+    if (!detail.current_pass || detail.schedule_slots.length > 0) {
+      return null;
+    }
+    return findAnchorLessonForFixedScheduleCreate(detail.lessons, detail.current_pass.pass_id);
+  }, [detail.current_pass, detail.lessons, detail.schedule_slots.length]);
   const courseName = detail.lessons[0]?.course_name ?? '-';
+
+  async function openScheduleDialog(options: {
+    lesson: StudentDetailData['lessons'][number];
+    createFixedOnly: boolean;
+  }) {
+    const supabase = createClient();
+    const context = await fetchLessonScheduleEditContext(supabase, options.lesson.id);
+    if (context) {
+      setWeeklyFrequency(context.weekly_frequency);
+      setDialogTeacherId(context.assigned_teacher_id);
+    } else {
+      setWeeklyFrequency(detail.schedule_slots.length || 1);
+      setDialogTeacherId(null);
+    }
+    setDialogAnchorLesson(options.lesson);
+    setCreateFixedOnly(options.createFixedOnly);
+    setScheduleDialogOpen(true);
+  }
 
   async function refreshAfterLessonOperation() {
     const supabase = createClient();
@@ -185,21 +227,29 @@ export function StudentDetailClient({
                 type="button"
                 className="mt-4 rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white"
                 onClick={() => {
-                  void (async () => {
-                    const supabase = createClient();
-                    const context = await fetchLessonScheduleEditContext(
-                      supabase,
-                      nextChangeableLesson.id,
-                    );
-                    if (context) {
-                      setWeeklyFrequency(context.weekly_frequency);
-                    }
-                    setScheduleDialogOpen(true);
-                  })();
+                  void openScheduleDialog({
+                    lesson: nextChangeableLesson,
+                    createFixedOnly: false,
+                  });
                 }}
                 data-testid="student-schedule-change-open"
               >
                 수업 일정 변경
+              </button>
+            ) : null}
+            {fixedScheduleCreateAnchor ? (
+              <button
+                type="button"
+                className="mt-4 ml-2 rounded-md border border-brand-700 px-4 py-2 text-sm font-medium text-brand-700"
+                onClick={() => {
+                  void openScheduleDialog({
+                    lesson: fixedScheduleCreateAnchor,
+                    createFixedOnly: true,
+                  });
+                }}
+                data-testid="student-fixed-schedule-create-open"
+              >
+                새 고정 일정 등록
               </button>
             ) : null}
           </>
@@ -213,9 +263,26 @@ export function StudentDetailClient({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-lg font-semibold">고정 일정</h2>
         {detail.schedule_slots.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-600" data-testid="student-no-schedule">
-            등록된 고정 일정이 없습니다.
-          </p>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-slate-600" data-testid="student-no-schedule">
+              등록된 고정 일정이 없습니다.
+            </p>
+            {fixedScheduleCreateAnchor ? (
+              <button
+                type="button"
+                className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white"
+                onClick={() => {
+                  void openScheduleDialog({
+                    lesson: fixedScheduleCreateAnchor,
+                    createFixedOnly: true,
+                  });
+                }}
+                data-testid="student-fixed-schedule-create-open-section"
+              >
+                새 고정 일정 등록
+              </button>
+            ) : null}
+          </div>
         ) : (
           <ul className="mt-3 space-y-2" data-testid="student-schedule-slots">
             {detail.schedule_slots.map((slot) => (
@@ -316,29 +383,38 @@ export function StudentDetailClient({
         studentName={master.name}
       />
 
-      {scheduleDialogOpen && nextChangeableLesson && detail.current_pass ? (
+      {scheduleDialogOpen && dialogAnchorLesson && detail.current_pass ? (
         <OwnerScheduleChangeDialog
           open={scheduleDialogOpen}
-          onClose={() => setScheduleDialogOpen(false)}
+          onClose={() => {
+            setScheduleDialogOpen(false);
+            setCreateFixedOnly(false);
+            setDialogAnchorLesson(null);
+          }}
           studentName={detail.student.name}
           courseName={courseName}
           teacherName={detail.teacher_name ?? '-'}
           remainingLessonCount={detail.current_pass.remaining_lesson_count}
           lesson={{
-            id: nextChangeableLesson.id,
-            scheduled_at: nextChangeableLesson.scheduled_at,
-            updated_at: nextChangeableLesson.updated_at,
-            status: nextChangeableLesson.status,
-            duration_minutes: nextChangeableLesson.duration_minutes,
-            pass_id: nextChangeableLesson.pass_id,
-            pass_updated_at: nextChangeableLesson.pass_updated_at,
-            sequence_number: nextChangeableLesson.sequence_number,
-            registered_lesson_count: nextChangeableLesson.registered_lesson_count,
+            id: dialogAnchorLesson.id,
+            scheduled_at: dialogAnchorLesson.scheduled_at,
+            updated_at: dialogAnchorLesson.updated_at,
+            status: dialogAnchorLesson.status,
+            duration_minutes: dialogAnchorLesson.duration_minutes,
+            pass_id: dialogAnchorLesson.pass_id,
+            pass_updated_at: dialogAnchorLesson.pass_updated_at,
+            sequence_number: dialogAnchorLesson.sequence_number,
+            registered_lesson_count: dialogAnchorLesson.registered_lesson_count,
+            assigned_teacher_id: dialogTeacherId,
           }}
           scheduleSlots={detail.schedule_slots}
           weeklyFrequency={weeklyFrequency}
+          createFixedOnly={createFixedOnly}
+          initialMode={createFixedOnly ? 'recurring' : null}
           onSuccess={() => {
             setScheduleDialogOpen(false);
+            setCreateFixedOnly(false);
+            setDialogAnchorLesson(null);
             void refreshAfterLessonOperation();
           }}
         />

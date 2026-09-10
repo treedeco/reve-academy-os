@@ -34,6 +34,15 @@ export function WeeklyTimetableMobileList({
                   <WeeklyTimetableLessonCard
                     lesson={lesson}
                     selected={selectedLessonId === lesson.lesson_id}
+                    hasTimeOverlap={column.lessons.some((other) => {
+                      if (other.lesson_id === lesson.lesson_id) {
+                        return false;
+                      }
+                      const start = lesson.local_start_minutes;
+                      const end = start + lesson.duration_minutes;
+                      const otherEnd = other.local_start_minutes + other.duration_minutes;
+                      return other.local_start_minutes < end && start < otherEnd;
+                    })}
                     onSelect={onLessonSelect}
                     onScheduleChange={onScheduleChange}
                   />

@@ -5,6 +5,7 @@ import type {
   DirectRescheduleResult,
   EnrollmentScheduleSlotInput,
   FixedPassScheduleChangeResult,
+  ScheduleCollisionPreviewRow,
 } from '@/lib/domain/types';
 
 export async function countFutureEligibleLessons(
@@ -13,20 +14,36 @@ export async function countFutureEligibleLessons(
   effectiveDateKey: string,
 ): Promise<number> {
   const effectiveStart = `${effectiveDateKey}T00:00:00+09:00`;
-  const { count, error } = await supabase
-    .from('lessons')
-    .select('id', { count: 'exact', head: true })
-    .eq('pass_id', passId)
-    .gte('scheduled_at', effectiveStart)
-    .in('status', ['scheduled', 'postponed'])
-    .is('actual_start_at', null)
-    .is('actual_end_at', null);
+  const eligibleStatuses = ['scheduled', 'postponed'] as const;
 
-  if (error) {
-    throw new Error(error.message);
+  const [{ count: datedCount, error: datedError }, { count: unscheduledCount, error: unscheduledError }] =
+    await Promise.all([
+      supabase
+        .from('lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('pass_id', passId)
+        .gte('scheduled_at', effectiveStart)
+        .in('status', [...eligibleStatuses])
+        .is('actual_start_at', null)
+        .is('actual_end_at', null),
+      supabase
+        .from('lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('pass_id', passId)
+        .is('scheduled_at', null)
+        .in('status', [...eligibleStatuses])
+        .is('actual_start_at', null)
+        .is('actual_end_at', null),
+    ]);
+
+  if (datedError) {
+    throw new Error(datedError.message);
+  }
+  if (unscheduledError) {
+    throw new Error(unscheduledError.message);
   }
 
-  return count ?? 0;
+  return (datedCount ?? 0) + (unscheduledCount ?? 0);
 }
 
 export async function changeFixedPassSchedule(
@@ -37,6 +54,7 @@ export async function changeFixedPassSchedule(
     effectiveFrom: string;
     slots: EnrollmentScheduleSlotInput[];
     reason: string;
+    allowConflictOverride?: boolean;
   },
 ): Promise<FixedPassScheduleChangeResult> {
   const { data, error } = await supabase.rpc('reve_owner_change_fixed_pass_schedule', {
@@ -45,6 +63,7 @@ export async function changeFixedPassSchedule(
     p_effective_from: input.effectiveFrom,
     p_schedule_slots: buildScheduleSlotsPayloadFromInputs(input.slots),
     p_reason: input.reason,
+    p_allow_conflict_override: input.allowConflictOverride === true,
   });
 
   if (error) {
@@ -57,6 +76,22 @@ export async function changeFixedPassSchedule(
   }
 
   return row as FixedPassScheduleChangeResult;
+}
+
+export async function previewPassScheduleCollisions(
+  supabase: SupabaseClient,
+  input: { passId: string; slots: EnrollmentScheduleSlotInput[] },
+): Promise<ScheduleCollisionPreviewRow[]> {
+  const { data, error } = await supabase.rpc('reve_owner_preview_pass_schedule_collisions', {
+    p_pass_id: input.passId,
+    p_schedule_slots: buildScheduleSlotsPayloadFromInputs(input.slots),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ScheduleCollisionPreviewRow[];
 }
 
 export async function changeSingleLessonSchedule(
@@ -88,7 +123,7 @@ export async function fetchLessonScheduleEditContext(
 ): Promise<{
   id: string;
   updated_at: string;
-  scheduled_at: string;
+  scheduled_at: string | null;
   status: string;
   pass_id: string;
   pass_updated_at: string;

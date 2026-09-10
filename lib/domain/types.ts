@@ -340,6 +340,22 @@ export interface FixedPassScheduleChangeResult {
   cascaded_lesson_count: number;
   future_eligible_lesson_count: number;
   no_change: boolean;
+  conflict_override_applied?: boolean;
+}
+
+export interface ScheduleCollisionPreviewRow {
+  conflict_type: string;
+  conflicting_schedule_slot_id: string | null;
+  conflicting_pass_id: string | null;
+  conflicting_pass_code: string | null;
+  student_name: string | null;
+  student_code: string | null;
+  teacher_id: string | null;
+  teacher_name: string | null;
+  course_name: string | null;
+  weekday: number;
+  local_start_time: string;
+  duration_minutes: number;
 }
 
 export const ORDINARY_TRANSITION_TARGETS: Record<LessonStatus, LessonStatus[]> = {

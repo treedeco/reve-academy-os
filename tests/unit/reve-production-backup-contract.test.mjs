@@ -12,15 +12,15 @@ import { BACKUP_ARTIFACTS } from '../../scripts/lib/reve-production-backup-dump-
 describe('reve-production-backup-contract', () => {
   it('defines the hardened 2B-2C1 v2 contract', () => {
     expect(BACKUP_CONTRACT_VERSION).toBe('2b2c1-v2');
-    expect(EXPECTED_MIGRATION_COUNT).toBe(29);
+    expect(EXPECTED_MIGRATION_COUNT).toBe(30);
     expect(BACKUP_ARTIFACTS).toHaveLength(8);
     expect(REQUIRED_PUBLIC_TABLES).toHaveLength(15);
     expect(RECOVERY_DOMAINS.storageObjects).toContain('not in PostgreSQL');
   });
 
-  it('resolves the latest migration checkpoint at 29/29', () => {
+  it('resolves the latest migration checkpoint at 30/30', () => {
     const checkpoint = resolveExpectedMigrationCheckpoint(process.cwd());
-    expect(checkpoint).toContain('20260910120000');
+    expect(checkpoint).toContain('20260910180000');
   });
 
   it('rejects legacy contract versions', () => {

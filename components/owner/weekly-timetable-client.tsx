@@ -42,7 +42,7 @@ export function WeeklyTimetableClient({
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [dialogLesson, setDialogLesson] = useState<{
     id: string;
-    scheduled_at: string;
+    scheduled_at: string | null;
     updated_at: string;
     status: WeeklyTimetableLesson['lesson_status'];
     duration_minutes: number;

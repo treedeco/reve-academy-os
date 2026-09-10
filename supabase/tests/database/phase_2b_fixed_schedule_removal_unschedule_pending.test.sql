@@ -230,7 +230,7 @@ SELECT has_function(
 );
 SELECT has_function(
   'public', 'reve_owner_change_fixed_pass_schedule',
-  ARRAY['uuid', 'timestamptz', 'date', 'jsonb', 'text']
+  ARRAY['uuid', 'timestamptz', 'date', 'jsonb', 'text', 'boolean']
 );
 
 -- ---------------------------------------------------------------------------

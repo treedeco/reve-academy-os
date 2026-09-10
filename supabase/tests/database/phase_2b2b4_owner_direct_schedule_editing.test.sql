@@ -5,12 +5,12 @@ SELECT plan(6);
 
 SELECT has_function(
   'public', 'reve_owner_change_fixed_pass_schedule',
-  ARRAY['uuid', 'timestamptz', 'date', 'jsonb', 'text']
+  ARRAY['uuid', 'timestamptz', 'date', 'jsonb', 'text', 'boolean']
 );
 
 SELECT has_function(
   'public', 'reve_owner_replace_pass_schedule_slots',
-  ARRAY['uuid', 'timestamptz', 'jsonb', 'text', 'date']
+  ARRAY['uuid', 'timestamptz', 'jsonb', 'text', 'date', 'boolean']
 );
 
 SELECT ok(
@@ -27,7 +27,7 @@ SELECT ok(
 SELECT ok(
   NOT has_function_privilege(
     'public',
-    'reve_owner_change_fixed_pass_schedule(uuid, timestamptz, date, jsonb, text)'::regprocedure,
+    'reve_owner_change_fixed_pass_schedule(uuid, timestamptz, date, jsonb, text, boolean)'::regprocedure,
     'EXECUTE'
   ),
   'PUBLIC cannot execute reve_owner_change_fixed_pass_schedule'
@@ -36,7 +36,7 @@ SELECT ok(
 SET ROLE anon;
 SELECT throws_ok(
   $$ SELECT count(*) FROM public.reve_owner_change_fixed_pass_schedule(
-       gen_random_uuid(), now(), current_date, '[]'::jsonb, 'anon') $$,
+       gen_random_uuid(), now(), current_date, '[]'::jsonb, 'anon', false) $$,
   '42501'
 );
 RESET ROLE;
@@ -44,7 +44,7 @@ RESET ROLE;
 SELECT ok(
   has_function_privilege(
     'authenticated',
-    'reve_owner_change_fixed_pass_schedule(uuid, timestamptz, date, jsonb, text)'::regprocedure,
+    'reve_owner_change_fixed_pass_schedule(uuid, timestamptz, date, jsonb, text, boolean)'::regprocedure,
     'EXECUTE'
   ),
   'authenticated can execute reve_owner_change_fixed_pass_schedule'

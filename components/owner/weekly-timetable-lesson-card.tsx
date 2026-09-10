@@ -9,12 +9,14 @@ export function WeeklyTimetableLessonCard({
   lesson,
   compact = false,
   selected = false,
+  hasTimeOverlap = false,
   onSelect,
   onScheduleChange,
 }: {
   lesson: WeeklyTimetableLesson;
   compact?: boolean;
   selected?: boolean;
+  hasTimeOverlap?: boolean;
   onSelect?: (lesson: WeeklyTimetableLesson) => void;
   onScheduleChange?: (lesson: WeeklyTimetableLesson) => void;
 }) {
@@ -26,10 +28,25 @@ export function WeeklyTimetableLessonCard({
     <article
       className={`h-full min-h-0 overflow-hidden rounded-md border bg-white text-xs shadow-sm ${
         compact ? 'flex flex-col p-1' : 'p-2'
-      } ${selected ? 'border-brand-600 ring-1 ring-brand-600' : 'border-slate-200'}`}
+      } ${
+        hasTimeOverlap
+          ? 'border-amber-400 ring-1 ring-amber-300'
+          : selected
+            ? 'border-brand-600 ring-1 ring-brand-600'
+            : 'border-slate-200'
+      }`}
       data-testid={`weekly-timetable-lesson-${lesson.lesson_id}`}
+      data-time-overlap={hasTimeOverlap ? 'true' : 'false'}
       title={title}
     >
+      {hasTimeOverlap ? (
+        <p
+          className="shrink-0 text-[10px] font-semibold leading-tight text-amber-800"
+          data-testid={`weekly-timetable-overlap-badge-${lesson.lesson_id}`}
+        >
+          시간 겹침
+        </p>
+      ) : null}
       <p className="shrink-0 font-semibold tabular-nums leading-tight">{startLabel}</p>
       <p className="mt-0.5 min-w-0 truncate font-medium leading-tight">{lesson.student_name}</p>
       {!compact ? (

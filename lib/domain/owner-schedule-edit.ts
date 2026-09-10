@@ -17,6 +17,8 @@ export const OWNER_SCHEDULE_CHANGE_MODE_LABELS: Record<OwnerScheduleChangeMode, 
   recurring: '고정 일정 변경',
 };
 
+export const OWNER_FIXED_SCHEDULE_CREATE_LABEL = '새 고정 일정 등록';
+
 export const TIMETABLE_TIME_STEP_MINUTES = 30;
 
 export function buildAcademyTimeOptions(): string[] {
@@ -115,6 +117,54 @@ export function scheduleSlotsFromPassSlots(
     durationMinutes: slot.duration_minutes,
     slotOrder: index + 1,
   }));
+}
+
+/** Seeds empty fixed-schedule editors when a pass has no active slots. */
+export function buildEmptyFixedScheduleSlotInputs(input: {
+  weeklyFrequency: number;
+  teacherId: string;
+  durationMinutes?: number;
+  weekday?: number;
+  localTime?: string;
+}): EnrollmentScheduleSlotInput[] {
+  const duration = input.durationMinutes ?? 60;
+  const weekday = input.weekday ?? 1;
+  const localTime = input.localTime ?? formatMinutesAsLocalTime(ACADEMY_FIRST_START_MINUTES);
+  const slots: EnrollmentScheduleSlotInput[] = [];
+  for (let slotOrder = 1; slotOrder <= input.weeklyFrequency; slotOrder += 1) {
+    slots.push({
+      teacherId: input.teacherId,
+      weekday,
+      localTime,
+      durationMinutes: duration,
+      slotOrder,
+    });
+  }
+  return slots;
+}
+
+export function formatScheduleCollisionSummary(row: {
+  weekday: number;
+  local_start_time: string;
+  duration_minutes: number;
+  student_name: string | null;
+  teacher_name: string | null;
+  course_name: string | null;
+  conflicting_pass_code: string | null;
+}): string {
+  const weekday = WEEKDAY_LABELS[row.weekday] ?? String(row.weekday);
+  const time = row.local_start_time.slice(0, 5);
+  const parts = [
+    `${weekday} ${time}`,
+    `${row.duration_minutes}분`,
+    row.student_name ?? '학생 미상',
+    row.teacher_name ?? '강사 미상',
+    row.course_name ?? '과목 미상',
+  ];
+  if (row.conflicting_pass_code) {
+    parts.push(row.conflicting_pass_code);
+  }
+  return parts.join(' · ');
 }
 
 export function validateSingleScheduleChange(input: {
