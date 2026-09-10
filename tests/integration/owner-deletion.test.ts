@@ -134,6 +134,10 @@ describe.skipIf(!integrationEnabled)('Owner deletion integration', () => {
     const detailAfter = await fetchStudentDetail(ownerClient, student.id);
     expect(detailAfter.schedule_slots).toHaveLength(0);
     expect(detailAfter.current_pass).not.toBeNull();
+    expect(detailAfter.lessons.length).toBeGreaterThan(0);
+    const pending = detailAfter.lessons.filter((lesson) => lesson.status === 'scheduled');
+    expect(pending.length).toBeGreaterThan(0);
+    expect(pending.every((lesson) => lesson.scheduled_at == null)).toBe(true);
 
     // Idempotent replay: nothing left to remove.
     const secondPreview = await previewRemoveFixedPassSchedule(ownerClient, {

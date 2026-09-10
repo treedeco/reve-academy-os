@@ -153,7 +153,8 @@ export function RemoveFixedSchedulePanel({
       >
         <h3 className="text-sm font-semibold text-amber-900">고정 일정 관리</h3>
         <p className="mt-1 text-sm text-amber-800">
-          반복 고정 일정만 제거합니다. 과거·완료 수업과 결제 기록은 유지됩니다.
+          고정 반복 일정을 삭제합니다. 완료·취소 등 기존 수업 이력은 유지되며, 아직 진행하지
+          않은 예정 회차의 기존 일정은 해제됩니다.
         </p>
         <button
           type="button"
@@ -168,7 +169,7 @@ export function RemoveFixedSchedulePanel({
       <DangerZoneConfirmationDialog
         open={dialogOpen}
         title="고정 스케줄 삭제"
-        description="선택한 회차권의 반복 고정 일정을 제거합니다. 되돌릴 수 없습니다."
+        description="고정 반복 일정을 삭제합니다. 완료·취소 등 기존 수업 이력은 유지되며, 아직 진행하지 않은 예정 회차의 기존 일정은 해제됩니다."
         impactSummary={
           preview ? (
             <dl className="grid gap-2 sm:grid-cols-2">
@@ -191,11 +192,11 @@ export function RemoveFixedSchedulePanel({
                 <dd>{effectiveFrom}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">영향 미래 수업</dt>
+                <dt className="text-slate-500">일정 해제 대상 예정 회차</dt>
                 <dd>{formatCountLabel(preview.future_timetable_lesson_count, '건')}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">수동 이동 미래 수업</dt>
+                <dt className="text-slate-500">수동 이동 예정 회차</dt>
                 <dd>{formatCountLabel(preview.manually_moved_future_lesson_count, '건')}</dd>
               </div>
             </dl>
@@ -206,7 +207,7 @@ export function RemoveFixedSchedulePanel({
         preservedItems={
           preview
             ? [
-                `과거·미차감 수업 ${formatCountLabel(preview.preserved_past_lesson_count, '건')}`,
+                `과거·이력 수업 ${formatCountLabel(preview.preserved_past_lesson_count, '건')}`,
                 `완료(차감) 수업 ${formatCountLabel(preview.preserved_completed_lesson_count, '건')}`,
                 '결제·환불·수강권 사용 이력',
               ]
@@ -216,7 +217,7 @@ export function RemoveFixedSchedulePanel({
           preview
             ? [
                 `활성 고정 일정 ${formatCountLabel(preview.active_slot_count, '건')}`,
-                `적용 시작일 이후 시간표 미래 수업 ${formatCountLabel(preview.future_timetable_lesson_count, '건')}`,
+                `미진행 예정 회차 일정 해제 ${formatCountLabel(preview.future_timetable_lesson_count, '건')}`,
               ]
             : undefined
         }

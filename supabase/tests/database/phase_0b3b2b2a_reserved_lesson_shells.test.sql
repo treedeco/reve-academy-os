@@ -2,7 +2,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(15);
 
 DO $$
 DECLARE
@@ -170,13 +170,46 @@ SELECT ok(
   'reserved pass with four null-dated shells is valid'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ UPDATE public.lessons SET scheduled_at = NULL
      WHERE id = current_setting('test.lesson_p1')::uuid;
      SET CONSTRAINTS ALL IMMEDIATE; $$,
-  'P0001', 'REVE_ACTIVE_PASS_UNSCHEDULED_LESSON',
-  'active pass rejects null-dated lesson at commit'
+  'active pass allows null-dated pending scheduled shell'
 );
+
+SELECT throws_ok(
+  $$ UPDATE public.lessons
+     SET scheduled_at = NULL, status = 'postponed'
+     WHERE id = current_setting('test.lesson_p1')::uuid;
+     SET CONSTRAINTS ALL IMMEDIATE; $$,
+  '23514', NULL,
+  'active pass rejects postponed + null scheduled_at at row check'
+);
+
+SELECT throws_ok(
+  $$ UPDATE public.passes SET status = 'completed'
+     WHERE id = current_setting('test.pass_pay_active')::uuid;
+     SET CONSTRAINTS ALL IMMEDIATE; $$,
+  'P0001', 'REVE_ACTIVE_PASS_UNSCHEDULED_LESSON',
+  'completed pass rejects unresolved null-dated lesson shell'
+);
+
+-- Restore dated lesson so later payment-renewal fixtures remain valid.
+SELECT lives_ok(
+  $$ UPDATE public.lessons
+     SET scheduled_at = now() + interval '1 day',
+         schedule_slot_id = (
+           SELECT id FROM public.schedule_slots
+           WHERE pass_id = current_setting('test.pass_pay_active')::uuid
+           LIMIT 1
+         )
+     WHERE id = current_setting('test.lesson_p1')::uuid;
+     SET CONSTRAINTS ALL IMMEDIATE; $$,
+  'restore active-pass lesson scheduled_at after invariant checks'
+);
+
+-- Restore deferred constraint evaluation for subsequent payment/renewal flow.
+SET CONSTRAINTS ALL DEFERRED;
 
 SELECT throws_ok(
   $$ INSERT INTO public.lessons (

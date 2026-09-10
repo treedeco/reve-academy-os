@@ -60,6 +60,14 @@ export function formatDateTimeSeoul(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Displays a lesson schedule instant, or "일정 미정" when unscheduled. */
+export function formatLessonScheduledAtSeoul(iso: string | null | undefined): string {
+  if (!iso) {
+    return '일정 미정';
+  }
+  return formatDateTimeSeoul(iso);
+}
+
 export function formatTimeSeoul(iso: string): string {
   return new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',

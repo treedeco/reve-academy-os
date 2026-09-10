@@ -15,7 +15,7 @@ import { StudentPassSummary } from '@/components/owner/student-pass-summary';
 import { fetchLessonScheduleEditContext } from '@/lib/data/owner-schedule-edit';
 import { fetchStudentDetail } from '@/lib/data/owner-queries';
 import { fetchOwnerStudentMasterRow } from '@/lib/data/owner-students';
-import { formatDateTimeSeoul, formatLessonStatus } from '@/lib/domain/format';
+import { formatLessonScheduledAtSeoul, formatLessonStatus } from '@/lib/domain/format';
 import { formatLessonProgress, isScheduleChangeableLessonStatus } from '@/lib/domain/lesson-correction';
 import { formatFixedWeeklySchedulesLabel } from '@/lib/domain/owner-schedule-edit';
 import type {
@@ -30,9 +30,14 @@ import type {
 import { WEEKDAY_LABELS } from '@/lib/domain/types';
 import { createClient } from '@/lib/supabase/client';
 
-function findNextChangeableLesson(lessons: StudentDetailData['lessons']) {
+function findNextChangeableLesson(
+  lessons: StudentDetailData['lessons'],
+): (Omit<(typeof lessons)[number], 'scheduled_at'> & { scheduled_at: string }) | null {
   const nowIso = new Date().toISOString();
-  const eligible = lessons.filter((lesson) => isScheduleChangeableLessonStatus(lesson.status));
+  const eligible = lessons.filter(
+    (lesson): lesson is typeof lesson & { scheduled_at: string } =>
+      isScheduleChangeableLessonStatus(lesson.status) && lesson.scheduled_at != null,
+  );
   const upcoming = [...eligible]
     .filter((lesson) => lesson.scheduled_at >= nowIso)
     .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
@@ -251,7 +256,7 @@ export function StudentDetailClient({
                     <td className="px-2 py-2">
                       {formatLessonProgress(lesson.registered_lesson_count, lesson.sequence_number)}
                     </td>
-                    <td className="px-2 py-2">{formatDateTimeSeoul(lesson.scheduled_at)}</td>
+                    <td className="px-2 py-2">{formatLessonScheduledAtSeoul(lesson.scheduled_at)}</td>
                     <td className="px-2 py-2">
                       {formatLessonStatus(lesson.status as LessonStatus)}
                     </td>

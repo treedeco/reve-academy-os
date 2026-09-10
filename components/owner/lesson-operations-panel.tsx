@@ -54,7 +54,8 @@ export function LessonOperationsPanel({
   const ordinaryOptions = ORDINARY_TRANSITION_TARGETS[lesson.status] ?? [];
   const showOrdinarySelect = canOrdinaryTransition(lesson.status) && ordinaryOptions.length > 0;
   const showCorrection = isDeductibleLessonStatus(lesson.status);
-  const showReschedule = isScheduleChangeableLessonStatus(lesson.status);
+  const showReschedule =
+    isScheduleChangeableLessonStatus(lesson.status) && lesson.scheduled_at != null;
 
   const passUsageForLesson =
     passUsage && passUsage.pass_id === lesson.pass_id
@@ -224,7 +225,7 @@ export function LessonOperationsPanel({
         remainingLessonCount={passUsage?.remaining_lesson_count ?? null}
         lesson={{
           id: lesson.id,
-          scheduled_at: lesson.scheduled_at,
+          scheduled_at: lesson.scheduled_at!,
           updated_at: lesson.updated_at,
           status: lesson.status,
           duration_minutes: lesson.duration_minutes,

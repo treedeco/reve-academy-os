@@ -527,7 +527,7 @@ SELECT ok(
   'schedule removal preview reports active slots, future lesson counts, and manual-move warning'
 );
 
--- Execute: removes active slots, advance_cancels future lessons, preserves history
+-- Execute: removes active slots, unschedules future pending lessons, preserves history
 SELECT ok(
   (
     SELECT pass_id = current_setting('test.pass_sched')::uuid
@@ -547,7 +547,7 @@ SELECT ok(
       ))
     )
   ),
-  'schedule removal execute deactivates slots and processes future lessons'
+  'schedule removal execute deactivates slots and unschedules pending lessons'
 );
 
 SELECT ok(
@@ -560,14 +560,19 @@ SELECT ok(
 
 SELECT ok(
   (
-    SELECT bool_and(status = 'advance_cancelled' AND change_reason IS NOT NULL)
+    SELECT bool_and(
+      status = 'scheduled'
+      AND scheduled_at IS NULL
+      AND schedule_slot_id IS NULL
+      AND change_reason IS NOT NULL
+    )
     FROM public.lessons
     WHERE id IN (
       current_setting('test.lesson_sched_future1')::uuid,
       current_setting('test.lesson_sched_future2')::uuid
     )
   ),
-  'both future lessons on the pass are advance_cancelled with a change reason'
+  'both future pending lessons are unscheduled shells with dates cleared'
 );
 
 SELECT ok(
@@ -643,13 +648,13 @@ SELECT ok(
     JOIN public.audit_logs AS pass_audit ON pass_audit.correlation_id = lesson_audit.correlation_id
     WHERE pass_audit.action = 'pass.fixed_schedule_removed'
       AND pass_audit.resource_id = current_setting('test.pass_sched')::uuid
-      AND lesson_audit.action = 'lesson.status_transition'
+      AND lesson_audit.action = 'lesson.schedule_unscheduled'
       AND lesson_audit.resource_id IN (
         current_setting('test.lesson_sched_future1')::uuid,
         current_setting('test.lesson_sched_future2')::uuid
       )
   ) = 2,
-  'both cancelled-lesson audit rows share the schedule removal correlation id'
+  'both unscheduled-lesson audit rows share the schedule removal correlation id'
 );
 
 -- Other student unaffected

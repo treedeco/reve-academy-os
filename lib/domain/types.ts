@@ -42,7 +42,7 @@ export interface TodayLessonRow {
 export interface OwnerLessonOperationsRow {
   id: string;
   sequence_number: number;
-  scheduled_at: string;
+  scheduled_at: string | null;
   status: LessonStatus;
   updated_at: string;
   registered_lesson_count: number;
@@ -100,7 +100,7 @@ export interface StudentDetailData {
   lessons: Array<{
     id: string;
     sequence_number: number;
-    scheduled_at: string;
+    scheduled_at: string | null;
     status: LessonStatus;
     updated_at: string;
     registered_lesson_count: number;

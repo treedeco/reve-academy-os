@@ -136,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_phase_0b3b2b3e.ps1
 | RPC | Purpose |
 |-----|---------|
 | `reve_owner_preview_remove_fixed_pass_schedule` | Impact preview for fixed schedule removal |
-| `reve_owner_remove_fixed_pass_schedule` | Deactivate slots; future lessons → `advance_cancelled` |
+| `reve_owner_remove_fixed_pass_schedule` | Deactivate slots; eligible pending lessons → unscheduled shells |
 | `reve_owner_preview_delete_student` | Preflight counts before student delete |
 | `reve_owner_permanently_delete_student` | Atomic cascade delete + tombstone audit |
 | `reve_owner_preview_delete_teacher` | Preflight for teacher delete modes |

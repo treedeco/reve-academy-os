@@ -713,7 +713,7 @@ Historical-protection triggers (`reve_block_row_delete`, `reve_block_row_mutatio
 | RPC | Purpose |
 |-----|---------|
 | `reve_owner_preview_remove_fixed_pass_schedule` | Read-only impact preview |
-| `reve_owner_remove_fixed_pass_schedule` | Deactivate active slots; future non-completed lessons → `advance_cancelled` |
+| `reve_owner_remove_fixed_pass_schedule` | Deactivate active slots; eligible pending lessons (`scheduled`/`postponed`) → unscheduled shells (`scheduled_at` NULL); history statuses preserved |
 
 | Aspect | Specification |
 |--------|---------------|
