@@ -1129,13 +1129,12 @@ SELECT ok(
   'reserved pass may reuse active predecessor recurring slot'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_replace_pass_schedule_slots(
        current_setting('test.pass_res_reserved')::uuid,
        pg_temp.pass_updated_at(current_setting('test.pass_res_reserved')::uuid),
        pg_temp.collision_exact_json(), 'unrelated reserved conflict') $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner reserved pass may overlap unrelated active slot (warning-only)'
 );
 
 -- ---------------------------------------------------------------------------

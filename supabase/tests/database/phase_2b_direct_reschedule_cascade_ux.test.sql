@@ -1,7 +1,7 @@
 -- Phase 2B — direct reschedule cascade UX / false-collision fix
 BEGIN;
 
-SELECT plan(16);
+SELECT plan(18);
 
 CREATE OR REPLACE FUNCTION pg_temp.test_auth_as(p_user uuid)
 RETURNS void LANGUAGE plpgsql AS $$
@@ -192,6 +192,8 @@ BEGIN
   PERFORM set_config('test.e2_old', (SELECT scheduled_at::text FROM public.lessons WHERE id = v_e2), false);
 END $$;
 
+RESET ROLE;
+
 SELECT ok(
   reve_private.lesson_is_cascade_eligible((SELECT l FROM public.lessons l WHERE id = current_setting('test.l3')::uuid)),
   'eligible: scheduled'
@@ -200,6 +202,8 @@ SELECT ok(
   NOT reve_private.lesson_is_cascade_eligible((SELECT l FROM public.lessons l WHERE id = current_setting('test.l1')::uuid)),
   'non-eligible: completed'
 );
+
+SELECT pg_temp.test_auth_as(current_setting('test.owner')::uuid);
 
 -- A/C/F/H/J: L3 onto former L4 with cascade
 SELECT lives_ok(

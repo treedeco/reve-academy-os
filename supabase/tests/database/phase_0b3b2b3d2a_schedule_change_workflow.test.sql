@@ -1255,45 +1255,44 @@ BEGIN
      WHERE id = current_setting('test.lesson_collision_target')::uuid), false);
 END $$;
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_apply_schedule_change_request(
        current_setting('test.req_collision_exact')::uuid,
        pg_temp.request_updated_at(current_setting('test.req_collision_exact')::uuid),
        pg_temp.lesson_updated_at(current_setting('test.lesson_collision_target')::uuid)) $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner apply into exact teacher overlap succeeds (warning-only)'
 );
 
 SELECT is(
   (SELECT status FROM public.schedule_change_requests
    WHERE id = current_setting('test.req_collision_exact')::uuid),
-  'approved',
-  'collision abort leaves request approved and unapplied'
+  'applied',
+  'overlap apply marks request applied'
 );
 
-SELECT is(
-  pg_temp.schedule_change_event_count(current_setting('test.req_collision_exact')::uuid),
-  current_setting('test.events_before_collision')::bigint,
-  'collision abort writes no lesson_schedule_changes event'
+SELECT ok(
+  pg_temp.schedule_change_event_count(current_setting('test.req_collision_exact')::uuid)
+    > current_setting('test.events_before_collision')::bigint,
+  'overlap apply writes lesson_schedule_changes event'
 );
 
-SELECT is(
-  pg_temp.audit_count_for('schedule_change_request.applied'),
-  current_setting('test.apply_audit_before_collision')::bigint,
-  'collision abort writes no schedule_change_request.applied audit'
+SELECT ok(
+  pg_temp.audit_count_for('schedule_change_request.applied')
+    > current_setting('test.apply_audit_before_collision')::bigint,
+  'overlap apply writes schedule_change_request.applied audit'
 );
 
-SELECT is(
-  pg_temp.audit_count_for('lesson.rescheduled'),
-  current_setting('test.reschedule_audit_before_collision')::bigint,
-  'collision abort writes no lesson.rescheduled audit'
+SELECT ok(
+  pg_temp.audit_count_for('lesson.rescheduled')
+    > current_setting('test.reschedule_audit_before_collision')::bigint,
+  'overlap apply writes lesson.rescheduled audit'
 );
 
 SELECT is(
   (SELECT scheduled_at FROM public.lessons
    WHERE id = current_setting('test.lesson_collision_target')::uuid),
-  current_setting('test.collision_target_before')::timestamptz,
-  'collision abort leaves target lesson scheduled_at unchanged'
+  current_setting('test.collision_anchor')::timestamptz,
+  'overlap apply persists requested scheduled_at'
 );
 
 DO $$
@@ -1315,13 +1314,12 @@ BEGIN
   PERFORM set_config('test.req_collision_partial', v_request::text, false);
 END $$;
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_apply_schedule_change_request(
        current_setting('test.req_collision_partial')::uuid,
        pg_temp.request_updated_at(current_setting('test.req_collision_partial')::uuid),
        pg_temp.lesson_updated_at(current_setting('test.lesson_collision_target')::uuid)) $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner apply into partial teacher overlap succeeds (warning-only)'
 );
 
 DO $$
