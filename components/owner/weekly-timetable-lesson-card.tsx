@@ -26,14 +26,14 @@ export function WeeklyTimetableLessonCard({
 
   return (
     <article
-      className={`h-full min-h-0 overflow-hidden rounded-md border bg-white text-xs shadow-sm ${
-        compact ? 'flex flex-col p-1' : 'p-2'
+      className={`h-full min-h-0 overflow-hidden rounded-md border bg-white shadow-sm ${
+        compact ? 'flex flex-col gap-0.5 px-2 py-1.5' : 'space-y-1 p-3'
       } ${
         hasTimeOverlap
           ? 'border-amber-400 ring-1 ring-amber-300'
           : selected
             ? 'border-brand-600 ring-1 ring-brand-600'
-            : 'border-slate-200'
+            : 'border-slate-300'
       }`}
       data-testid={`weekly-timetable-lesson-${lesson.lesson_id}`}
       data-time-overlap={hasTimeOverlap ? 'true' : 'false'}
@@ -41,32 +41,49 @@ export function WeeklyTimetableLessonCard({
     >
       {hasTimeOverlap ? (
         <p
-          className="shrink-0 text-[10px] font-semibold leading-tight text-amber-800"
+          className="shrink-0 text-[10px] font-semibold leading-snug text-amber-800"
           data-testid={`weekly-timetable-overlap-badge-${lesson.lesson_id}`}
         >
           시간 겹침
         </p>
       ) : null}
-      <p className="shrink-0 font-semibold tabular-nums leading-tight">{startLabel}</p>
-      <p className="mt-0.5 min-w-0 truncate font-medium leading-tight">{lesson.student_name}</p>
+      <p className="shrink-0 text-[11px] font-semibold tabular-nums leading-snug text-slate-700">
+        {startLabel}
+      </p>
+      <p
+        className={`min-w-0 truncate font-semibold leading-snug text-slate-900 ${
+          compact ? 'text-sm' : 'text-base'
+        }`}
+      >
+        {lesson.student_name}
+      </p>
       {!compact ? (
         <>
-          <p className="break-words text-slate-600">{lesson.teacher_name}</p>
-          <p className="break-words text-slate-600">{lesson.course_name}</p>
+          <p className="break-words text-xs leading-snug text-slate-500">{lesson.teacher_name}</p>
+          <p className="break-words text-xs leading-snug text-slate-500">{lesson.course_name}</p>
         </>
       ) : null}
       {!isVeryShort ? (
-        <p className="mt-0.5 shrink-0 font-medium leading-tight text-brand-700" data-testid="lesson-progress-label">
+        <p
+          className="mt-0.5 shrink-0 text-[11px] font-medium leading-snug text-brand-700"
+          data-testid="lesson-progress-label"
+        >
           {lesson.lesson_progress}
         </p>
       ) : null}
-      {!compact ? <p className="text-slate-500">{formatLessonStatus(lesson.lesson_status)}</p> : null}
+      {!compact ? (
+        <p className="text-xs leading-snug text-slate-500">{formatLessonStatus(lesson.lesson_status)}</p>
+      ) : null}
       {!isVeryShort ? (
-        <div className={`mt-auto flex min-h-0 flex-wrap gap-x-2 gap-y-0 overflow-hidden ${compact ? 'pt-0.5' : 'mt-2'}`}>
+        <div
+          className={`mt-auto flex min-h-0 flex-wrap gap-x-2 gap-y-0.5 overflow-hidden ${
+            compact ? 'pt-0.5' : 'pt-1'
+          }`}
+        >
           {onSelect ? (
             <button
               type="button"
-              className="shrink-0 text-brand-700 underline"
+              className="shrink-0 text-[11px] leading-snug text-brand-700 underline"
               onClick={() => onSelect(lesson)}
               data-testid={`weekly-lesson-detail-open-${lesson.lesson_id}`}
             >
@@ -76,7 +93,7 @@ export function WeeklyTimetableLessonCard({
             <Link
               href={`/students/${lesson.student_id}`}
               prefetch={false}
-              className="shrink-0 text-brand-700 underline"
+              className="shrink-0 text-[11px] leading-snug text-brand-700 underline"
             >
               상세
             </Link>
@@ -84,7 +101,7 @@ export function WeeklyTimetableLessonCard({
           {onScheduleChange ? (
             <button
               type="button"
-              className="shrink-0 text-brand-700 underline"
+              className="shrink-0 text-[11px] leading-snug text-brand-700 underline"
               onClick={() => onScheduleChange(lesson)}
               data-testid={`weekly-lesson-schedule-open-${lesson.lesson_id}`}
             >

@@ -68,14 +68,16 @@ function DayColumn({
 
   return (
     <div
-      className="relative min-w-0 flex-1 border-l border-slate-200"
+      className="relative min-w-0 flex-1 border-l border-slate-300"
       data-testid={`weekly-timetable-day-${column.weekday}`}
     >
       <div className="relative" style={{ height: totalHeight }}>
         {rows.map((row, index) => (
           <div
             key={row.start_minutes}
-            className="absolute inset-x-0 border-t border-slate-100"
+            className={`absolute inset-x-0 border-t ${
+              row.start_minutes % 60 === 0 ? 'border-slate-300' : 'border-slate-200'
+            }`}
             style={{ top: index * WEEKLY_TIMETABLE_ROW_HEIGHT_PX, height: WEEKLY_TIMETABLE_ROW_HEIGHT_PX }}
             data-testid={`weekly-timetable-cell-${column.weekday}-${row.start_minutes}`}
           />
@@ -97,7 +99,7 @@ function DayColumn({
           return (
             <div
               key={lesson.lesson_id}
-              className="absolute overflow-hidden px-0.5"
+              className="absolute overflow-hidden px-1"
               style={{
                 top: box.top,
                 height: box.height,
@@ -141,12 +143,12 @@ export function WeeklyTimetableGrid({
     <div className="hidden lg:block" data-testid="weekly-timetable-grid">
       <div className="max-h-[70vh] overflow-y-auto overflow-x-auto" data-testid="weekly-timetable-scroll">
         <div className="min-w-[960px]">
-          <div className="sticky top-0 z-20 flex border-b border-slate-200 bg-white shadow-sm">
-            <div className="w-16 shrink-0" />
+          <div className="sticky top-0 z-20 flex border-b border-slate-300 bg-white shadow-sm">
+            <div className="w-16 shrink-0 border-r border-slate-300" />
             {columns.map((column) => (
               <div
                 key={column.weekday}
-                className="min-w-0 flex-1 border-l border-slate-200 px-2 py-2 text-center text-sm font-semibold"
+                className="min-w-0 flex-1 border-l border-slate-300 px-2 py-2 text-center text-sm font-semibold"
                 data-testid={`weekly-timetable-header-${column.weekday}`}
               >
                 {column.header_label}
@@ -155,11 +157,15 @@ export function WeeklyTimetableGrid({
           </div>
 
           <div className="flex">
-            <div className="w-16 shrink-0" style={{ height: totalHeight }}>
+            <div className="w-16 shrink-0 border-r border-slate-300 bg-slate-50/80" style={{ height: totalHeight }}>
               {rows.map((row) => (
                 <div
                   key={row.start_minutes}
-                  className="border-t border-slate-200 pr-1 text-right text-xs tabular-nums text-slate-600"
+                  className={`border-t pr-1.5 text-right text-xs tabular-nums ${
+                    row.start_minutes % 60 === 0
+                      ? 'border-slate-300 font-semibold text-slate-700'
+                      : 'border-slate-200 font-medium text-slate-500'
+                  }`}
                   style={{
                     height: WEEKLY_TIMETABLE_ROW_HEIGHT_PX,
                     lineHeight: `${WEEKLY_TIMETABLE_ROW_HEIGHT_PX}px`,

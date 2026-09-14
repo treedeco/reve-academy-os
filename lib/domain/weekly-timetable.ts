@@ -10,7 +10,7 @@ import { weekdayLabelMonFirst, WEEKDAY_ORDER_MON_FIRST } from '@/lib/domain/week
 export const TIMETABLE_INTERVAL_MINUTES = 30;
 
 /** Fixed visual height of one 30-minute grid row (px). Shared by overlay math and CSS. */
-export const WEEKLY_TIMETABLE_ROW_HEIGHT_PX = 32;
+export const WEEKLY_TIMETABLE_ROW_HEIGHT_PX = 40;
 
 /** Timetable grid displays rows from 10:00 through the 22:00 closing boundary. */
 export const TIMETABLE_START_MINUTES = ACADEMY_FIRST_START_MINUTES;
