@@ -94,6 +94,21 @@ export async function previewPassScheduleCollisions(
   return (data ?? []) as ScheduleCollisionPreviewRow[];
 }
 
+export async function previewScheduleSlotCollisions(
+  supabase: SupabaseClient,
+  slots: EnrollmentScheduleSlotInput[],
+): Promise<ScheduleCollisionPreviewRow[]> {
+  const { data, error } = await supabase.rpc('reve_owner_preview_schedule_slot_collisions', {
+    p_schedule_slots: buildScheduleSlotsPayloadFromInputs(slots),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ScheduleCollisionPreviewRow[];
+}
+
 export async function changeSingleLessonSchedule(
   supabase: SupabaseClient,
   input: {

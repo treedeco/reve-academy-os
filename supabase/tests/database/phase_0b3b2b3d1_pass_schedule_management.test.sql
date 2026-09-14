@@ -1011,34 +1011,31 @@ BEGIN
     pg_temp.audit_count_for('pass.schedule_slots_replaced')::text, false);
 END $$;
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_replace_pass_schedule_slots(
        current_setting('test.pass_main')::uuid,
        pg_temp.pass_updated_at(current_setting('test.pass_main')::uuid),
        pg_temp.collision_exact_json(), 'exact overlap') $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner exact slot overlap saves (warning-only)'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_replace_pass_schedule_slots(
        current_setting('test.pass_main')::uuid,
        pg_temp.pass_updated_at(current_setting('test.pass_main')::uuid),
        pg_temp.collision_partial_json(), 'partial overlap') $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner partial slot overlap saves (warning-only)'
 );
 
-SELECT is(
-  pg_temp.active_slot_count(current_setting('test.pass_main')::uuid),
-  current_setting('test.active_before_collision')::integer,
-  'failed collision rolls back active slot count on target pass'
+SELECT ok(
+  pg_temp.active_slot_count(current_setting('test.pass_main')::uuid) >= 1,
+  'overlap save keeps an active slot on target pass'
 );
 
-SELECT is(
-  pg_temp.audit_count_for('pass.schedule_slots_replaced'),
-  current_setting('test.audit_before_collision')::bigint,
-  'failed collision writes no schedule replacement audit'
+SELECT ok(
+  pg_temp.audit_count_for('pass.schedule_slots_replaced')
+    > current_setting('test.audit_before_collision')::bigint,
+  'overlap save writes schedule replacement audit'
 );
 
 SELECT ok(

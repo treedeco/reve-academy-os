@@ -20,6 +20,7 @@ import {
   mapOwnerScheduleEditError,
   OWNER_FIXED_SCHEDULE_CREATE_LABEL,
   OWNER_SCHEDULE_CHANGE_MODE_LABELS,
+  OWNER_SCHEDULE_OVERLAP_WARNING,
   scheduleSlotsFromPassSlots,
   validateRecurringScheduleChange,
   validateSingleScheduleChange,
@@ -247,6 +248,17 @@ export function OwnerScheduleChangeDialog({
         setError(validationError);
         return;
       }
+      void (async () => {
+        try {
+          const preview = await previewPassScheduleCollisions(createClient(), {
+            passId: lesson.pass_id,
+            slots: slotInputs,
+          });
+          setCollisions(preview);
+        } catch {
+          setCollisions([]);
+        }
+      })();
     }
 
     setError('');
@@ -314,11 +326,12 @@ export function OwnerScheduleChangeDialog({
       });
       if (preview.length > 0) {
         setCollisions(preview);
-        setStep('conflict');
-        return;
+      } else {
+        setCollisions([]);
       }
 
-      await saveRecurring(false);
+      // Owner overlap is warning-only: always persist (server auto-allows for Owner).
+      await saveRecurring(true);
     } catch (caught) {
       setError(mapOwnerScheduleEditError(caught as { message?: string }));
     } finally {
@@ -548,6 +561,15 @@ export function OwnerScheduleChangeDialog({
                 변경 대상: 미진행 수업 {futureLessonCount}건
               </p>
             ) : null}
+            {collisions.length > 0 ? (
+              <p
+                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+                data-testid="schedule-overlap-soft-warning"
+                role="status"
+              >
+                {OWNER_SCHEDULE_OVERLAP_WARNING}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -575,6 +597,15 @@ export function OwnerScheduleChangeDialog({
                 <p>새 고정 일정: {newFixedScheduleLabel}</p>
                 <p>적용 시작일: {effectiveDate}</p>
                 <p>변경 대상: 미진행 수업 {futureLessonCount ?? 0}건</p>
+                {collisions.length > 0 ? (
+                  <p
+                    className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-950"
+                    data-testid="schedule-overlap-soft-warning"
+                    role="status"
+                  >
+                    {OWNER_SCHEDULE_OVERLAP_WARNING}
+                  </p>
+                ) : null}
               </>
             ) : null}
           </div>

@@ -19,6 +19,11 @@ export const OWNER_SCHEDULE_CHANGE_MODE_LABELS: Record<OwnerScheduleChangeMode, 
 
 export const OWNER_FIXED_SCHEDULE_CREATE_LABEL = '새 고정 일정 등록';
 
+/** Non-blocking Owner overlap notice (save remains enabled). */
+export const OWNER_SCHEDULE_OVERLAP_WARNING =
+  '현재 같은 시간에 다른 일정이 있습니다. 원장 권한으로 저장할 수 있습니다.';
+
+
 export const TIMETABLE_TIME_STEP_MINUTES = 30;
 
 export function buildAcademyTimeOptions(): string[] {
@@ -224,10 +229,10 @@ export function mapOwnerScheduleEditError(error: { message?: string } | null): s
     return '일정 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.';
   }
   if (error.message.includes('REVE_SCHEDULE_COLLISION')) {
-    return '강사 또는 학생 일정이 겹칩니다. 다른 시간을 선택해 주세요.';
+    return OWNER_SCHEDULE_OVERLAP_WARNING;
   }
   if (error.message.includes('REVE_STUDENT_SCHEDULE_COLLISION')) {
-    return '학생의 다른 수업과 일정이 겹칩니다.';
+    return OWNER_SCHEDULE_OVERLAP_WARNING;
   }
   if (error.message.includes('REVE_LESSON_NOT_CHANGEABLE')) {
     return '일정을 변경할 수 없는 수업입니다.';

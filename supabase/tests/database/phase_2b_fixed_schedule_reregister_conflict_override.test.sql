@@ -2,7 +2,7 @@
 
 BEGIN;
 
-SELECT plan(16);
+SELECT plan(14);
 
 DO $$
 DECLARE
@@ -181,47 +181,17 @@ SELECT ok(
   'preview lists same-teacher collision for Tuesday 19:00'
 );
 
--- Without override: hard block
-SELECT throws_ok(
+-- Without override flag: Owner still saves (warning-only policy)
+SELECT lives_ok(
   $$ SELECT * FROM public.reve_owner_change_fixed_pass_schedule(
        current_setting('test.pass')::uuid,
        pg_temp.pass_updated_at(current_setting('test.pass')::uuid),
        CURRENT_DATE,
        pg_temp.slot_json(current_setting('test.teacher')::uuid, 2, '19:00'),
-       'attempt without override',
+       'attempt without override flag',
        false
      ) $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
-);
-
--- No mutation after blocked attempt
-SELECT ok(
-  (
-    SELECT count(*)::integer = 0
-    FROM public.schedule_slots
-    WHERE pass_id = current_setting('test.pass')::uuid
-      AND is_active = true
-  ),
-  'blocked conflict leaves no active schedule slots on target pass'
-);
-
--- Owner override succeeds and reuses lesson IDs
-SELECT ok(
-  (
-    SELECT conflict_override_applied = true
-      AND cascaded_lesson_count = 4
-      AND no_change = false
-    FROM public.reve_owner_change_fixed_pass_schedule(
-      current_setting('test.pass')::uuid,
-      pg_temp.pass_updated_at(current_setting('test.pass')::uuid),
-      CURRENT_DATE,
-      pg_temp.slot_json(current_setting('test.teacher')::uuid, 2, '19:00'),
-      'Owner overrides Tuesday 19:00 conflict',
-      true
-    )
-  ),
-  'Owner override saves overlapping fixed schedule and assigns four shells'
+  'Owner fixed-schedule overlap saves without explicit override flag'
 );
 
 SELECT ok(

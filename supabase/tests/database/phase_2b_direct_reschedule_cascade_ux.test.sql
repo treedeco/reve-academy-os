@@ -263,8 +263,8 @@ SELECT is(
   'H: fixed slot preserved'
 );
 
--- D/E: external collision blocks and leaves L3 unchanged (function abort)
-SELECT throws_ok(
+-- D/E: external collision is warning-only for Owner and persists
+SELECT lives_ok(
   format(
     $sql$
       SELECT count(*) FROM public.reve_owner_direct_reschedule_lesson(
@@ -277,15 +277,13 @@ SELECT throws_ok(
     'External collision probe',
     pg_temp.pass_updated_at(current_setting('test.pass')::uuid)
   ),
-  'P0001',
-  'REVE_SCHEDULE_COLLISION',
-  'D: external teacher collision still blocks'
+  'D: Owner external teacher collision saves (warning-only)'
 );
 
-SELECT is(
+SELECT isnt(
   (SELECT scheduled_at FROM public.lessons WHERE id = current_setting('test.l3')::uuid),
   current_setting('test.l4_old')::timestamptz,
-  'E: failed cascade leaves L3 unchanged (atomic)'
+  'E: Owner overlap reschedule persists new scheduled_at'
 );
 
 -- G: twice-weekly cadence cascade

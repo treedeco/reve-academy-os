@@ -124,8 +124,11 @@ export function mapInitialEnrollmentError(error: { message?: string } | null): s
   if (error.message.includes('REVE_IDEMPOTENCY_CONFLICT')) {
     return '동일한 등록 요청 키가 이미 다른 등록에 사용되었습니다.';
   }
-  if (error.message.includes('REVE_TEACHER_SCHEDULE_CONFLICT') || error.message.includes('REVE_SCHEDULE_CONFLICT')) {
-    return '선택한 고정 일정이 기존 수업과 충돌합니다.';
+  if (error.message.includes('REVE_TEACHER_SCHEDULE_CONFLICT')
+    || error.message.includes('REVE_SCHEDULE_CONFLICT')
+    || error.message.includes('REVE_SCHEDULE_COLLISION')
+    || error.message.includes('REVE_STUDENT_SCHEDULE_COLLISION')) {
+    return '현재 같은 시간에 다른 일정이 있습니다. 원장 권한으로 저장할 수 있습니다.';
   }
 
   return mapDatabaseError(error);

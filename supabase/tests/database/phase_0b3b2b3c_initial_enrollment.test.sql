@@ -1095,36 +1095,33 @@ BEGIN
   PERFORM set_config('test.pay_before_collision', v_pay_before::text, false);
 END $$;
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ SELECT count(*) FROM public.reve_owner_create_initial_enrollment(
        current_setting('test.student_s009')::uuid,
        current_setting('test.product_4')::uuid,
        current_setting('test.start_date')::date,
        pg_temp.vocal_collision_slot_json(),
        200000, 'cash', now(), 'idem-s009-collision', NULL) $$,
-  'P0001',
-  'REVE_SCHEDULE_COLLISION'
+  'Owner enrollment into occupied teacher slot succeeds (overlap warning-only)'
 );
 
-SELECT is(
+SELECT ok(
   pg_temp.pass_count(
     current_setting('test.student_s009')::uuid,
     current_setting('test.course_vocal')::uuid
-  ),
-  current_setting('test.pass_before_collision')::bigint,
-  'schedule collision rolls back pass creation'
+  ) > current_setting('test.pass_before_collision')::bigint,
+  'schedule overlap still creates the new pass for Owner'
 );
 
-SELECT is(
-  pg_temp.payment_count(current_setting('test.student_s009')::uuid),
-  current_setting('test.pay_before_collision')::bigint,
-  'schedule collision rolls back payment creation'
+SELECT ok(
+  pg_temp.payment_count(current_setting('test.student_s009')::uuid)
+    > current_setting('test.pay_before_collision')::bigint,
+  'schedule overlap still creates payment for Owner'
 );
 
-SELECT is(
-  pg_temp.audit_count(),
-  current_setting('test.audit_before_collision')::bigint,
-  'schedule collision writes no audit log'
+SELECT ok(
+  pg_temp.audit_count() > current_setting('test.audit_before_collision')::bigint,
+  'Owner overlap enrollment writes audit logs'
 );
 
 SELECT ok(
@@ -1134,12 +1131,12 @@ SELECT ok(
     FROM public.lessons
     WHERE id = current_setting('test.collision_lesson')::uuid
   ),
-  'pre-existing conflicting lesson remains unchanged after collision abort'
+  'pre-existing conflicting lesson remains unchanged after Owner overlap enrollment'
 );
 
 SELECT ok(
-  pg_temp.lesson_count(current_setting('test.student_s009')::uuid) = 0,
-  'collision abort leaves enrolling student without lesson rows'
+  pg_temp.lesson_count(current_setting('test.student_s009')::uuid) > 0,
+  'Owner overlap enrollment creates lesson rows for the new student'
 );
 
 -- ---------------------------------------------------------------------------

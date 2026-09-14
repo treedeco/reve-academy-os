@@ -119,7 +119,7 @@ export function mapScheduleChangeError(error: { message?: string } | null): stri
   }
 
   if (error.message.includes('REVE_SCHEDULE_COLLISION')) {
-    return '강사 일정이 겹칩니다. 다른 시간을 선택해 주세요.';
+    return '현재 같은 시간에 다른 일정이 있습니다. 원장 권한으로 저장할 수 있습니다.';
   }
   if (error.message.includes('REVE_UNAUTHORIZED')) {
     return '권한이 없습니다. 다시 로그인해 주세요.';

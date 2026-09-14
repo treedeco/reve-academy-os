@@ -21,6 +21,8 @@ import {
   validateInitialEnrollmentForm,
   type EnrollmentPaymentMethod,
 } from '@/lib/domain/initial-enrollment';
+import { OWNER_SCHEDULE_OVERLAP_WARNING } from '@/lib/domain/owner-schedule-edit';
+import { previewScheduleSlotCollisions } from '@/lib/data/owner-schedule-edit';
 import type {
   EnrollmentScheduleSlotInput,
   OwnerEnrollmentCatalog,
@@ -57,6 +59,7 @@ export function InitialEnrollmentPanel({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [overlapWarning, setOverlapWarning] = useState(false);
 
   const loadCatalog = useCallback(async () => {
     setCatalogState({ status: 'loading' });
@@ -100,6 +103,35 @@ export function InitialEnrollmentPanel({
     Boolean(selectedProduct) &&
     slots.length > 0 &&
     !pending;
+
+  useEffect(() => {
+    if (!selectedProduct || slots.length === 0 || slots.some((slot) => !slot.teacherId)) {
+      setOverlapWarning(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const supabase = createClient();
+          const conflicts = await previewScheduleSlotCollisions(supabase, slots);
+          if (!cancelled) {
+            setOverlapWarning(conflicts.length > 0);
+          }
+        } catch {
+          if (!cancelled) {
+            setOverlapWarning(false);
+          }
+        }
+      })();
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [selectedProduct, slots]);
 
   function handleCourseChange(nextCourseId: string) {
     setCourseId(nextCourseId);
@@ -379,6 +411,15 @@ export function InitialEnrollmentPanel({
         </div>
       ) : null}
 
+      {overlapWarning ? (
+        <p
+          className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          data-testid="enrollment-overlap-soft-warning"
+          role="status"
+        >
+          {OWNER_SCHEDULE_OVERLAP_WARNING}
+        </p>
+      ) : null}
       {error ? (
         <p className="mt-3 text-sm text-red-600" role="alert" data-testid="enrollment-error">
           {error}

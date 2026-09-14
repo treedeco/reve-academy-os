@@ -88,7 +88,7 @@ describe('schedule change domain helpers', () => {
   });
 
   it('maps schedule change errors to safe Korean messages', () => {
-    expect(mapScheduleChangeError({ message: 'REVE_SCHEDULE_COLLISION' })).toMatch(/겹칩니다/);
+    expect(mapScheduleChangeError({ message: 'REVE_SCHEDULE_COLLISION' })).toMatch(/원장 권한으로 저장/);
     expect(mapScheduleChangeError({ message: 'REVE_UNAUTHORIZED' })).toMatch(/권한/);
     expect(mapScheduleChangeError({ message: 'REVE_REQUEST_NOT_REVIEWABLE' })).toMatch(/검토할 수 없는/);
     expect(mapScheduleChangeError({ message: 'REVE_REQUEST_NOT_APPLICABLE' })).toMatch(/적용할 수 없는/);
@@ -102,7 +102,7 @@ describe('schedule change domain helpers', () => {
   });
 
   it('maps schedule change errors through shared database error helper', () => {
-    expect(mapDatabaseError({ message: 'REVE_SCHEDULE_COLLISION' })).toMatch(/겹칩니다/);
+    expect(mapDatabaseError({ message: 'REVE_SCHEDULE_COLLISION' })).toMatch(/원장 권한으로 저장/);
     expect(mapDatabaseError({ message: 'REVE_REASON_REQUIRED' })).toMatch(/사유/);
   });
 });

@@ -10,7 +10,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_REFUND_ALREADY_EXISTS: '이미 환불 처리된 결제입니다.',
   REVE_PAYMENT_NOT_REFUNDABLE: '환불할 수 없는 결제입니다.',
   REVE_REFUND_AMOUNT_MISMATCH: '환불 금액이 결제 금액과 일치하지 않습니다.',
-  REVE_SCHEDULE_COLLISION: '강사 일정이 겹칩니다. 다른 시간을 선택해 주세요.',
+  REVE_SCHEDULE_COLLISION: '현재 같은 시간에 다른 일정이 있습니다. 원장 권한으로 저장할 수 있습니다.',
   REVE_REQUEST_NOT_REVIEWABLE: '검토할 수 없는 요청 상태입니다.',
   REVE_REQUEST_NOT_APPLICABLE: '적용할 수 없는 요청 상태입니다.',
   REVE_APPROVED_TIME_REQUIRED: '승인 일시를 입력해 주세요.',
@@ -20,7 +20,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVE_ACADEMY_HOURS_BEFORE_OPEN: '수업 시작은 10:00 이후여야 합니다.',
   REVE_ACADEMY_HOURS_AFTER_CLOSE: '수업 시작은 22:00 이전이어야 합니다.',
   REVE_ACADEMY_HOURS_END_AFTER_CLOSE: '수업 종료는 22:00을 넘을 수 없습니다.',
-  REVE_STUDENT_SCHEDULE_COLLISION: '학생의 다른 수업과 일정이 겹칩니다.',
+  REVE_STUDENT_SCHEDULE_COLLISION: '현재 같은 시간에 다른 일정이 있습니다. 원장 권한으로 저장할 수 있습니다.',
   REVE_LESSON_NOTE_EMPTY: '수업 내용을 입력해 주세요.',
   REVE_LESSON_NOTE_NOT_FOUND: '수업 메모를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.',
 };
