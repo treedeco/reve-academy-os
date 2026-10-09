@@ -152,7 +152,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_phase_2b2b5.ps1
 
 Manual checklist: [docs/manual-verification-owner-deletion.md](./docs/manual-verification-owner-deletion.md)
 
-**Deferred**: Payment renewal Owner UI (`reve_complete_payment_and_renew_pass`) — pending-payment RPC not yet available.
+**Implemented**: Owner payment + pass renewal UI via `reve_owner_record_payment_and_renew_pass` (creates pending payment, then `complete_payment_and_renew_pass_internal`).
 
 ## Phase 0B-3B-2B-3E — Owner payment refund (database)
 

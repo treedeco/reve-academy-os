@@ -12,7 +12,9 @@ export function StudentPassSummary({
     <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <dt className="text-sm text-slate-500">Pass 코드</dt>
-        <dd className="font-medium">{pass.pass_code}</dd>
+        <dd className="font-medium" data-testid="current-pass-code">
+          {pass.pass_code}
+        </dd>
       </div>
       <div>
         <dt className="text-sm text-slate-500">등록 회차</dt>

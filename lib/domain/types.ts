@@ -122,6 +122,30 @@ export interface StudentDetailData {
     pass_code: string;
     status: PassStatus;
     sequence_number: number;
+    course_id: string;
+    course_name: string;
+    course_product_id: string | null;
+  }>;
+  /** Courses eligible for next-pass renewal (completed without active/reserved, or prepaid while active). */
+  renewable_targets: Array<{
+    source_pass_id: string;
+    pass_code: string;
+    status: PassStatus;
+    sequence_number: number;
+    course_id: string;
+    course_name: string;
+    course_product_id: string | null;
+    mode: 'completed_renewal' | 'prepaid_renewal';
+    teacher_id: string | null;
+    teacher_name: string | null;
+    schedule_slots: Array<{
+      id: string;
+      weekday: number;
+      local_start_time: string;
+      duration_minutes: number;
+      teacher_id: string;
+      teacher_name: string;
+    }>;
   }>;
 }
 

@@ -292,7 +292,7 @@ export async function fetchStudentDetail(
 
   const { data: passes } = await supabase
     .from('passes')
-    .select('id, pass_code, status, sequence_number, course_id')
+    .select('id, pass_code, status, sequence_number, course_id, course_product_id')
     .eq('student_id', studentId)
     .order('sequence_number', { ascending: false });
 
@@ -308,6 +308,28 @@ export async function fetchStudentDetail(
         .from('schedule_slots')
         .select('id, weekday, local_start_time, duration_minutes, teacher_id, teachers(name)')
         .eq('pass_id', currentPassRow.id)
+        .eq('is_active', true)
+        .order('slot_order', { ascending: true })
+    : { data: [] };
+
+  const passCourseIds = [...new Set((passes ?? []).map((pass) => pass.course_id))];
+  const { data: passCourseRows } = passCourseIds.length
+    ? await supabase.from('courses').select('id, name').in('id', passCourseIds)
+    : { data: [] };
+  const passCoursesById = new Map((passCourseRows ?? []).map((course) => [course.id, course.name]));
+
+  const scheduleSourcePassIds = [
+    ...new Set(
+      (passes ?? [])
+        .filter((pass) => pass.status === 'completed' || pass.status === 'active')
+        .map((pass) => pass.id),
+    ),
+  ];
+  const { data: renewalSlots } = scheduleSourcePassIds.length
+    ? await supabase
+        .from('schedule_slots')
+        .select('id, pass_id, weekday, local_start_time, duration_minutes, teacher_id, teachers(name)')
+        .in('pass_id', scheduleSourcePassIds)
         .eq('is_active', true)
         .order('slot_order', { ascending: true })
     : { data: [] };
@@ -372,6 +394,104 @@ export async function fetchStudentDetail(
 
   const teacherName = slots?.[0] ? readTeacherName(slots[0].teachers as TeacherJoin) : null;
 
+  const slotsByPassId = new Map<
+    string,
+    Array<{
+      id: string;
+      weekday: number;
+      local_start_time: string;
+      duration_minutes: number;
+      teacher_id: string;
+      teacher_name: string;
+    }>
+  >();
+  for (const slot of renewalSlots ?? []) {
+    const mapped = {
+      id: slot.id,
+      weekday: slot.weekday,
+      local_start_time: slot.local_start_time,
+      duration_minutes: slot.duration_minutes,
+      teacher_id: slot.teacher_id,
+      teacher_name: readTeacherName(slot.teachers as TeacherJoin),
+    };
+    const existing = slotsByPassId.get(slot.pass_id) ?? [];
+    existing.push(mapped);
+    slotsByPassId.set(slot.pass_id, existing);
+  }
+
+  const previousPasses = (passes ?? [])
+    .filter((pass) => pass.id !== currentPassRow?.id)
+    .map((pass) => ({
+      id: pass.id,
+      pass_code: pass.pass_code,
+      status: pass.status as PassStatus,
+      sequence_number: pass.sequence_number,
+      course_id: pass.course_id,
+      course_name: passCoursesById.get(pass.course_id) ?? '',
+      course_product_id: pass.course_product_id ?? null,
+    }));
+
+  const renewableTargets: StudentDetailData['renewable_targets'] = [];
+  const passesByCourse = new Map<string, NonNullable<typeof passes>>();
+  for (const pass of passes ?? []) {
+    const list = passesByCourse.get(pass.course_id) ?? [];
+    list.push(pass);
+    passesByCourse.set(pass.course_id, list);
+  }
+
+  for (const [courseId, coursePasses] of passesByCourse) {
+    const sorted = [...coursePasses].sort((a, b) => b.sequence_number - a.sequence_number);
+    const reserved = sorted.find((pass) => pass.status === 'reserved');
+    if (reserved) {
+      continue;
+    }
+
+    const active = sorted.find((pass) => pass.status === 'active');
+    if (active) {
+      const usage =
+        currentPass?.pass_id === active.id
+          ? currentPass
+          : await fetchPassUsage(supabase, active.id);
+      if (usage && usage.remaining_lesson_count > 0) {
+        const sourceSlots = slotsByPassId.get(active.id) ?? [];
+        renewableTargets.push({
+          source_pass_id: active.id,
+          pass_code: active.pass_code,
+          status: active.status as PassStatus,
+          sequence_number: active.sequence_number,
+          course_id: courseId,
+          course_name: passCoursesById.get(courseId) ?? '',
+          course_product_id: active.course_product_id ?? null,
+          mode: 'prepaid_renewal',
+          teacher_id: sourceSlots[0]?.teacher_id ?? null,
+          teacher_name: sourceSlots[0]?.teacher_name ?? null,
+          schedule_slots: sourceSlots,
+        });
+      }
+      continue;
+    }
+
+    const completed = sorted.find((pass) => pass.status === 'completed');
+    if (!completed) {
+      continue;
+    }
+
+    const sourceSlots = slotsByPassId.get(completed.id) ?? [];
+    renewableTargets.push({
+      source_pass_id: completed.id,
+      pass_code: completed.pass_code,
+      status: completed.status as PassStatus,
+      sequence_number: completed.sequence_number,
+      course_id: courseId,
+      course_name: passCoursesById.get(courseId) ?? '',
+      course_product_id: completed.course_product_id ?? null,
+      mode: 'completed_renewal',
+      teacher_id: sourceSlots[0]?.teacher_id ?? null,
+      teacher_name: sourceSlots[0]?.teacher_name ?? null,
+      schedule_slots: sourceSlots,
+    });
+  }
+
   return {
     student,
     teacher_name: teacherName ?? null,
@@ -414,14 +534,8 @@ export async function fetchStudentDetail(
       };
     }),
     lesson_notes: lessonNotes ?? [],
-    previous_passes: (passes ?? [])
-      .filter((pass) => pass.id !== currentPassRow?.id)
-      .map((pass) => ({
-        id: pass.id,
-        pass_code: pass.pass_code,
-        status: pass.status,
-        sequence_number: pass.sequence_number,
-      })),
+    previous_passes: previousPasses,
+    renewable_targets: renewableTargets,
   };
 }
 

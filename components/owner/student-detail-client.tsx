@@ -5,6 +5,10 @@ import { useMemo, useState } from 'react';
 import { InitialEnrollmentPanel } from '@/components/owner/initial-enrollment-panel';
 import { LessonOperationsPanel } from '@/components/owner/lesson-operations-panel';
 import { OwnerScheduleChangeDialog } from '@/components/owner/owner-schedule-change-dialog';
+import {
+  PassRenewalPanel,
+  RenewablePassActions,
+} from '@/components/owner/pass-renewal-panel';
 import { StudentMasterPanel } from '@/components/owner/student-master-panel';
 import {
   RemoveFixedSchedulePanel,
@@ -12,12 +16,15 @@ import {
 } from '@/components/owner/owner-deletion-panels';
 import { StudentOperationalHistoryPanel } from '@/components/owner/student-operational-history-panel';
 import { StudentPassSummary } from '@/components/owner/student-pass-summary';
+import type { OwnerPassRenewalResult } from '@/lib/data/owner-pass-renewal';
 import { fetchLessonScheduleEditContext } from '@/lib/data/owner-schedule-edit';
 import { fetchStudentDetail } from '@/lib/data/owner-queries';
 import { fetchOwnerStudentMasterRow } from '@/lib/data/owner-students';
 import { formatLessonScheduledAtSeoul, formatLessonStatus } from '@/lib/domain/format';
 import { formatLessonProgress, isScheduleChangeableLessonStatus } from '@/lib/domain/lesson-correction';
 import { formatFixedWeeklySchedulesLabel } from '@/lib/domain/owner-schedule-edit';
+import type { RenewablePassTarget } from '@/lib/domain/pass-renewal';
+import { formatPassStatusLabel } from '@/lib/domain/weekly-schedule';
 import type {
   LessonStatus,
   OwnerInitialEnrollmentResult,
@@ -79,6 +86,7 @@ export function StudentDetailClient({
   const [dialogAnchorLesson, setDialogAnchorLesson] = useState<
     StudentDetailData['lessons'][number] | null
   >(null);
+  const [renewalTarget, setRenewalTarget] = useState<RenewablePassTarget | null>(null);
 
   const fixedScheduleLabel = useMemo(
     () => formatFixedWeeklySchedulesLabel(detail.schedule_slots),
@@ -147,7 +155,7 @@ export function StudentDetailClient({
     setMaster(nextMaster);
   }
 
-  async function refreshAfterEnrollment(_result: OwnerInitialEnrollmentResult) {
+  async function refreshStudentScopedHistory() {
     const supabase = createClient();
     const [nextDetail, nextMaster, paymentsResult] = await Promise.all([
       fetchStudentDetail(supabase, master.id),
@@ -185,6 +193,15 @@ export function StudentDetailClient({
     }
   }
 
+  async function refreshAfterEnrollment(_result: OwnerInitialEnrollmentResult) {
+    await refreshStudentScopedHistory();
+  }
+
+  async function refreshAfterRenewal(_result: OwnerPassRenewalResult) {
+    await refreshStudentScopedHistory();
+    setRenewalTarget(null);
+  }
+
   return (
     <div className="space-y-6" data-testid="student-detail-client">
       <div>
@@ -208,6 +225,31 @@ export function StudentDetailClient({
           excludedCourseIds={detail.enrolled_course_ids}
           onEnrollmentComplete={refreshAfterEnrollment}
         />
+      ) : null}
+
+      {master.operational_status === 'active' && detail.renewable_targets.length > 0 ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-4" data-testid="pass-renewal-section">
+          <h2 className="text-lg font-semibold">다음 회차 등록</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            완료된 과목의 다음 회차 또는 잔여 회차가 있을 때의 선결제를 등록합니다. 과목 추가와는
+            별도입니다.
+          </p>
+          <RenewablePassActions
+            targets={detail.renewable_targets}
+            activeTargetId={renewalTarget?.source_pass_id ?? null}
+            onOpen={setRenewalTarget}
+          />
+          {renewalTarget ? (
+            <div className="mt-4">
+              <PassRenewalPanel
+                studentId={master.id}
+                target={renewalTarget}
+                onRenewalComplete={refreshAfterRenewal}
+                onCancel={() => setRenewalTarget(null)}
+              />
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -363,14 +405,36 @@ export function StudentDetailClient({
       ) : null}
 
       {detail.previous_passes.length > 0 ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-lg border border-slate-200 bg-white p-4" data-testid="previous-passes-section">
           <h2 className="text-lg font-semibold">이전 회차권</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            {detail.previous_passes.map((pass) => (
-              <li key={pass.id}>
-                {pass.pass_code} · {pass.status} · seq {pass.sequence_number}
-              </li>
-            ))}
+            {detail.previous_passes.map((pass) => {
+              const renewable = detail.renewable_targets.find(
+                (target) => target.source_pass_id === pass.id,
+              );
+              return (
+                <li
+                  key={pass.id}
+                  className="flex flex-wrap items-center justify-between gap-2"
+                  data-testid={`previous-pass-${pass.pass_code}`}
+                >
+                  <span>
+                    {pass.course_name} · {pass.pass_code} · {formatPassStatusLabel(pass.status)} ·
+                    seq {pass.sequence_number}
+                  </span>
+                  {renewable && master.operational_status === 'active' ? (
+                    <button
+                      type="button"
+                      className="rounded-md border border-brand-700 px-3 py-1 text-brand-800"
+                      onClick={() => setRenewalTarget(renewable)}
+                      data-testid={`previous-pass-renew-${pass.pass_code}`}
+                    >
+                      다음 회차 등록
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}
