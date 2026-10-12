@@ -131,9 +131,16 @@ BEGIN
     'abababab-abab-abab-abab-ababababa101', v_lesson, v_owner, 'Alpha seed memo', 'internal'
   ) ON CONFLICT (id) DO NOTHING;
 
+  -- Refresh Asia/Seoul "today" anchors on re-seed (INSERT uses ON CONFLICT DO NOTHING).
   UPDATE public.lessons
   SET
     status = 'scheduled',
+    scheduled_at = CASE id
+      WHEN '99999999-9999-9999-9999-999999999101' THEN v_today
+      WHEN '99999999-9999-9999-9999-999999999102' THEN v_today + interval '7 days'
+      WHEN '99999999-9999-9999-9999-999999999103' THEN v_today + interval '14 days'
+      WHEN '99999999-9999-9999-9999-999999999104' THEN v_today + interval '21 days'
+    END,
     updated_at = now(),
     actual_start_at = NULL,
     actual_end_at = NULL,

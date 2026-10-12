@@ -7,6 +7,7 @@ import {
   fetchTeacherAssignedStudents,
   fetchTeacherTodayLessons,
 } from '@/lib/data/teacher-queries';
+import { applyLocalSqlFixture } from '@/tests/helpers/apply-local-sql-fixture';
 import { getOwnerTestPassword } from '@/tests/helpers/owner-test-credentials';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,6 +43,9 @@ describe.skipIf(!integrationEnabled)('Immediate owner/teacher operations', () =>
   let teacherBetaClient: SupabaseClient;
 
   beforeAll(async () => {
+    // Alpha lesson 999…101 must be Asia/Seoul "today"; seed INSERT is ON CONFLICT DO NOTHING.
+    applyLocalSqlFixture('fixture-reset-owner-alpha-today-lesson.sql');
+
     ownerClient = createAuthClient('reve-test-immediate-owner');
     teacherClient = createAuthClient('reve-test-immediate-teacher');
     teacherBetaClient = createAuthClient('reve-test-immediate-teacher-beta');
