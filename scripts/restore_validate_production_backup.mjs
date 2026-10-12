@@ -25,6 +25,10 @@ import {
   buildValidationDatabaseName,
 } from './lib/reve-production-restore-isolation-guard.mjs';
 import {
+  resolveRestoreValidationPsqlUser,
+  rolesSqlTouchesReservedRole,
+} from './lib/reve-production-restore-psql.mjs';
+import {
   RESTORE_VALIDATION_QUERIES,
   buildRestoreValidationReport,
   compareManifestRowCounts,
@@ -34,10 +38,10 @@ import { REQUIRED_PUBLIC_TABLES } from './lib/reve-production-backup-contract.mj
 import { logStage } from './lib/reve-production-operator-io.mjs';
 import { verifyProductionBackup } from './verify_production_backup.mjs';
 
-function psqlExec(container, sql, dbName = 'postgres') {
+function psqlExec(container, sql, dbName = 'postgres', user = resolveRestoreValidationPsqlUser('bootstrap')) {
   return execFileSync(
     'docker',
-    ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1', '-t', '-A', '-c', sql],
+    ['exec', '-i', container, 'psql', '-U', user, '-d', dbName, '-v', 'ON_ERROR_STOP=1', '-t', '-A', '-c', sql],
     { encoding: 'utf8', timeout: 120_000 },
   ).trim();
 }
@@ -56,12 +60,19 @@ function psqlExecJsonArray(container, sql, dbName = 'postgres') {
   return line ? JSON.parse(line) : [];
 }
 
-function psqlApplyFile(container, sqlFilePath, dbName) {
+function psqlApplyFile(container, sqlFilePath, dbName, user = resolveRestoreValidationPsqlUser('apply_artifact')) {
+  const sql = fs.readFileSync(sqlFilePath);
+  if (path.basename(sqlFilePath) === 'roles.sql' && rolesSqlTouchesReservedRole(sql.toString('utf8'))) {
+    logStage(
+      'restore_validation_roles_reserved_role_replay',
+      `user=${user} (local superuser; backup artifact unchanged)`,
+    );
+  }
   execFileSync(
     'docker',
-    ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1'],
+    ['exec', '-i', container, 'psql', '-U', user, '-d', dbName, '-v', 'ON_ERROR_STOP=1'],
     {
-      input: fs.readFileSync(sqlFilePath),
+      input: sql,
       timeout: 300_000,
       stdio: ['pipe', 'pipe', 'pipe'],
     },

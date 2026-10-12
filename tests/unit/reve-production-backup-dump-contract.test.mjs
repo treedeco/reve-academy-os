@@ -59,10 +59,21 @@ describe('reve-production-backup-dump-contract', () => {
     const schemaPublic = buildSupabaseDumpCommandArgs('schema-public', 'schema-public.sql');
     expect(schemaPublic.dumpMode).toBe('schema-only');
     expect(schemaPublic.argv).not.toContain('--data-only');
+    expect(schemaPublic.argv).toEqual(
+      expect.arrayContaining(['--schema', 'public,reve_private']),
+    );
 
     const dataPublic = buildSupabaseDumpCommandArgs('data-public', 'data-public.sql');
     expect(dataPublic.dumpMode).toBe('data-only');
     expect(dataPublic.argv).toContain('--data-only');
+  });
+
+  it('captures reve_private with public schema to satisfy trigger/function circular dependency', () => {
+    const schemaPublic = BACKUP_ARTIFACTS.find((entry) => entry.id === 'schema-public');
+    expect(schemaPublic?.includedSchemas).toEqual(['public', 'reve_private']);
+    expect(schemaPublic?.captures).toEqual(
+      expect.arrayContaining(['reve_private_schema', 'reve_private_functions']),
+    );
   });
 
   it('documents dependency-aware restore order with auth schema before public schema', () => {

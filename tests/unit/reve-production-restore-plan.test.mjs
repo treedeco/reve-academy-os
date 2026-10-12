@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AUTH_USERS_DEPENDENCY_FIXTURE,
+  REVE_PRIVATE_DEPENDENCY_FIXTURE,
   RESTORE_ARTIFACT_ORDER_PREVIOUS_INVALID,
   assertManagedSchemaRestoreBoundary,
   validateRestorePlan,
@@ -16,6 +17,14 @@ describe('reve-production-restore-plan', () => {
     expect(RESTORE_ARTIFACT_ORDER.indexOf('data-auth')).toBeLessThan(
       RESTORE_ARTIFACT_ORDER.indexOf('data-public'),
     );
+  });
+
+  it('documents reve_private circular dependency requiring combined public dump', () => {
+    expect(REVE_PRIVATE_DEPENDENCY_FIXTURE.failingStatementExample).toMatch(
+      /trg_course_products_validate_active_course/,
+    );
+    expect(REVE_PRIVATE_DEPENDENCY_FIXTURE.resolution).toMatch(/public,reve_private/);
+    expect(AUTH_USERS_DEPENDENCY_FIXTURE.referencedObject).toBe('auth.users');
   });
 
   it('rejects the previous invalid order for auth.users dependency regression', () => {

@@ -39,6 +39,19 @@ export const AUTH_USERS_DEPENDENCY_FIXTURE = Object.freeze({
   blockingReason: 'schema-public references auth.users before auth schema exists',
 });
 
+/**
+ * Regression fixture: public constraint triggers execute reve_private functions, while
+ * reve_private function signatures reference public table types (e.g. public.lessons).
+ * Separate dumps cannot satisfy both directions; combined --schema public,reve_private is required.
+ */
+export const REVE_PRIVATE_DEPENDENCY_FIXTURE = Object.freeze({
+  description: 'public triggers execute reve_private functions that type against public tables',
+  failingStatementExample:
+    'CREATE CONSTRAINT TRIGGER "trg_course_products_validate_active_course" ... EXECUTE FUNCTION "reve_private"."trg_deferred_validate_active_product_course"()',
+  reverseFailureExample: 'CREATE FUNCTION reve_private.* ... type public.lessons does not exist',
+  resolution: 'schema-public artifact dumps --schema public,reve_private in one pg_dump',
+});
+
 export function validateRestorePlan(order, dependencies = RESTORE_ARTIFACT_DEPENDENCIES) {
   const normalized = [...order];
   const seen = new Set();

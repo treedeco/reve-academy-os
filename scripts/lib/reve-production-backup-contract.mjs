@@ -14,7 +14,14 @@ import {
 } from './reve-production-backup-dump-contract.mjs';
 
 export const BACKUP_CONTRACT_VERSION = '2b2c1-v2';
-export const EXPECTED_MIGRATION_COUNT = 32;
+/**
+ * Minimum applied production migrations required for a valid backup.
+ * Actual backup/restore counts follow the linked applied head (may rise after db push).
+ * Keep as a floor only — do not treat this as a permanently fixed production head.
+ */
+export const MINIMUM_PRODUCTION_MIGRATION_COUNT = 31;
+/** @deprecated Use MINIMUM_PRODUCTION_MIGRATION_COUNT; retained for restore fallback defaults. */
+export const EXPECTED_MIGRATION_COUNT = MINIMUM_PRODUCTION_MIGRATION_COUNT;
 export { PRODUCTION_PROJECT_REF, BACKUP_MECHANISM, BACKUP_ARTIFACTS, RESTORE_ARTIFACT_ORDER };
 
 export const REQUIRED_PUBLIC_TABLES = Object.freeze([
@@ -89,14 +96,24 @@ export function listRepoMigrationVersions(repoRoot = process.cwd()) {
     .sort();
 }
 
-export function resolveExpectedMigrationCheckpoint(repoRoot = process.cwd()) {
+export function resolveExpectedMigrationCheckpoint(
+  repoRoot = process.cwd(),
+  appliedMigrationCount = MINIMUM_PRODUCTION_MIGRATION_COUNT,
+) {
   const versions = listRepoMigrationVersions(repoRoot);
-  if (versions.length !== EXPECTED_MIGRATION_COUNT) {
+  const appliedCount = Number(appliedMigrationCount);
+  if (!Number.isInteger(appliedCount) || appliedCount < MINIMUM_PRODUCTION_MIGRATION_COUNT) {
     throw new Error(
-      `Expected ${EXPECTED_MIGRATION_COUNT} repo migrations, found ${versions.length}.`,
+      `Applied migration count must be an integer >= ${MINIMUM_PRODUCTION_MIGRATION_COUNT} (got ${appliedMigrationCount}).`,
     );
   }
-  return versions[versions.length - 1];
+  if (versions.length < appliedCount) {
+    throw new Error(
+      `Repo migrations (${versions.length}) are behind production applied count (${appliedCount}).`,
+    );
+  }
+  // Pin to the production-applied head for the given applied count (not a local-only pending file).
+  return versions[appliedCount - 1];
 }
 
 export function assertBackupContractVersion(version) {

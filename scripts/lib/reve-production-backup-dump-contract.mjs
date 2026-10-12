@@ -28,7 +28,7 @@ export const BACKUP_ARTIFACTS = Object.freeze([
     artifactType: 'schema',
     dumpMode: 'schema-only',
     classification: 'schema',
-    includedSchemas: ['public'],
+    includedSchemas: ['public', 'reve_private'],
     excludedSchemas: ['auth', 'storage', 'supabase_migrations'],
     captures: [
       'public_tables',
@@ -38,9 +38,15 @@ export const BACKUP_ARTIFACTS = Object.freeze([
       'public_triggers',
       'public_sequences',
       'public_views',
+      'reve_private_schema',
+      'reve_private_functions',
     ],
-    supabaseArgs: ['supabase', 'db', 'dump', '--linked', '--schema', 'public'],
-    proofNotes: 'pg_dump --schema-only --schema=public',
+    // Combined dump: public triggers/policies execute reve_private functions, while
+    // reve_private function signatures reference public table types. pg_dump emits a
+    // dependency-safe order only when both schemas are dumped together.
+    supabaseArgs: ['supabase', 'db', 'dump', '--linked', '--schema', 'public,reve_private'],
+    proofNotes:
+      'pg_dump --schema-only --schema=public,reve_private (combined; circular dependency between public triggers and reve_private functions).',
   },
   {
     id: 'schema-auth-storage',
@@ -175,11 +181,15 @@ export const BACKUP_CONTENT_PROOF = Object.freeze({
     artifactId: 'migration-history-data',
     proven: 'explicit_data_only_supabase_migrations_dump',
   },
-  functionsRpcs: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public' },
-  constraintsIndexes: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public' },
-  rlsPolicies: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public' },
-  triggers: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public' },
-  sequences: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public' },
+  functionsRpcs: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public_and_reve_private' },
+  constraintsIndexes: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public_and_reve_private' },
+  rlsPolicies: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public_and_reve_private' },
+  triggers: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public_and_reve_private' },
+  sequences: { artifactId: 'schema-public', proven: 'pg_dump_schema_only_public_and_reve_private' },
+  revePrivateSchema: {
+    artifactId: 'schema-public',
+    proven: 'pg_dump_schema_only_public_and_reve_private',
+  },
   roles: { artifactId: 'roles', proven: 'pg_dumpall_roles_only' },
 });
 

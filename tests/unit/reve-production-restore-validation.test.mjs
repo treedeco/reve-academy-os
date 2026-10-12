@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RESTORE_VALIDATION_QUERIES,
   buildRestoreValidationReport,
   compareManifestRowCounts,
   validateRestoreReport,
@@ -137,5 +138,26 @@ describe('reve-production-restore-validation', () => {
     expect(() => validateRestoreReport(report, { migrationCount: 26, migrationCheckpoint: '20260728120000' })).toThrow(
       /rls_policies_missing/,
     );
+  });
+
+  it('uses payments.related_pass_id / renewed_pass_id (not nonexistent payments.pass_id)', () => {
+    const fkSql = RESTORE_VALIDATION_QUERIES.fkIntegrityProbe;
+    const linkageSql = RESTORE_VALIDATION_QUERIES.paymentsPassLinkage;
+
+    expect(fkSql).toMatch(/pay\.related_pass_id/);
+    expect(fkSql).toMatch(/pay\.renewed_pass_id/);
+    // Legacy bug: payments aliased as p joined on nonexistent p.pass_id.
+    expect(fkSql).not.toMatch(/FROM public\.payments p\b[\s\S]*\bp\.pass_id\b/);
+    expect(fkSql).not.toMatch(/\bps\.id = p\.pass_id\b/);
+
+    expect(linkageSql).toMatch(/renewed_pass_id IS NULL/);
+    expect(linkageSql).not.toMatch(/AND pass_id IS NULL/);
+
+    expect(() =>
+      validateRestoreReport(
+        buildPassingReport({ completedPaymentsWithoutPass: 1 }),
+        { migrationCount: 26, migrationCheckpoint: '20260728120000' },
+      ),
+    ).toThrow(/payments_pass_linkage/);
   });
 });

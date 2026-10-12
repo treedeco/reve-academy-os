@@ -31,7 +31,7 @@ The backup set uses **`npx supabase db dump`** which wraps **`pg_dump` / `pg_dum
 | Artifact file (encrypted) | Command |
 |---------------------------|---------|
 | `roles.sql.enc` | `npx supabase db dump --linked --role-only -f roles.sql` |
-| `schema-public.sql.enc` | `npx supabase db dump --linked --schema public -f schema-public.sql` |
+| `schema-public.sql.enc` | `npx supabase db dump --linked --schema public,reve_private -f schema-public.sql` |
 | `schema-auth-storage.sql.enc` | `npx supabase db dump --linked --schema auth,storage -f schema-auth-storage.sql` |
 | `migration-history-schema.sql.enc` | `npx supabase db dump --linked --schema supabase_migrations -f migration-history-schema.sql` |
 | `data-public.sql.enc` | `npx supabase db dump --linked --data-only --schema public -f data-public.sql` |
@@ -45,8 +45,8 @@ Plaintext SQL exists only in a temporary directory during backup, is secret-scan
 
 | Contract item | Proven capture path | Notes |
 |---------------|---------------------|-------|
-| public schema DDL | `schema-public.sql` | pg_dump `--schema-only --schema=public` |
-| public table data | `data-public.sql` | pg_dump `--data-only --schema public` |
+| public + `reve_private` schema DDL | `schema-public.sql` | pg_dump `--schema-only --schema=public,reve_private` (combined: public triggers execute `reve_private` functions; those functions type against public tables) |
+| public table data | `data-public.sql` | pg_dump `--data-only --schema public` (`reve_private` has no tables) |
 | auth schema DDL | `schema-auth-storage.sql` | **Not** in default CLI dump; explicit `--schema auth,storage` required |
 | auth.users data | `data-auth.sql` | includes password hashes; CLI excludes `auth.schema_migrations` |
 | storage metadata schema | `schema-auth-storage.sql` | bucket/table DDL only |
@@ -120,6 +120,20 @@ Dependency-aware order for a **new** validation database (`public.profiles` refe
 - Restore into an existing Supabase project requires a **separately reviewed managed-schema procedure** (not implemented in Phase 2B-2C1)
 
 Temporary database: `reve_backup_val_<suffix>` — **dropped in all exit paths**.
+
+### Local psql privilege compatibility
+
+On Supabase local Docker, role `postgres` is **not** a superuser. Hosted `--role-only` dumps may include `ALTER ROLE "supabase_admin" ...` (and similar reserved-role statements). Non-superuser apply fails with:
+
+`ERROR: "supabase_admin" is a reserved role, only superusers can modify it`
+
+Isolated restore validation therefore:
+
+- creates/drops `reve_backup_val_*` as `postgres`
+- applies decrypted SQL artifacts as local superuser `supabase_admin`
+- **does not** rewrite or strip encrypted backup artifacts
+
+Role statements are cluster-scoped in PostgreSQL; apply may adjust local Docker role settings only (never production).
 
 Post-restore validation fails closed on missing artifacts, checksum mismatch, migration checkpoint mismatch, missing tables, FK orphans, RLS disabled, missing policies, active/reserved pass uniqueness violations, pass usage overflow, payment/SMS/slot orphans, and manifest row-count drift.
 

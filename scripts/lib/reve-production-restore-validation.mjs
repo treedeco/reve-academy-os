@@ -75,9 +75,13 @@ export const RESTORE_VALIDATION_QUERIES = Object.freeze({
       (SELECT count(*)::int FROM public.lessons l
         LEFT JOIN public.teachers t ON t.id = l.assigned_teacher_id
         WHERE t.id IS NULL) AS orphan_lessons_by_teacher,
-      (SELECT count(*)::int FROM public.payments p
-        LEFT JOIN public.passes ps ON ps.id = p.pass_id
-        WHERE ps.id IS NULL) AS orphan_payments_by_pass,
+      -- payments has no pass_id; FKs are related_pass_id and renewed_pass_id → passes(id).
+      (SELECT count(*)::int FROM public.payments pay
+        LEFT JOIN public.passes related ON related.id = pay.related_pass_id
+        LEFT JOIN public.passes renewed ON renewed.id = pay.renewed_pass_id
+        WHERE (pay.related_pass_id IS NOT NULL AND related.id IS NULL)
+           OR (pay.renewed_pass_id IS NOT NULL AND renewed.id IS NULL)
+      ) AS orphan_payments_by_pass,
       (SELECT count(*)::int FROM public.schedule_slots ss
         LEFT JOIN public.passes p ON p.id = ss.pass_id
         WHERE p.id IS NULL) AS orphan_schedule_slots_by_pass,
@@ -112,7 +116,7 @@ export const RESTORE_VALIDATION_QUERIES = Object.freeze({
     SELECT count(*)::int AS completed_without_pass
     FROM public.payments
     WHERE status = 'completed'
-      AND pass_id IS NULL;
+      AND renewed_pass_id IS NULL;
   `,
   scheduleSlotsActiveLessons: `
     SELECT count(*)::int AS active_slots_without_pass
@@ -199,8 +203,12 @@ export function validateRestoreReport(report, manifest, options = {}) {
     failures.push('migration_count_mismatch');
   }
 
-  if (expectedCheckpoint && report.latestMigrationVersion !== expectedCheckpoint) {
-    failures.push('migration_checkpoint_mismatch');
+  if (expectedCheckpoint) {
+    const expectedVersion = String(expectedCheckpoint).trim().match(/^(\d{14})/)?.[1] ?? '';
+    const actualVersion = String(report.latestMigrationVersion ?? '').trim().match(/^(\d{14})/)?.[1] ?? '';
+    if (!expectedVersion || actualVersion !== expectedVersion) {
+      failures.push('migration_checkpoint_mismatch');
+    }
   }
 
   const fk = report.fkIntegrity ?? {};

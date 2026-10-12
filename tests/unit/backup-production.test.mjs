@@ -10,8 +10,7 @@ import { assertManifestArtifactsComplete } from '../../scripts/lib/reve-producti
 describe('backup-production', () => {
   const tempDirs = [];
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  function clearBackupEnv() {
     delete process.env.REVE_CONFIRM_PRODUCTION;
     delete process.env.REVE_PRODUCTION_PROJECT_REF_CONFIRM;
     delete process.env.REVE_BACKUP_ENCRYPTION_PASSPHRASE;
@@ -19,6 +18,11 @@ describe('backup-production', () => {
     delete process.env.PRODUCTION_SUPABASE_ANON_KEY;
     delete process.env.PRODUCTION_OWNER_PASSWORD;
     delete process.env.PRODUCTION_URL;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearBackupEnv();
 
     for (const dir of tempDirs.splice(0)) {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -41,6 +45,7 @@ describe('backup-production', () => {
   }
 
   it('requires explicit production confirmation and encryption passphrase', async () => {
+    clearBackupEnv();
     await expect(runProductionBackup()).rejects.toThrow(/requires explicit confirmation/);
     process.env.REVE_CONFIRM_PRODUCTION = '1';
     process.env.REVE_PRODUCTION_PROJECT_REF_CONFIRM = 'bfhptqhgxignyggyxxkx';
@@ -61,7 +66,8 @@ describe('backup-production', () => {
 
     const runNpx = vi.fn(async (args) => {
       if (args[1] === 'migration') {
-        return { stdout: '{ "migrations": [' + '1,'.repeat(31) + '1] }', stderr: '' };
+        // 31 applied remote rows (production pre-push head).
+        return { stdout: '{ "migrations": [' + '1,'.repeat(30) + '1] }', stderr: '' };
       }
       const fileIndex = args.indexOf('-f');
       const dumpPath = args[fileIndex + 1];

@@ -117,9 +117,10 @@ export async function runProductionBackup(options = {}) {
   const { setDir, manifestPath, destinationRoot } = buildBackupSetPaths(label, repoRoot);
   const protectionResult = assertBackupDestinationProtected(setDir, { requireEncryption: true });
   assertBackupSetPathSafe(setDir, destinationRoot);
-  const migrationCheckpoint = options.migrationCheckpoint ?? resolveExpectedMigrationCheckpoint(repoRoot);
 
   const migrationCount = await verifyLinkedMigrationCheckpoint(runNpx);
+  const migrationCheckpoint =
+    options.migrationCheckpoint ?? resolveExpectedMigrationCheckpoint(repoRoot, migrationCount);
 
   logStage('backup_owner_session_start');
   const { client } = await createOwnerSession();

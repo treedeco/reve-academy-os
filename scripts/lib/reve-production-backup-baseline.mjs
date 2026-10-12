@@ -3,7 +3,7 @@
  */
 import {
   CRITICAL_ROW_COUNT_TABLES,
-  EXPECTED_MIGRATION_COUNT,
+  MINIMUM_PRODUCTION_MIGRATION_COUNT,
 } from './reve-production-backup-contract.mjs';
 import { logStage } from './reve-production-operator-io.mjs';
 
@@ -13,12 +13,23 @@ export function countLinkedMigrations(raw) {
   if (jsonStart >= 0) {
     try {
       const payload = JSON.parse(combined.slice(jsonStart));
-      return payload?.migrations?.length ?? 0;
+      const migrations = payload?.migrations;
+      if (!Array.isArray(migrations)) {
+        return 0;
+      }
+      // Count applied (remote) rows only — local-only pending migrations are not production state.
+      return migrations.filter((entry) => {
+        if (entry == null || typeof entry !== 'object') {
+          return Boolean(entry);
+        }
+        return String(entry.remote ?? '').trim() !== '';
+      }).length;
     } catch {
       // Fall through to table parsing.
     }
   }
 
+  // Table format rows with both local and remote timestamps = applied.
   const rowMatches = combined.match(/`?\d{14}`?\s*\|\s*`?\d{14}`?\s*\|/g);
   if (rowMatches?.length) {
     return rowMatches.length;
@@ -29,9 +40,14 @@ export function countLinkedMigrations(raw) {
   );
 }
 
-export function assertExpectedMigrationCount(count, expected = EXPECTED_MIGRATION_COUNT) {
-  if (count !== expected) {
-    throw new Error(`Migration checkpoint mismatch: expected ${expected}, got ${count}.`);
+export function assertExpectedMigrationCount(
+  count,
+  minimum = MINIMUM_PRODUCTION_MIGRATION_COUNT,
+) {
+  if (!Number.isInteger(count) || count < minimum) {
+    throw new Error(
+      `Migration checkpoint too low: expected at least ${minimum} applied migrations, got ${count}.`,
+    );
   }
   return count;
 }
